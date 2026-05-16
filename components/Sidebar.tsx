@@ -12,6 +12,7 @@ const navItems = [
   { label: 'Expenses',   href: '/expenses',    icon: 'ti-wallet',           accent: '#d4607a' },
   { label: 'Attendance', href: '/attendance',  icon: 'ti-calendar-check',   accent: '#9b7ec8' },
   { label: 'Insights',   href: '/insights',    icon: 'ti-chart-bar',        accent: '#5a8c63' },
+  { label: 'Periods Tracker',   href: '/',    icon: 'ti-chart-bar',        accent: '#5a8c63' },
   { label: 'Profile', href: '/profile', icon: 'ti-user-circle', accent: '#d4607a' },
 ]
 
