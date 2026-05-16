@@ -1,29 +1,195 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { createClient } from '@/lib/supabase'
 import { useTheme } from '@/lib/useTheme'
 
 const moods = [
-  { label: 'Amazing', emoji: '🤩', score: 5, color: '#fbbf24', light: '#fffbeb' },
-  { label: 'Happy', emoji: '😊', score: 4, color: '#34d399', light: '#ecfdf5' },
-  { label: 'Focused', emoji: '🎯', score: 4, color: '#60a5fa', light: '#eff6ff' },
-  { label: 'Okay', emoji: '😐', score: 3, color: '#a78bfa', light: '#f5f3ff' },
-  { label: 'Tired', emoji: '😴', score: 2, color: '#94a3b8', light: '#f8fafc' },
-  { label: 'Anxious', emoji: '😰', score: 2, color: '#f97316', light: '#fff7ed' },
-  { label: 'Sad', emoji: '😢', score: 1, color: '#818cf8', light: '#eef2ff' },
-  { label: 'Stressed', emoji: '😤', score: 1, color: '#f87171', light: '#fef2f2' },
+  { label: 'Amazing',  score: 5, c: '#ffcf40', bg: 'rgba(255,207,64,0.12)',  border: 'rgba(255,207,64,0.3)',  icon: 'ti-star' },
+  { label: 'Happy',    score: 4, c: '#00e5a0', bg: 'rgba(0,229,160,0.1)',    border: 'rgba(0,229,160,0.28)',  icon: 'ti-mood-smile' },
+  { label: 'Focused',  score: 4, c: '#38bdff', bg: 'rgba(56,189,255,0.1)',   border: 'rgba(56,189,255,0.28)', icon: 'ti-target' },
+  { label: 'Okay',     score: 3, c: '#bf7fff', bg: 'rgba(191,127,255,0.1)',  border: 'rgba(191,127,255,0.28)',icon: 'ti-minus' },
+  { label: 'Tired',    score: 2, c: '#94a3b8', bg: 'rgba(148,163,184,0.1)',  border: 'rgba(148,163,184,0.25)',icon: 'ti-zzz' },
+  { label: 'Anxious',  score: 2, c: '#ff9340', bg: 'rgba(255,147,64,0.1)',   border: 'rgba(255,147,64,0.28)', icon: 'ti-alert-triangle' },
+  { label: 'Sad',      score: 1, c: '#818cf8', bg: 'rgba(129,140,248,0.1)',  border: 'rgba(129,140,248,0.28)',icon: 'ti-mood-sad' },
+  { label: 'Stressed', score: 1, c: '#ff6b8a', bg: 'rgba(255,107,138,0.1)', border: 'rgba(255,107,138,0.28)',icon: 'ti-flame' },
 ]
 
 type Entry = {
   id: string
   mood: string
-  emoji: string
   note: string
   score: number
   created_at: string
 }
+
+const css = `
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&display=swap');
+  @import url('https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  .mp { font-family: 'DM Sans', sans-serif; min-height: 100vh; position: relative; overflow: hidden; }
+
+  .mp-bg {
+    position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    background-image:
+      radial-gradient(ellipse 65% 50% at 15% 15%, rgba(191,127,255,0.14) 0%, transparent 60%),
+      radial-gradient(ellipse 55% 45% at 85% 80%, rgba(0,229,160,0.1) 0%, transparent 60%),
+      radial-gradient(ellipse 40% 35% at 70% 20%, rgba(255,107,138,0.08) 0%, transparent 55%),
+      radial-gradient(ellipse 35% 30% at 30% 85%, rgba(56,189,255,0.08) 0%, transparent 55%);
+  }
+
+  .mp-inner { position: relative; z-index: 1; padding: clamp(18px,4vw,36px) clamp(16px,4vw,36px); }
+
+  /* ── header ── */
+  .mp-hrow { display: flex; align-items: flex-start; justify-content: space-between;
+    flex-wrap: wrap; gap: 14px; margin-bottom: 22px; }
+
+  .mp-h1 { font-size: clamp(26px,5.5vw,42px); font-weight: 800; letter-spacing: -2px;
+    line-height: 1.0; margin-bottom: 8px;
+    background: linear-gradient(110deg, #bf7fff 0%, #ff6b8a 40%, #ffcf40 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+
+  .mp-sub { font-size: 13px; font-weight: 400; }
+
+  .mp-hbtns { display: flex; gap: 8px; flex-wrap: wrap; align-items: flex-start; }
+
+  .mp-btn-pill {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 9px 16px; border-radius: 100px;
+    font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 600;
+    cursor: pointer; transition: transform 0.15s ease, opacity 0.15s ease;
+    white-space: nowrap;
+  }
+  .mp-btn-pill:hover { transform: scale(1.04); }
+  .mp-btn-pill:active { transform: scale(0.97); }
+  .mp-btn-pill i { font-size: 14px; }
+
+  /* ── live dot ── */
+  .mp-live { display: flex; align-items: center; gap: 7px; margin-bottom: 18px; }
+  .mp-live-dot { width: 7px; height: 7px; border-radius: 50%; background: #00e5a0;
+    animation: live-pulse 2s ease-in-out infinite; }
+  @keyframes live-pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(.7)} }
+  .mp-live-txt { font-size: 11px; font-weight: 600; color: #00e5a0; letter-spacing: 0.3px; }
+
+  /* ── stat cards ── */
+  .mp-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px,1fr));
+    gap: 11px; margin-bottom: 22px; }
+
+  .mp-stat { border-radius: 16px; padding: 16px; transition: transform 0.2s ease; }
+  .mp-stat:hover { transform: translateY(-3px); }
+  .mp-stat-val { font-size: 22px; font-weight: 800; letter-spacing: -0.8px; margin-bottom: 4px; }
+  .mp-stat-lbl { font-size: 10px; font-weight: 700; letter-spacing: 1.2px;
+    text-transform: uppercase; opacity: 0.45; }
+  .mp-stat-ico { font-size: 16px; margin-bottom: 8px; opacity: 0.6; }
+
+  /* ── tabs ── */
+  .mp-tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+
+  .mp-tab {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 8px 18px; border-radius: 100px;
+    font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 700;
+    cursor: pointer; letter-spacing: 0.2px;
+    transition: transform 0.15s ease;
+  }
+  .mp-tab:hover { transform: scale(1.03); }
+  .mp-tab i { font-size: 13px; }
+
+  /* ── log panel grid ── */
+  .mp-log-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px,1fr)); gap: 18px; }
+
+  /* ── card shell ── */
+  .mp-card { border-radius: 22px; padding: clamp(18px,2.5vw,26px); backdrop-filter: blur(20px); }
+
+  .mp-card-lbl { font-size: 10px; font-weight: 700; letter-spacing: 2px;
+    text-transform: uppercase; margin-bottom: 16px; opacity: 0.4; }
+
+  /* ── mood grid ── */
+  .mp-moodgrid { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; }
+
+  .mp-moodbtn {
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    padding: 14px 6px; border-radius: 14px;
+    font-family: 'DM Sans', sans-serif; cursor: pointer;
+    transition: transform 0.18s ease;
+  }
+  .mp-moodbtn:hover { transform: translateY(-3px) scale(1.06); }
+  .mp-moodbtn:active { transform: scale(0.94); }
+
+  .mp-moodbtn-ico { font-size: 22px; }
+  .mp-moodbtn-lbl { font-size: 10px; font-weight: 700; letter-spacing: 0.3px; }
+
+  .mp-dots { display: flex; gap: 3px; margin-top: 2px; }
+  .mp-dot { width: 4px; height: 4px; border-radius: 50%; }
+
+  /* ── note area ── */
+  .mp-note { width: 100%; border-radius: 12px; padding: 12px 14px;
+    font-family: 'DM Sans', sans-serif; font-size: 13px; resize: none;
+    outline: none; line-height: 1.6; margin-bottom: 12px; }
+
+  /* ── submit ── */
+  .mp-submit {
+    width: 100%; padding: 13px; border-radius: 13px; border: none;
+    font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 800;
+    letter-spacing: 0.2px; cursor: pointer; transition: transform 0.15s ease, opacity 0.15s ease;
+  }
+  .mp-submit:hover { transform: scale(1.02); }
+  .mp-submit:active { transform: scale(0.98); }
+  .mp-submit:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+  /* ── selected preview ── */
+  .mp-preview { border-radius: 20px; padding: 24px; text-align: center; }
+  .mp-preview-ico { font-size: 44px; margin-bottom: 12px; }
+  .mp-preview-lbl { font-size: 18px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 10px; }
+  .mp-preview-sub { font-size: 12px; opacity: 0.45; margin-top: 8px; }
+
+  /* ── log list ── */
+  .mp-loglist { display: flex; flex-direction: column; gap: 8px;
+    max-height: 300px; overflow-y: auto; }
+
+  .mp-logitem { display: flex; align-items: center; gap: 10px;
+    padding: 10px 12px; border-radius: 12px; }
+
+  .mp-logitem-ico { font-size: 18px; flex-shrink: 0; }
+  .mp-logitem-name { font-size: 13px; font-weight: 700; }
+  .mp-logitem-note { font-size: 11px; margin-top: 2px; opacity: 0.4; }
+  .mp-logitem-time { font-size: 10px; opacity: 0.3; margin-left: auto; flex-shrink: 0; }
+
+  /* ── history list ── */
+  .mp-histitem { display: flex; align-items: center; gap: 14px; padding: 14px 16px;
+    border-radius: 14px; }
+
+  .mp-histitem-ico { font-size: 20px; flex-shrink: 0; }
+
+  /* ── AI tab ── */
+  .mp-ai-header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+  .mp-ai-avatar { width: 44px; height: 44px; border-radius: 13px; display: flex;
+    align-items: center; justify-content: center; font-size: 20px;
+    background: linear-gradient(135deg, #bf7fff, #ff6b8a); flex-shrink: 0; }
+  .mp-ai-title { font-size: 16px; font-weight: 800; letter-spacing: -0.3px; }
+  .mp-ai-sub { font-size: 12px; opacity: 0.4; margin-top: 2px; }
+  .mp-ai-body { border-radius: 16px; padding: 20px; font-size: 14px; line-height: 1.8; }
+
+  /* ── spinner ── */
+  .mp-spin { width: 32px; height: 32px; border-radius: 50%; margin: 0 auto 14px;
+    border-width: 3px; border-style: solid; border-color: rgba(191,127,255,0.2);
+    border-top-color: #bf7fff; animation: spin 0.9s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── success toast ── */
+  .mp-toast { padding: 10px 14px; border-radius: 11px; font-size: 12px;
+    font-weight: 600; text-align: center; margin-top: 10px; }
+
+  /* ── responsive ── */
+  @media (max-width: 580px) {
+    .mp-moodgrid { grid-template-columns: repeat(4,1fr); }
+    .mp-log-grid { grid-template-columns: 1fr; }
+    .mp-stats { grid-template-columns: repeat(2,1fr); }
+  }
+`
 
 export default function MoodPage() {
   const supabase = createClient()
@@ -35,16 +201,24 @@ export default function MoodPage() {
   const [loading, setLoading] = useState(false)
   const [entries, setEntries] = useState<Entry[]>([])
   const [success, setSuccess] = useState(false)
-  const [activeTab, setActiveTab] = useState<'log' | 'history'>('log')
+  const [activeTab, setActiveTab] = useState<'log' | 'history' | 'ai'>('log')
+  const [aiSummary, setAiSummary] = useState('')
+  const [aiLoading, setAiLoading] = useState(false)
+  const channelRef = useRef<any>(null)
 
-  useEffect(() => { fetchEntries() }, [])
+  useEffect(() => {
+    fetchEntries()
+    channelRef.current = supabase
+      .channel('mood-realtime')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'mood_entries' }, (payload) => {
+        setEntries(prev => [payload.new as Entry, ...prev])
+      })
+      .subscribe()
+    return () => { if (channelRef.current) supabase.removeChannel(channelRef.current) }
+  }, [])
 
   const fetchEntries = async () => {
-    const { data } = await supabase
-      .from('mood_entries')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(20)
+    const { data } = await supabase.from('mood_entries').select('*').order('created_at', { ascending: false }).limit(20)
     if (data) setEntries(data)
   }
 
@@ -53,364 +227,365 @@ export default function MoodPage() {
     setLoading(true)
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
-    const { error } = await supabase.from('mood_entries').insert({
-      user_id: user.id,
-      mood: selected.label,
-      emoji: selected.emoji,
-      score: selected.score,
-      note: note.trim() || null,
-    })
-    if (!error) {
-      setSuccess(true)
-      setSelected(null)
-      setNote('')
-      fetchEntries()
-      setTimeout(() => setSuccess(false), 3000)
-    }
+    await supabase.from('mood_entries').insert({ user_id: user.id, mood: selected.label, score: selected.score, note: note.trim() || null })
+    setSuccess(true); setSelected(null); setNote('')
+    setTimeout(() => setSuccess(false), 3000)
     setLoading(false)
   }
 
-  const todayEntries = entries.filter(e =>
-    new Date(e.created_at).toDateString() === new Date().toDateString()
-  )
-  const avgScore = todayEntries.length
-    ? (todayEntries.reduce((a, e) => a + e.score, 0) / todayEntries.length).toFixed(1)
-    : null
-  const scoreToLabel = (s: number) =>
-    s >= 4.5 ? 'Amazing ✨' : s >= 3.5 ? 'Good 😊' : s >= 2.5 ? 'Okay 😐' : s >= 1.5 ? 'Low 😴' : 'Rough 😤'
+  const handleAISummary = async () => {
+    setAiLoading(true); setActiveTab('ai')
+    const res = await fetch('/api/ai-summary', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ entries }) })
+    const data = await res.json()
+    setAiSummary(data.summary)
+    setAiLoading(false)
+  }
 
-  const bg = dark ? '#08080f' : '#f8f7ff'
-  const cardBg = dark ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.9)'
-  const cardBorder = dark ? 'rgba(167,139,250,0.15)' : 'rgba(167,139,250,0.25)'
-  const text1 = dark ? '#e8e6ff' : '#1a1040'
-  const text2 = dark ? 'rgba(232,230,255,0.4)' : 'rgba(26,16,64,0.5)'
-  const text3 = dark ? 'rgba(232,230,255,0.25)' : 'rgba(26,16,64,0.3)'
+  const todayEntries = entries.filter(e => new Date(e.created_at).toDateString() === new Date().toDateString())
+  const avgScore = todayEntries.length ? (todayEntries.reduce((a, e) => a + e.score, 0) / todayEntries.length).toFixed(1) : null
+  const scoreToLabel = (s: number) => s >= 4.5 ? 'stellar' : s >= 3.5 ? 'solid' : s >= 2.5 ? 'alright' : s >= 1.5 ? 'low' : 'rough'
+
+  // tokens
+  const root    = dark ? '#070710' : '#f5f4ff'
+  const card    = dark ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.85)'
+  const bord    = dark ? 'rgba(255,255,255,0.08)' : 'rgba(191,127,255,0.18)'
+  const txt1    = dark ? '#f0eeff' : '#140d2e'
+  const txt2    = dark ? 'rgba(240,238,255,0.38)' : 'rgba(20,13,46,0.45)'
+  const txt3    = dark ? 'rgba(240,238,255,0.2)'  : 'rgba(20,13,46,0.28)'
 
   const statCards = [
-    { label: 'avg score', value: avgScore || '—', icon: '📊', color: '#a78bfa' },
-    { label: 'logs today', value: String(todayEntries.length), icon: '📝', color: '#34d399' },
-    { label: 'total logs', value: String(entries.length), icon: '🗂️', color: '#60a5fa' },
-    { label: "today's vibe", value: avgScore ? scoreToLabel(parseFloat(avgScore)) : '—', icon: '✨', color: '#fbbf24' },
+    { label: 'avg score',   value: avgScore || '—',              c: '#bf7fff', icon: 'ti-chart-line' },
+    { label: 'today logs',  value: String(todayEntries.length),  c: '#00e5a0', icon: 'ti-check' },
+    { label: 'total logs',  value: String(entries.length),       c: '#38bdff', icon: 'ti-database' },
+    { label: "today's vibe",value: avgScore ? scoreToLabel(parseFloat(avgScore)) : '—', c: '#ffcf40', icon: 'ti-sparkles' },
+  ]
+
+  const tabs: { key: 'log' | 'history' | 'ai'; label: string; icon: string }[] = [
+    { key: 'log',     label: 'log mood', icon: 'ti-pencil' },
+    { key: 'history', label: 'history',  icon: 'ti-history' },
+    { key: 'ai',      label: 'AI report', icon: 'ti-brain' },
   ]
 
   return (
-    <div style={{ minHeight: '100vh', background: bg, fontFamily: 'DM Sans, sans-serif', position: 'relative', overflow: 'hidden' }}>
+    <>
+      <style>{css}</style>
+      <div className="mp" style={{ background: root, color: txt1 }}>
+        <div className="mp-bg" />
+        <div className="mp-inner">
 
-      {/* SVG background */}
-      <svg style={{ position: 'fixed', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 0, opacity: dark ? 0.4 : 0.15 }} viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice">
-        <defs>
-          <radialGradient id="rg1" cx="20%" cy="20%"><stop offset="0%" stopColor="#a78bfa" stopOpacity="0.4" /><stop offset="100%" stopColor="#a78bfa" stopOpacity="0" /></radialGradient>
-          <radialGradient id="rg2" cx="80%" cy="80%"><stop offset="0%" stopColor="#34d399" stopOpacity="0.3" /><stop offset="100%" stopColor="#34d399" stopOpacity="0" /></radialGradient>
-          <radialGradient id="rg3" cx="60%" cy="30%"><stop offset="0%" stopColor="#f87171" stopOpacity="0.2" /><stop offset="100%" stopColor="#f87171" stopOpacity="0" /></radialGradient>
-        </defs>
-        <ellipse cx="200" cy="200" rx="400" ry="400" fill="url(#rg1)" />
-        <ellipse cx="1200" cy="700" rx="350" ry="350" fill="url(#rg2)" />
-        <ellipse cx="900" cy="200" rx="280" ry="280" fill="url(#rg3)" />
-        <circle cx="100" cy="500" r="6" fill="#a78bfa" opacity="0.5" />
-        <circle cx="1350" cy="150" r="8" fill="#34d399" opacity="0.4" />
-        <circle cx="700" cy="800" r="5" fill="#fbbf24" opacity="0.5" />
-        <path d="M0,450 C360,400 720,500 1080,420 C1260,380 1380,440 1440,430" stroke="#a78bfa" strokeWidth="1.5" fill="none" opacity="0.2" />
-        <path d="M0,600 C400,550 800,650 1200,580 C1350,560 1420,600 1440,590" stroke="#34d399" strokeWidth="1" fill="none" opacity="0.15" />
-      </svg>
-
-      <div style={{ position: 'relative', zIndex: 1, padding: '32px' }}>
-
-        {/* Header */}
-        <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}
-          style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '32px' }}>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '6px' }}>
-              <h1 style={{
-                fontSize: '38px', fontWeight: 800, letterSpacing: '-1.5px',
-                background: 'linear-gradient(135deg, #a78bfa 0%, #f472b6 50%, #fbbf24 100%)',
-                WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
-              }}>mood tracker</h1>
-              <svg width="40" height="40" viewBox="0 0 40 40">
-                <circle cx="20" cy="20" r="18" fill="#a78bfa" opacity="0.15" stroke="#a78bfa" strokeWidth="1.5" />
-                <circle cx="14" cy="16" r="2.5" fill="#a78bfa" />
-                <circle cx="26" cy="16" r="2.5" fill="#a78bfa" />
-                <path d="M13,25 Q20,31 27,25" stroke="#a78bfa" strokeWidth="2" fill="none" strokeLinecap="round" />
-              </svg>
+          {/* Header */}
+          <motion.div className="mp-hrow"
+            initial={{ opacity: 0, y: -14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.42 }}>
+            <div>
+              <h1 className="mp-h1">mood tracker</h1>
+              <p className="mp-sub" style={{ color: txt2 }}>how are you feeling right now?</p>
             </div>
-            <p style={{ fontSize: '14px', color: text2 }}>how you feeling rn bestie? 👀</p>
+            <div className="mp-hbtns">
+              <motion.button className="mp-btn-pill" whileTap={{ scale: 0.96 }}
+                onClick={handleAISummary} disabled={aiLoading || entries.length === 0}
+                style={{
+                  background: 'rgba(191,127,255,0.1)', border: '1px solid rgba(191,127,255,0.22)',
+                  color: '#bf7fff', opacity: entries.length === 0 ? 0.4 : 1,
+                  cursor: entries.length === 0 ? 'not-allowed' : 'pointer',
+                }}>
+                <i className="ti ti-brain" aria-hidden="true" />
+                {aiLoading ? 'analyzing...' : 'AI summary'}
+              </motion.button>
+
+              <motion.button className="mp-btn-pill" whileTap={{ scale: 0.96 }}
+                onClick={toggle}
+                style={{ background: card, border: `1px solid ${bord}`, color: txt1 }}>
+                <i className={`ti ${dark ? 'ti-sun' : 'ti-moon'}`} aria-hidden="true"
+                  style={{ color: dark ? '#ffcf40' : '#bf7fff' }} />
+                {dark ? 'light' : 'dark'}
+              </motion.button>
+            </div>
+          </motion.div>
+
+          {/* Live indicator */}
+          <div className="mp-live">
+            <div className="mp-live-dot" />
+            <span className="mp-live-txt">live updates on</span>
           </div>
-          <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={toggle}
-            style={{
-              display: 'flex', alignItems: 'center', gap: '8px',
-              padding: '10px 16px', background: cardBg,
-              outline: 'none',
-              borderTop: `1px solid ${cardBorder}`,
-              borderRight: `1px solid ${cardBorder}`,
-              borderBottom: `1px solid ${cardBorder}`,
-              borderLeft: `1px solid ${cardBorder}`,
-              borderRadius: '20px', cursor: 'pointer', color: text1,
-              fontSize: '13px', fontWeight: 500, backdropFilter: 'blur(10px)',
-            }}>
-            {dark ? (
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" strokeWidth="2" strokeLinecap="round">
-                <circle cx="12" cy="12" r="5" /><line x1="12" y1="1" x2="12" y2="3" /><line x1="12" y1="21" x2="12" y2="23" />
-                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" /><line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
-                <line x1="1" y1="12" x2="3" y2="12" /><line x1="21" y1="12" x2="23" y2="12" />
-              </svg>
-            ) : (
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" strokeWidth="2" strokeLinecap="round">
-                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
-              </svg>
-            )}
-            {dark ? 'light mode' : 'dark mode'}
-          </motion.button>
-        </motion.div>
 
-        {/* Stat cards — plain divs, no border conflicts */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: '24px' }}>
-          {statCards.map((s, i) => (
-            <motion.div key={s.label}
-              initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 + i * 0.06 }}
-              whileHover={{ y: -3 }}
-              style={{
-                background: cardBg,
-                borderTop: `1px solid ${cardBorder}`,
-                borderRight: `1px solid ${cardBorder}`,
-                borderBottom: `1px solid ${cardBorder}`,
-                borderLeft: `3px solid ${s.color}`,
-                borderRadius: '16px', padding: '16px',
-                backdropFilter: 'blur(20px)',
-              }}>
-              <div style={{ fontSize: '20px', marginBottom: '8px' }}>{s.icon}</div>
-              <div style={{ fontSize: '20px', fontWeight: 700, color: s.color }}>{s.value}</div>
-              <div style={{ fontSize: '11px', color: text2, marginTop: '2px' }}>{s.label}</div>
-            </motion.div>
-          ))}
-        </div>
+          {/* Stat cards */}
+          <div className="mp-stats">
+            {statCards.map((s, i) => (
+              <motion.div key={s.label} className="mp-stat"
+                style={{ background: `${s.c}10`, border: `1px solid ${s.c}28` }}
+                initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.07 * i }}>
+                <i className={`ti ${s.icon} mp-stat-ico`} aria-hidden="true" style={{ color: s.c }} />
+                <div className="mp-stat-val" style={{ color: s.c }}>{s.value}</div>
+                <div className="mp-stat-lbl" style={{ color: txt1 }}>{s.label}</div>
+              </motion.div>
+            ))}
+          </div>
 
-        {/* Tabs */}
-        <div style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
-          {(['log', 'history'] as const).map(tab => (
-            <motion.button key={tab} whileTap={{ scale: 0.97 }} onClick={() => setActiveTab(tab)}
-              style={{
-                padding: '8px 20px',
-                background: activeTab === tab ? 'linear-gradient(135deg, #a78bfa, #60a5fa)' : cardBg,
-                borderTop: `1px solid ${activeTab === tab ? 'transparent' : cardBorder}`,
-                borderRight: `1px solid ${activeTab === tab ? 'transparent' : cardBorder}`,
-                borderBottom: `1px solid ${activeTab === tab ? 'transparent' : cardBorder}`,
-                borderLeft: `1px solid ${activeTab === tab ? 'transparent' : cardBorder}`,
-                borderRadius: '20px', color: activeTab === tab ? 'white' : text2,
-                fontSize: '13px', fontWeight: 500, cursor: 'pointer',
-                backdropFilter: 'blur(10px)',
-              }}>
-              {tab === 'log' ? '🫠 log mood' : '📋 history'}
-            </motion.button>
-          ))}
-        </div>
-
-        <AnimatePresence mode="wait">
-          {activeTab === 'log' ? (
-            <motion.div key="log" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: '20px' }}>
-
-                <div>
-                  {/* Mood picker */}
-                  <div style={{
-                    background: cardBg,
-                    borderTop: `1px solid ${cardBorder}`,
-                    borderRight: `1px solid ${cardBorder}`,
-                    borderBottom: `1px solid ${cardBorder}`,
-                    borderLeft: `1px solid ${cardBorder}`,
-                    borderRadius: '24px', padding: '24px', marginBottom: '16px',
-                    backdropFilter: 'blur(20px)',
+          {/* Tabs */}
+          <div className="mp-tabs">
+            {tabs.map(t => {
+              const active = activeTab === t.key
+              const accent = t.key === 'ai' ? '#ff6b8a' : '#bf7fff'
+              return (
+                <motion.button key={t.key} className="mp-tab"
+                  onClick={() => setActiveTab(t.key)}
+                  style={{
+                    background: active ? `${accent}22` : card,
+                    border: active ? `1px solid ${accent}55` : `1px solid ${bord}`,
+                    color: active ? accent : txt2,
                   }}>
-                    <div style={{ fontSize: '11px', color: text2, marginBottom: '16px', textTransform: 'uppercase', letterSpacing: '1.5px', fontWeight: 600 }}>
-                      pick your vibe ✨
+                  <i className={`ti ${t.icon}`} aria-hidden="true" />
+                  {t.label}
+                </motion.button>
+              )
+            })}
+          </div>
+
+          <AnimatePresence mode="wait">
+
+            {/* ── LOG TAB ── */}
+            {activeTab === 'log' && (
+              <motion.div key="log" initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 16 }}>
+                <div className="mp-log-grid">
+
+                  {/* Left col */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+
+                    {/* Mood picker */}
+                    <div className="mp-card" style={{ background: card, border: `1px solid ${bord}` }}>
+                      <p className="mp-card-lbl" style={{ color: txt1 }}>pick your vibe</p>
+                      <div className="mp-moodgrid">
+                        {moods.map((m, i) => {
+                          const isActive = selected?.label === m.label
+                          return (
+                            <motion.button key={m.label} className="mp-moodbtn"
+                              initial={{ opacity: 0, scale: 0.85 }} animate={{ opacity: 1, scale: 1 }}
+                              transition={{ delay: i * 0.04 }}
+                              onClick={() => setSelected(isActive ? null : m)}
+                              style={{
+                                background: isActive ? m.bg : (dark ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.6)'),
+                                border: `2px solid ${isActive ? m.border : (dark ? 'rgba(255,255,255,0.06)' : 'rgba(191,127,255,0.12)')}`,
+                              }}>
+                              <i className={`ti ${m.icon} mp-moodbtn-ico`} aria-hidden="true"
+                                style={{ color: isActive ? m.c : txt2 }} />
+                              <span className="mp-moodbtn-lbl" style={{ color: isActive ? m.c : txt2 }}>{m.label}</span>
+                              <div className="mp-dots">
+                                {[...Array(5)].map((_, di) => (
+                                  <div key={di} className="mp-dot"
+                                    style={{ background: di < m.score ? m.c : (dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)') }} />
+                                ))}
+                              </div>
+                            </motion.button>
+                          )
+                        })}
+                      </div>
                     </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px' }}>
-                      {moods.map((m, i) => (
-                        <motion.button key={m.label}
-                          initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: i * 0.04 }}
-                          whileHover={{ scale: 1.1, y: -4 }} whileTap={{ scale: 0.92 }}
-                          onClick={() => setSelected(selected?.label === m.label ? null : m)}
-                          style={{
-                            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px',
-                            padding: '18px 8px',
-                            background: selected?.label === m.label ? (dark ? `${m.color}25` : m.light) : (dark ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.6)'),
-                            borderTop: `2px solid ${selected?.label === m.label ? m.color : (dark ? 'rgba(255,255,255,0.06)' : 'rgba(167,139,250,0.15)')}`,
-                            borderRight: `2px solid ${selected?.label === m.label ? m.color : (dark ? 'rgba(255,255,255,0.06)' : 'rgba(167,139,250,0.15)')}`,
-                            borderBottom: `2px solid ${selected?.label === m.label ? m.color : (dark ? 'rgba(255,255,255,0.06)' : 'rgba(167,139,250,0.15)')}`,
-                            borderLeft: `2px solid ${selected?.label === m.label ? m.color : (dark ? 'rgba(255,255,255,0.06)' : 'rgba(167,139,250,0.15)')}`,
-                            borderRadius: '16px', cursor: 'pointer', position: 'relative', overflow: 'hidden',
-                          }}>
-                          <motion.span
-                            animate={selected?.label === m.label ? { rotate: [0, -10, 10, 0], scale: [1, 1.2, 1] } : {}}
-                            transition={{ duration: 0.4 }}
-                            style={{ fontSize: '30px' }}>{m.emoji}</motion.span>
-                          <span style={{ fontSize: '11px', color: selected?.label === m.label ? m.color : text2, fontWeight: 600 }}>{m.label}</span>
-                          <div style={{ display: 'flex', gap: '2px' }}>
-                            {[...Array(5)].map((_, di) => (
-                              <div key={di} style={{ width: '4px', height: '4px', borderRadius: '50%', background: di < m.score ? m.color : (dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)') }} />
+
+                    {/* Note + submit */}
+                    <div className="mp-card" style={{ background: card, border: `1px solid ${bord}` }}>
+                      <p className="mp-card-lbl" style={{ color: txt1 }}>add a note</p>
+                      <textarea className="mp-note" value={note} onChange={e => setNote(e.target.value)}
+                        placeholder="what's on your mind..."
+                        rows={3}
+                        style={{
+                          background: dark ? 'rgba(255,255,255,0.04)' : 'rgba(191,127,255,0.06)',
+                          border: `1px solid ${dark ? 'rgba(255,255,255,0.08)' : 'rgba(191,127,255,0.18)'}`,
+                          color: txt1,
+                        }} />
+                      <button className="mp-submit" onClick={handleLog} disabled={!selected || loading}
+                        style={{
+                          background: selected
+                            ? `linear-gradient(135deg, ${selected.c}, #bf7fff)`
+                            : (dark ? 'rgba(255,255,255,0.06)' : 'rgba(191,127,255,0.1)'),
+                          color: selected ? (selected.score > 2 ? '#07060f' : '#fff') : txt3,
+                        }}>
+                        {loading ? 'logging...' : success ? 'logged!' : selected ? `log — ${selected.label}` : 'pick a mood first'}
+                      </button>
+                      <AnimatePresence>
+                        {success && (
+                          <motion.div className="mp-toast"
+                            initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                            style={{ background: 'rgba(0,229,160,0.1)', border: '1px solid rgba(0,229,160,0.28)', color: '#00e5a0' }}>
+                            mood saved in realtime
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  </div>
+
+                  {/* Right col */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+
+                    {/* Selected preview */}
+                    <AnimatePresence>
+                      {selected && (
+                        <motion.div className="mp-preview"
+                          initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }}
+                          style={{ background: selected.bg, border: `2px solid ${selected.border}` }}>
+                          <motion.div animate={{ y: [0, -7, 0] }} transition={{ repeat: Infinity, duration: 2.2 }}>
+                            <i className={`ti ${selected.icon} mp-preview-ico`} aria-hidden="true" style={{ color: selected.c }} />
+                          </motion.div>
+                          <div className="mp-preview-lbl" style={{ color: selected.c }}>{selected.label}</div>
+                          <div className="mp-dots" style={{ justifyContent: 'center', gap: '5px' }}>
+                            {[...Array(5)].map((_, i) => (
+                              <div key={i} style={{ width: '8px', height: '8px', borderRadius: '50%',
+                                background: i < selected.score ? selected.c : (dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)') }} />
                             ))}
                           </div>
-                        </motion.button>
-                      ))}
-                    </div>
-                  </div>
+                          <p className="mp-preview-sub" style={{ color: txt1 }}>score: {selected.score} / 5</p>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
 
-                  {/* Note */}
-                  <div style={{
-                    background: cardBg,
-                    borderTop: `1px solid ${cardBorder}`,
-                    borderRight: `1px solid ${cardBorder}`,
-                    borderBottom: `1px solid ${cardBorder}`,
-                    borderLeft: `1px solid ${cardBorder}`,
-                    borderRadius: '20px', padding: '20px', backdropFilter: 'blur(20px)',
-                  }}>
-                    <div style={{ fontSize: '11px', color: text2, marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '1.5px', fontWeight: 600 }}>
-                      spill the tea ☕ (optional)
+                    {/* Today's log */}
+                    <div className="mp-card" style={{ background: card, border: `1px solid ${bord}`, flex: 1 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
+                        <p className="mp-card-lbl" style={{ color: txt1, marginBottom: 0 }}>today's log</p>
+                        <div className="mp-live-dot" style={{ flexShrink: 0 }} />
+                      </div>
+                      {todayEntries.length === 0 ? (
+                        <div style={{ textAlign: 'center', padding: '28px 16px' }}>
+                          <i className="ti ti-moon" aria-hidden="true"
+                            style={{ fontSize: '32px', color: txt3, display: 'block', marginBottom: '8px' }} />
+                          <span style={{ fontSize: '13px', color: txt3 }}>no entries yet</span>
+                        </div>
+                      ) : (
+                        <div className="mp-loglist">
+                          <AnimatePresence>
+                            {todayEntries.map((e, i) => {
+                              const m = moods.find(x => x.label === e.mood)
+                              return (
+                                <motion.div key={e.id} className="mp-logitem"
+                                  initial={{ opacity: 0, x: 16, scale: 0.95 }} animate={{ opacity: 1, x: 0, scale: 1 }}
+                                  transition={{ delay: i * 0.04 }}
+                                  style={{ background: dark ? 'rgba(255,255,255,0.03)' : 'rgba(191,127,255,0.05)' }}>
+                                  <i className={`ti ${m?.icon || 'ti-circle'} mp-logitem-ico`}
+                                    aria-hidden="true" style={{ color: m?.c || '#bf7fff' }} />
+                                  <div style={{ flex: 1, minWidth: 0 }}>
+                                    <div className="mp-logitem-name" style={{ color: txt1 }}>{e.mood}</div>
+                                    {e.note && <div className="mp-logitem-note" style={{ color: txt1 }}>{e.note}</div>}
+                                  </div>
+                                  <div className="mp-logitem-time" style={{ color: txt1 }}>
+                                    {new Date(e.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+                                  </div>
+                                </motion.div>
+                              )
+                            })}
+                          </AnimatePresence>
+                        </div>
+                      )}
                     </div>
-                    <textarea value={note} onChange={e => setNote(e.target.value)}
-                      placeholder="what's going on in that big brain of yours..."
-                      rows={3}
-                      style={{
-                        width: '100%', background: dark ? 'rgba(255,255,255,0.03)' : 'rgba(167,139,250,0.05)',
-                        border: `1px solid ${dark ? 'rgba(255,255,255,0.08)' : 'rgba(167,139,250,0.2)'}`,
-                        borderRadius: '12px', padding: '12px 16px',
-                        color: text1, fontSize: '14px', resize: 'none',
-                        outline: 'none', fontFamily: 'DM Sans, sans-serif', lineHeight: 1.6,
-                      }} />
-                    <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-                      onClick={handleLog} disabled={!selected || loading}
-                      style={{
-                        width: '100%', padding: '14px', marginTop: '12px',
-                        background: selected ? `linear-gradient(135deg, ${selected.color}, #a78bfa)` : (dark ? 'rgba(255,255,255,0.05)' : 'rgba(167,139,250,0.1)'),
-                        borderTop: 'none', borderRight: 'none', borderBottom: 'none', borderLeft: 'none',
-                        borderRadius: '14px',
-                        color: selected ? 'white' : text3,
-                        fontSize: '15px', fontWeight: 700,
-                        cursor: selected ? 'pointer' : 'not-allowed',
-                      }}>
-                      {loading ? '⏳ logging...' : success ? '🎉 logged!' : `log it ${selected ? selected.emoji : '👆 pick a mood first'}`}
-                    </motion.button>
                   </div>
                 </div>
+              </motion.div>
+            )}
 
-                {/* Right panel */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                  <AnimatePresence>
-                    {selected && (
-                      <motion.div
-                        initial={{ opacity: 0, scale: 0.9, y: -10 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9 }}
-                        style={{
-                          background: dark ? `${selected.color}15` : selected.light,
-                          borderTop: `2px solid ${selected.color}40`,
-                          borderRight: `2px solid ${selected.color}40`,
-                          borderBottom: `2px solid ${selected.color}40`,
-                          borderLeft: `2px solid ${selected.color}40`,
-                          borderRadius: '20px', padding: '24px', textAlign: 'center',
-                        }}>
-                        <motion.div animate={{ y: [0, -8, 0] }} transition={{ repeat: Infinity, duration: 2 }}
-                          style={{ fontSize: '52px', marginBottom: '8px' }}>{selected.emoji}</motion.div>
-                        <div style={{ fontSize: '18px', fontWeight: 700, color: selected.color }}>{selected.label}</div>
-                        <div style={{ display: 'flex', justifyContent: 'center', gap: '4px', marginTop: '8px' }}>
-                          {[...Array(5)].map((_, i) => (
-                            <div key={i} style={{ width: '8px', height: '8px', borderRadius: '50%', background: i < selected.score ? selected.color : (dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)') }} />
-                          ))}
-                        </div>
-                        <div style={{ fontSize: '12px', color: text2, marginTop: '6px' }}>score: {selected.score}/5</div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-
-                  <div style={{
-                    background: cardBg,
-                    borderTop: `1px solid ${cardBorder}`,
-                    borderRight: `1px solid ${cardBorder}`,
-                    borderBottom: `1px solid ${cardBorder}`,
-                    borderLeft: `1px solid ${cardBorder}`,
-                    borderRadius: '20px', padding: '20px', flex: 1,
-                    backdropFilter: 'blur(20px)',
-                  }}>
-                    <div style={{ fontSize: '11px', color: text2, marginBottom: '14px', textTransform: 'uppercase', letterSpacing: '1.5px', fontWeight: 600 }}>
-                      today's log 📅
+            {/* ── HISTORY TAB ── */}
+            {activeTab === 'history' && (
+              <motion.div key="history" initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -16 }}>
+                <div className="mp-card" style={{ background: card, border: `1px solid ${bord}` }}>
+                  <p className="mp-card-lbl" style={{ color: txt1 }}>all entries</p>
+                  {entries.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '48px' }}>
+                      <i className="ti ti-database-off" aria-hidden="true"
+                        style={{ fontSize: '40px', color: txt3, display: 'block', marginBottom: '10px' }} />
+                      <span style={{ fontSize: '14px', color: txt3 }}>nothing here yet</span>
                     </div>
-                    {todayEntries.length === 0 ? (
-                      <div style={{ textAlign: 'center', padding: '32px 16px' }}>
-                        <div style={{ fontSize: '36px', marginBottom: '8px' }}>🌚</div>
-                        <div style={{ fontSize: '13px', color: text3 }}>no logs yet bestie</div>
-                      </div>
-                    ) : (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        {todayEntries.map((e, i) => (
-                          <motion.div key={e.id} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }}
-                            style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', background: dark ? 'rgba(255,255,255,0.03)' : 'rgba(167,139,250,0.05)', borderRadius: '12px' }}>
-                            <span style={{ fontSize: '22px' }}>{e.emoji}</span>
-                            <div style={{ flex: 1 }}>
-                              <div style={{ fontSize: '13px', fontWeight: 600, color: text1 }}>{e.mood}</div>
-                              {e.note && <div style={{ fontSize: '11px', color: text3, marginTop: '1px' }}>{e.note}</div>}
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '9px' }}>
+                      {entries.map((e, i) => {
+                        const m = moods.find(x => x.label === e.mood)
+                        return (
+                          <motion.div key={e.id} className="mp-histitem"
+                            initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: i * 0.03 }}
+                            style={{
+                              background: dark ? 'rgba(255,255,255,0.025)' : `${m?.c || '#bf7fff'}08`,
+                              border: `1px solid ${dark ? 'rgba(255,255,255,0.06)' : `${m?.c || '#bf7fff'}20`}`,
+                            }}>
+                            <i className={`ti ${m?.icon || 'ti-circle'} mp-histitem-ico`}
+                              aria-hidden="true" style={{ color: m?.c || '#bf7fff' }} />
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ fontSize: '13px', fontWeight: 700, color: txt1 }}>{e.mood}</div>
+                              {e.note && <div style={{ fontSize: '12px', color: txt2, marginTop: '2px' }}>"{e.note}"</div>}
                             </div>
-                            <div style={{ fontSize: '10px', color: text3 }}>
-                              {new Date(e.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+                            <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                              <div className="mp-dots" style={{ justifyContent: 'flex-end', marginBottom: '5px' }}>
+                                {[...Array(5)].map((_, di) => (
+                                  <div key={di} className="mp-dot"
+                                    style={{ width: '5px', height: '5px', background: di < e.score ? (m?.c || '#bf7fff') : (dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)') }} />
+                                ))}
+                              </div>
+                              <div style={{ fontSize: '10px', color: txt3 }}>
+                                {new Date(e.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                                {' · '}
+                                {new Date(e.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+                              </div>
                             </div>
                           </motion.div>
-                        ))}
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            )}
+
+            {/* ── AI TAB ── */}
+            {activeTab === 'ai' && (
+              <motion.div key="ai" initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}>
+                <div className="mp-card" style={{ background: card, border: '1px solid rgba(191,127,255,0.25)', maxWidth: '680px' }}>
+                  <div className="mp-ai-header">
+                    <div className="mp-ai-avatar">
+                      <i className="ti ti-brain" aria-hidden="true" style={{ fontSize: '20px', color: '#fff' }} />
+                    </div>
+                    <div>
+                      <div className="mp-ai-title" style={{ color: txt1 }}>AI mood analysis</div>
+                      <div className="mp-ai-sub" style={{ color: txt1 }}>powered by Llama 3.1 via Groq</div>
+                    </div>
+                  </div>
+
+                  {aiLoading ? (
+                    <div style={{ textAlign: 'center', padding: '40px' }}>
+                      <div className="mp-spin" />
+                      <div style={{ color: txt2, fontSize: '13px' }}>analyzing your mood patterns...</div>
+                    </div>
+                  ) : aiSummary ? (
+                    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+                      <div className="mp-ai-body"
+                        style={{ background: dark ? 'rgba(191,127,255,0.06)' : 'rgba(191,127,255,0.07)', border: `1px solid rgba(191,127,255,0.15)`, color: txt1 }}>
+                        {aiSummary}
                       </div>
-                    )}
-                  </div>
+                      <motion.button className="mp-btn-pill" whileTap={{ scale: 0.97 }}
+                        onClick={handleAISummary}
+                        style={{ marginTop: '14px', background: 'linear-gradient(135deg, #bf7fff, #ff6b8a)', border: 'none', color: '#fff' }}>
+                        <i className="ti ti-refresh" aria-hidden="true" />
+                        regenerate
+                      </motion.button>
+                    </motion.div>
+                  ) : (
+                    <div style={{ textAlign: 'center', padding: '36px' }}>
+                      <i className="ti ti-brain" aria-hidden="true"
+                        style={{ fontSize: '38px', color: '#bf7fff', display: 'block', marginBottom: '12px', opacity: 0.6 }} />
+                      <div style={{ color: txt2, fontSize: '13px', marginBottom: '18px' }}>
+                        click AI summary to analyze your mood patterns
+                      </div>
+                      <motion.button className="mp-btn-pill" whileTap={{ scale: 0.97 }}
+                        onClick={handleAISummary} disabled={entries.length === 0}
+                        style={{ background: 'linear-gradient(135deg, #bf7fff, #ff6b8a)', border: 'none', color: '#fff', opacity: entries.length === 0 ? 0.4 : 1 }}>
+                        <i className="ti ti-sparkles" aria-hidden="true" />
+                        analyze my mood
+                      </motion.button>
+                    </div>
+                  )}
                 </div>
-              </div>
-            </motion.div>
-          ) : (
-            <motion.div key="history" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-              <div style={{
-                background: cardBg,
-                borderTop: `1px solid ${cardBorder}`,
-                borderRight: `1px solid ${cardBorder}`,
-                borderBottom: `1px solid ${cardBorder}`,
-                borderLeft: `1px solid ${cardBorder}`,
-                borderRadius: '24px', padding: '24px', backdropFilter: 'blur(20px)',
-              }}>
-                <div style={{ fontSize: '11px', color: text2, marginBottom: '16px', textTransform: 'uppercase', letterSpacing: '1.5px', fontWeight: 600 }}>
-                  all entries 🗂️
-                </div>
-                {entries.length === 0 ? (
-                  <div style={{ textAlign: 'center', padding: '48px' }}>
-                    <div style={{ fontSize: '48px', marginBottom: '12px' }}>🫙</div>
-                    <div style={{ color: text3, fontSize: '14px' }}>nothing here yet. start logging!</div>
-                  </div>
-                ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    {entries.map((e, i) => (
-                      <motion.div key={e.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}
-                        style={{
-                          display: 'flex', alignItems: 'center', gap: '14px', padding: '14px 16px',
-                          background: dark ? 'rgba(255,255,255,0.02)' : 'rgba(167,139,250,0.04)',
-                          borderTop: `1px solid ${dark ? 'rgba(255,255,255,0.05)' : 'rgba(167,139,250,0.12)'}`,
-                          borderRight: `1px solid ${dark ? 'rgba(255,255,255,0.05)' : 'rgba(167,139,250,0.12)'}`,
-                          borderBottom: `1px solid ${dark ? 'rgba(255,255,255,0.05)' : 'rgba(167,139,250,0.12)'}`,
-                          borderLeft: `1px solid ${dark ? 'rgba(255,255,255,0.05)' : 'rgba(167,139,250,0.12)'}`,
-                          borderRadius: '14px',
-                        }}>
-                        <span style={{ fontSize: '28px' }}>{e.emoji}</span>
-                        <div style={{ flex: 1 }}>
-                          <div style={{ fontSize: '14px', fontWeight: 600, color: text1 }}>{e.mood}</div>
-                          {e.note && <div style={{ fontSize: '12px', color: text2, marginTop: '2px' }}>"{e.note}"</div>}
-                        </div>
-                        <div style={{ textAlign: 'right' }}>
-                          <div style={{ display: 'flex', gap: '3px', justifyContent: 'flex-end', marginBottom: '4px' }}>
-                            {[...Array(5)].map((_, di) => (
-                              <div key={di} style={{ width: '6px', height: '6px', borderRadius: '50%', background: di < e.score ? (moods.find(m => m.label === e.mood)?.color || '#a78bfa') : (dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)') }} />
-                            ))}
-                          </div>
-                          <div style={{ fontSize: '11px', color: text3 }}>
-                            {new Date(e.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} · {new Date(e.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
-                          </div>
-                        </div>
-                      </motion.div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+              </motion.div>
+            )}
+
+          </AnimatePresence>
+        </div>
       </div>
-    </div>
+    </>
   )
 }
