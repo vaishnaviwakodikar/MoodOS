@@ -48,7 +48,7 @@ const actions = [
   { label: 'attendance',  href: '/attendance', iconC: '#5a8c63', icon: 'ti-calendar-check' },
   { label: 'habits',      href: '/habits',     iconC: '#9b7ec8', icon: 'ti-checks' },
   { label: 'insights',    href: '/insights',   iconC: '#d4607a', icon: 'ti-chart-bar' },
-  { label: 'periods',     href: '/',    iconC: '#9b7ec8', icon: 'ti-calendar-heart' },
+  { label: 'periods',     href: '/periods',    iconC: '#9b7ec8', icon: 'ti-calendar-heart' },
   
 ]
 
