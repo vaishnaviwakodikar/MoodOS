@@ -6,14 +6,14 @@ import { createClient } from '@/lib/supabase'
 import { useTheme } from '@/lib/useTheme'
 
 const moods = [
-  { label: 'Amazing',  score: 5, c: '#ffcf40', bg: 'rgba(255,207,64,0.12)',  border: 'rgba(255,207,64,0.3)',  lightBg: '#fff7d6', lightBorder: '#f5c800', lightText: '#7a5c00', icon: 'ti-star' },
-  { label: 'Happy',    score: 4, c: '#00e5a0', bg: 'rgba(0,229,160,0.1)',    border: 'rgba(0,229,160,0.28)',  lightBg: '#d0fff2', lightBorder: '#00c987', lightText: '#005c41', icon: 'ti-mood-smile' },
-  { label: 'Focused',  score: 4, c: '#38bdff', bg: 'rgba(56,189,255,0.1)',   border: 'rgba(56,189,255,0.28)', lightBg: '#d6f2ff', lightBorder: '#009de0', lightText: '#003f5c', icon: 'ti-target' },
-  { label: 'Okay',     score: 3, c: '#bf7fff', bg: 'rgba(191,127,255,0.1)',  border: 'rgba(191,127,255,0.28)',lightBg: '#f0e0ff', lightBorder: '#a84fff', lightText: '#4a0080', icon: 'ti-minus' },
-  { label: 'Tired',    score: 2, c: '#94a3b8', bg: 'rgba(148,163,184,0.1)',  border: 'rgba(148,163,184,0.25)',lightBg: '#e8ecf2', lightBorder: '#64748b', lightText: '#2d3748', icon: 'ti-zzz' },
-  { label: 'Anxious',  score: 2, c: '#ff9340', bg: 'rgba(255,147,64,0.1)',   border: 'rgba(255,147,64,0.28)', lightBg: '#ffe9d4', lightBorder: '#e06b00', lightText: '#6b2d00', icon: 'ti-alert-triangle' },
-  { label: 'Sad',      score: 1, c: '#818cf8', bg: 'rgba(129,140,248,0.1)',  border: 'rgba(129,140,248,0.28)',lightBg: '#e8e9ff', lightBorder: '#5860e0', lightText: '#1a1f70', icon: 'ti-mood-sad' },
-  { label: 'Stressed', score: 1, c: '#ff6b8a', bg: 'rgba(255,107,138,0.1)', border: 'rgba(255,107,138,0.28)',lightBg: '#ffe0e7', lightBorder: '#e0003a', lightText: '#6b001e', icon: 'ti-flame' },
+  { label: 'Amazing',  score: 5, c: '#d4607a', bg: '#fde8ee', border: '#f2b3c0', lightBg: '#fde8ee', lightBorder: '#e8a0b0', lightText: '#7a1a35', icon: 'ti-star' },
+  { label: 'Happy',    score: 4, c: '#5a8c63', bg: '#edf6ee', border: '#a8c9ae', lightBg: '#edf6ee', lightBorder: '#a8c9ae', lightText: '#2a5c33', icon: 'ti-mood-smile' },
+  { label: 'Focused',  score: 4, c: '#9b7ec8', bg: '#f3edfb', border: '#c9b8e8', lightBg: '#f3edfb', lightBorder: '#c9b8e8', lightText: '#4a2a80', icon: 'ti-target' },
+  { label: 'Okay',     score: 3, c: '#b8860b', bg: '#fef8e7', border: '#f5ddb4', lightBg: '#fef8e7', lightBorder: '#f5ddb4', lightText: '#7a5c00', icon: 'ti-minus' },
+  { label: 'Tired',    score: 2, c: '#b09aa4', bg: '#f5f0f2', border: '#d4c4ca', lightBg: '#f5f0f2', lightBorder: '#d4c4ca', lightText: '#5c3d4a', icon: 'ti-zzz' },
+  { label: 'Anxious',  score: 2, c: '#c07840', bg: '#fdf0e6', border: '#e8c4a0', lightBg: '#fdf0e6', lightBorder: '#e8c4a0', lightText: '#7a4010', icon: 'ti-alert-triangle' },
+  { label: 'Sad',      score: 1, c: '#7a8cb8', bg: '#eef0f8', border: '#b8c0e0', lightBg: '#eef0f8', lightBorder: '#b8c0e0', lightText: '#2a3468', icon: 'ti-mood-sad' },
+  { label: 'Stressed', score: 1, c: '#c05878', bg: '#fbe8ee', border: '#e8b0c0', lightBg: '#fbe8ee', lightBorder: '#e8b0c0', lightText: '#6b1a30', icon: 'ti-flame' },
 ]
 
 type Entry = {
@@ -25,32 +25,33 @@ type Entry = {
 }
 
 const css = `
-  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;1,9..144,300;1,9..144,400&family=DM+Sans:wght@300;400;500;600&display=swap');
   @import url('https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css');
 
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-  .mp { font-family: 'DM Sans', sans-serif; min-height: 100vh; position: relative; overflow-x: hidden; width: 100%; }
+  .mp {
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh; position: relative;
+    overflow-x: hidden; width: 100%;
+  }
 
-  /* ── dark bg gradients ── */
+  .mp-bg {
+    position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    background-image:
+      radial-gradient(ellipse 60% 50% at 10% 10%, rgba(242,180,200,0.35) 0%, transparent 60%),
+      radial-gradient(ellipse 50% 45% at 90% 85%, rgba(212,232,216,0.3) 0%, transparent 60%),
+      radial-gradient(ellipse 40% 35% at 75% 15%, rgba(232,218,245,0.3) 0%, transparent 55%),
+      radial-gradient(ellipse 35% 30% at 20% 88%, rgba(254,243,226,0.4) 0%, transparent 55%);
+  }
+
   .mp-bg-dark {
     position: fixed; inset: 0; pointer-events: none; z-index: 0;
     background-image:
-      radial-gradient(ellipse 65% 50% at 15% 15%, rgba(191,127,255,0.14) 0%, transparent 60%),
-      radial-gradient(ellipse 55% 45% at 85% 80%, rgba(0,229,160,0.1) 0%, transparent 60%),
-      radial-gradient(ellipse 40% 35% at 70% 20%, rgba(255,107,138,0.08) 0%, transparent 55%),
-      radial-gradient(ellipse 35% 30% at 30% 85%, rgba(56,189,255,0.08) 0%, transparent 55%);
-  }
-
-  /* ── light bg: punchy warm off-white with vivid blob accents ── */
-  .mp-bg-light {
-    position: fixed; inset: 0; pointer-events: none; z-index: 0;
-    background-image:
-      radial-gradient(ellipse 55% 45% at 10% 10%, rgba(255,207,64,0.22) 0%, transparent 55%),
-      radial-gradient(ellipse 50% 40% at 90% 85%, rgba(0,229,160,0.18) 0%, transparent 55%),
-      radial-gradient(ellipse 40% 35% at 75% 15%, rgba(255,107,138,0.15) 0%, transparent 50%),
-      radial-gradient(ellipse 35% 30% at 20% 90%, rgba(56,189,255,0.14) 0%, transparent 50%),
-      radial-gradient(ellipse 30% 25% at 50% 50%, rgba(191,127,255,0.10) 0%, transparent 50%);
+      radial-gradient(ellipse 65% 50% at 15% 15%, rgba(212,96,122,0.12) 0%, transparent 60%),
+      radial-gradient(ellipse 55% 45% at 85% 80%, rgba(90,140,99,0.1) 0%, transparent 60%),
+      radial-gradient(ellipse 40% 35% at 70% 20%, rgba(155,126,200,0.1) 0%, transparent 55%),
+      radial-gradient(ellipse 35% 30% at 30% 85%, rgba(184,134,11,0.08) 0%, transparent 55%);
   }
 
   .mp-inner {
@@ -58,17 +59,11 @@ const css = `
     padding: clamp(18px,4vw,36px) clamp(16px,4vw,36px);
   }
 
-  /* ── mobile: clear fixed topbar + bottom tab bar ── */
   @media (max-width: 768px) {
-    .mp-inner {
-      padding: 72px 18px 88px 18px;
-    }
+    .mp-inner { padding: 72px 18px 88px 18px; }
   }
-
   @media (max-width: 380px) {
-    .mp-inner {
-      padding: 68px 14px 84px 14px;
-    }
+    .mp-inner { padding: 68px 14px 84px 14px; }
   }
 
   /* ── header ── */
@@ -78,17 +73,10 @@ const css = `
   }
 
   .mp-h1 {
-    font-size: clamp(24px,5.5vw,42px); font-weight: 800; letter-spacing: -1.5px;
-    line-height: 1.0; margin-bottom: 8px;
-    background: linear-gradient(110deg, #bf7fff 0%, #ff6b8a 40%, #ffcf40 100%);
-    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    font-family: 'Fraunces', serif;
+    font-size: clamp(28px, 5.5vw, 44px); font-weight: 300; font-style: italic;
+    letter-spacing: -1px; line-height: 1.0; margin-bottom: 6px;
     overflow: visible; word-break: break-word;
-  }
-
-  /* light mode headline: darker, punchier gradient */
-  .mp-h1-light {
-    background: linear-gradient(110deg, #7000d4 0%, #e0003a 45%, #e06b00 100%);
-    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
   }
 
   .mp-sub { font-size: 13px; font-weight: 400; }
@@ -97,8 +85,8 @@ const css = `
 
   .mp-btn-pill {
     display: inline-flex; align-items: center; gap: 7px;
-    padding: 9px 16px; border-radius: 100px;
-    font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 700;
+    padding: 9px 16px; border-radius: 999px;
+    font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 600;
     cursor: pointer; transition: transform 0.15s ease, opacity 0.15s ease;
     white-space: nowrap;
   }
@@ -108,29 +96,34 @@ const css = `
 
   /* ── live dot ── */
   .mp-live { display: flex; align-items: center; gap: 7px; margin-bottom: 18px; }
-  .mp-live-dot { width: 7px; height: 7px; border-radius: 50%; background: #00e5a0;
-    animation: live-pulse 2s ease-in-out infinite; }
-  @keyframes live-pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(.7)} }
-  .mp-live-txt { font-size: 11px; font-weight: 700; color: #00e5a0; letter-spacing: 0.3px; }
+  .mp-live-dot { width: 7px; height: 7px; border-radius: 50%;
+    animation: live-pulse 2.4s ease-in-out infinite; }
+  @keyframes live-pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.35;transform:scale(.65)} }
+  .mp-live-txt { font-size: 11px; font-weight: 600; letter-spacing: 0.3px; }
 
   /* ── stat cards ── */
-  .mp-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px,1fr));
-    gap: 11px; margin-bottom: 22px; }
-
-  .mp-stat { border-radius: 16px; padding: 16px; transition: transform 0.2s ease; }
+  .mp-stats {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(130px,1fr));
+    gap: 11px; margin-bottom: 22px;
+  }
+  .mp-stat { border-radius: 20px; padding: 16px; transition: transform 0.2s ease; }
   .mp-stat:hover { transform: translateY(-3px); }
-  .mp-stat-val { font-size: 22px; font-weight: 800; letter-spacing: -0.8px; margin-bottom: 4px; }
-  .mp-stat-lbl { font-size: 10px; font-weight: 700; letter-spacing: 1.2px;
-    text-transform: uppercase; opacity: 0.55; }
-  .mp-stat-ico { font-size: 16px; margin-bottom: 8px; opacity: 0.7; }
+  .mp-stat-val {
+    font-family: 'Fraunces', serif;
+    font-size: 22px; font-weight: 300; letter-spacing: -0.5px; margin-bottom: 4px;
+  }
+  .mp-stat-lbl {
+    font-size: 10px; font-weight: 600; letter-spacing: 1.5px;
+    text-transform: uppercase; opacity: 0.55;
+  }
+  .mp-stat-ico { font-size: 16px; margin-bottom: 8px; opacity: 0.6; }
 
   /* ── tabs ── */
   .mp-tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
-
   .mp-tab {
     display: inline-flex; align-items: center; gap: 7px;
-    padding: 8px 18px; border-radius: 100px;
-    font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 700;
+    padding: 8px 18px; border-radius: 999px;
+    font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 600;
     cursor: pointer; letter-spacing: 0.2px;
     transition: transform 0.15s ease;
   }
@@ -141,97 +134,107 @@ const css = `
   .mp-log-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px,1fr)); gap: 18px; }
 
   /* ── card shell ── */
-  .mp-card { border-radius: 22px; padding: clamp(18px,2.5vw,26px); backdrop-filter: blur(20px); }
+  .mp-card { border-radius: 22px; padding: clamp(18px,2.5vw,26px); }
+  .mp-card-lbl {
+    font-size: 10px; font-weight: 600; letter-spacing: 2.5px;
+    text-transform: uppercase; margin-bottom: 16px; opacity: 0.4;
+  }
 
-  .mp-card-lbl { font-size: 10px; font-weight: 700; letter-spacing: 2px;
-    text-transform: uppercase; margin-bottom: 16px; opacity: 0.4; }
+  /* ── section divider ── */
+  .mp-divider {
+    display: flex; align-items: center; gap: 8px; margin-bottom: 16px;
+  }
+  .mp-divider-line { flex: 1; height: 1px; }
+  .mp-divider-ico { font-size: 10px; opacity: 0.4; }
 
   /* ── mood grid ── */
   .mp-moodgrid { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; }
-
   .mp-moodbtn {
     display: flex; flex-direction: column; align-items: center; gap: 6px;
-    padding: 14px 6px; border-radius: 14px;
+    padding: 14px 6px; border-radius: 16px;
     font-family: 'DM Sans', sans-serif; cursor: pointer;
     transition: transform 0.18s ease;
   }
   .mp-moodbtn:hover { transform: translateY(-3px) scale(1.06); }
   .mp-moodbtn:active { transform: scale(0.94); }
-
   .mp-moodbtn-ico { font-size: 22px; }
-  .mp-moodbtn-lbl { font-size: 10px; font-weight: 700; letter-spacing: 0.3px; }
+  .mp-moodbtn-lbl { font-size: 10px; font-weight: 600; letter-spacing: 0.2px; }
 
   .mp-dots { display: flex; gap: 3px; margin-top: 2px; }
-  .mp-dot { width: 4px; height: 4px; border-radius: 50%; }
+  .mp-dot  { width: 4px; height: 4px; border-radius: 50%; }
 
-  /* ── note area ── */
-  .mp-note { width: 100%; border-radius: 12px; padding: 12px 14px;
+  /* ── note + submit ── */
+  .mp-note {
+    width: 100%; border-radius: 14px; padding: 12px 14px;
     font-family: 'DM Sans', sans-serif; font-size: 13px; resize: none;
-    outline: none; line-height: 1.6; margin-bottom: 12px; }
-
-  /* ── submit ── */
+    outline: none; line-height: 1.6; margin-bottom: 12px;
+  }
   .mp-submit {
-    width: 100%; padding: 13px; border-radius: 13px; border: none;
-    font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 800;
-    letter-spacing: 0.2px; cursor: pointer; transition: transform 0.15s ease, opacity 0.15s ease;
+    width: 100%; padding: 13px; border-radius: 999px; border: none;
+    font-family: 'Fraunces', serif; font-size: 15px; font-weight: 300; font-style: italic;
+    letter-spacing: 0.2px; cursor: pointer;
+    transition: transform 0.15s ease, opacity 0.15s ease;
   }
   .mp-submit:hover { transform: scale(1.02); }
   .mp-submit:active { transform: scale(0.98); }
   .mp-submit:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
 
-  /* ── selected preview ── */
-  .mp-preview { border-radius: 20px; padding: 24px; text-align: center; }
+  /* ── preview ── */
+  .mp-preview { border-radius: 22px; padding: 24px; text-align: center; }
   .mp-preview-ico { font-size: 44px; margin-bottom: 12px; }
-  .mp-preview-lbl { font-size: 18px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 10px; }
+  .mp-preview-lbl {
+    font-family: 'Fraunces', serif;
+    font-size: 22px; font-weight: 300; font-style: italic;
+    letter-spacing: -0.3px; margin-bottom: 10px;
+  }
   .mp-preview-sub { font-size: 12px; opacity: 0.45; margin-top: 8px; }
 
   /* ── log list ── */
   .mp-loglist { display: flex; flex-direction: column; gap: 8px;
     max-height: 300px; overflow-y: auto; }
-
   .mp-logitem { display: flex; align-items: center; gap: 10px;
-    padding: 10px 12px; border-radius: 12px; }
+    padding: 10px 12px; border-radius: 14px; }
+  .mp-logitem-ico  { font-size: 18px; flex-shrink: 0; }
+  .mp-logitem-name { font-size: 13px; font-weight: 600; }
+  .mp-logitem-note { font-size: 11px; margin-top: 2px; opacity: 0.45; font-style: italic; }
+  .mp-logitem-time { font-size: 10px; opacity: 0.35; margin-left: auto; flex-shrink: 0; }
 
-  .mp-logitem-ico { font-size: 18px; flex-shrink: 0; }
-  .mp-logitem-name { font-size: 13px; font-weight: 700; }
-  .mp-logitem-note { font-size: 11px; margin-top: 2px; opacity: 0.4; }
-  .mp-logitem-time { font-size: 10px; opacity: 0.3; margin-left: auto; flex-shrink: 0; }
-
-  /* ── history list ── */
-  .mp-histitem { display: flex; align-items: center; gap: 14px; padding: 14px 16px;
-    border-radius: 14px; }
-
+  /* ── history ── */
+  .mp-histitem { display: flex; align-items: center; gap: 14px;
+    padding: 14px 16px; border-radius: 16px; }
   .mp-histitem-ico { font-size: 20px; flex-shrink: 0; }
 
   /* ── AI tab ── */
-  .mp-ai-header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
-  .mp-ai-avatar { width: 44px; height: 44px; border-radius: 13px; display: flex;
-    align-items: center; justify-content: center; font-size: 20px;
-    background: linear-gradient(135deg, #bf7fff, #ff6b8a); flex-shrink: 0; }
-  .mp-ai-title { font-size: 16px; font-weight: 800; letter-spacing: -0.3px; }
-  .mp-ai-sub { font-size: 12px; opacity: 0.4; margin-top: 2px; }
-  .mp-ai-body { border-radius: 16px; padding: 20px; font-size: 14px; line-height: 1.8; }
+  .mp-ai-avatar {
+    width: 44px; height: 44px; border-radius: 14px; display: flex;
+    align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0;
+  }
+  .mp-ai-title { font-family: 'Fraunces', serif; font-size: 18px; font-weight: 300; font-style: italic; }
+  .mp-ai-sub   { font-size: 12px; opacity: 0.4; margin-top: 2px; }
+  .mp-ai-body  { border-radius: 16px; padding: 20px; font-size: 14px; line-height: 1.85; font-style: italic; }
 
   /* ── spinner ── */
-  .mp-spin { width: 32px; height: 32px; border-radius: 50%; margin: 0 auto 14px;
-    border-width: 3px; border-style: solid; border-color: rgba(191,127,255,0.2);
-    border-top-color: #bf7fff; animation: spin 0.9s linear infinite; }
+  .mp-spin {
+    width: 32px; height: 32px; border-radius: 50%; margin: 0 auto 14px;
+    border-width: 3px; border-style: solid;
+    animation: spin 1.1s linear infinite;
+  }
   @keyframes spin { to { transform: rotate(360deg); } }
 
-  /* ── success toast ── */
-  .mp-toast { padding: 10px 14px; border-radius: 11px; font-size: 12px;
-    font-weight: 600; text-align: center; margin-top: 10px; }
+  /* ── toast ── */
+  .mp-toast { padding: 10px 14px; border-radius: 999px; font-size: 12px;
+    font-weight: 600; text-align: center; margin-top: 10px; font-style: italic; }
 
   /* ── responsive ── */
   @media (max-width: 580px) {
     .mp-moodgrid { grid-template-columns: repeat(4,1fr); gap: 6px; }
     .mp-log-grid { grid-template-columns: 1fr; }
-    .mp-stats { grid-template-columns: repeat(2,1fr); }
-    .mp-hbtns { gap: 6px; }
+    .mp-stats    { grid-template-columns: repeat(2,1fr); }
+    .mp-hbtns    { gap: 6px; }
     .mp-btn-pill { padding: 7px 12px; font-size: 11px; }
-    .mp-tabs { gap: 6px; }
-    .mp-tab { padding: 7px 13px; font-size: 11px; }
-    .mp-moodbtn { padding: 10px 4px; }
+    .mp-tabs     { gap: 6px; }
+    .mp-tab      { padding: 7px 13px; font-size: 11px; }
+    .mp-moodbtn  { padding: 10px 4px; }
     .mp-moodbtn-ico { font-size: 18px; }
     .mp-moodbtn-lbl { font-size: 9px; }
   }
@@ -242,14 +245,14 @@ export default function MoodPage() {
   const { theme, toggle } = useTheme()
   const dark = theme === 'dark'
 
-  const [selected, setSelected] = useState<typeof moods[0] | null>(null)
-  const [note, setNote] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [entries, setEntries] = useState<Entry[]>([])
-  const [success, setSuccess] = useState(false)
-  const [activeTab, setActiveTab] = useState<'log' | 'history' | 'ai'>('log')
-  const [aiSummary, setAiSummary] = useState('')
-  const [aiLoading, setAiLoading] = useState(false)
+  const [selected, setSelected]   = useState<typeof moods[0] | null>(null)
+  const [note,     setNote]        = useState('')
+  const [loading,  setLoading]     = useState(false)
+  const [entries,  setEntries]     = useState<Entry[]>([])
+  const [success,  setSuccess]     = useState(false)
+  const [activeTab, setActiveTab]  = useState<'log' | 'history' | 'ai'>('log')
+  const [aiSummary, setAiSummary]  = useState('')
+  const [aiLoading, setAiLoading]  = useState(false)
   const channelRef = useRef<any>(null)
 
   useEffect(() => {
@@ -281,106 +284,87 @@ export default function MoodPage() {
 
   const handleAISummary = async () => {
     setAiLoading(true); setActiveTab('ai')
-    const res = await fetch('/api/ai-summary', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ entries }) })
+    const res  = await fetch('/api/ai-summary', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ entries }) })
     const data = await res.json()
     setAiSummary(data.summary)
     setAiLoading(false)
   }
 
   const todayEntries = entries.filter(e => new Date(e.created_at).toDateString() === new Date().toDateString())
-  const avgScore = todayEntries.length ? (todayEntries.reduce((a, e) => a + e.score, 0) / todayEntries.length).toFixed(1) : null
-  const scoreToLabel = (s: number) => s >= 4.5 ? 'stellar' : s >= 3.5 ? 'solid' : s >= 2.5 ? 'alright' : s >= 1.5 ? 'low' : 'rough'
+  const avgScore     = todayEntries.length ? (todayEntries.reduce((a, e) => a + e.score, 0) / todayEntries.length).toFixed(1) : null
+  const scoreToLabel = (s: number) => s >= 4.5 ? 'blooming' : s >= 3.5 ? 'glowing' : s >= 2.5 ? 'gentle' : s >= 1.5 ? 'tender' : 'healing'
 
-  // ── tokens ──
-  const root = dark ? '#070710' : '#fef9f0'
-  const card = dark ? 'rgba(255,255,255,0.03)' : '#ffffff'
-  const bord = dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.09)'
-  const txt1 = dark ? '#f0eeff' : '#0a0a0f'
-  const txt2 = dark ? 'rgba(240,238,255,0.38)' : 'rgba(10,10,15,0.55)'
-  const txt3 = dark ? 'rgba(240,238,255,0.2)'  : 'rgba(10,10,15,0.3)'
+  // ── design tokens ──
+  const root   = dark ? '#1a0f13' : '#fdf7f0'
+  const card   = dark ? 'rgba(255,255,255,0.04)' : '#ffffff'
+  const bord   = dark ? 'rgba(255,255,255,0.09)' : 'rgba(212,96,122,0.1)'
+  const txt1   = dark ? '#f5eef0' : '#3d2a35'
+  const txt2   = dark ? 'rgba(245,238,240,0.45)' : '#b09aa4'
+  const txt3   = dark ? 'rgba(245,238,240,0.22)' : '#d4bfc5'
 
-  // light mode stat card configs — fully opaque, vivid
-  const statCards = dark
-    ? [
-        { label: 'avg score',   value: avgScore || '—',              c: '#bf7fff', bg: 'rgba(191,127,255,0.12)', border: 'rgba(191,127,255,0.22)', icon: 'ti-chart-line' },
-        { label: 'today logs',  value: String(todayEntries.length),  c: '#00e5a0', bg: 'rgba(0,229,160,0.1)',    border: 'rgba(0,229,160,0.2)',    icon: 'ti-check' },
-        { label: 'total logs',  value: String(entries.length),       c: '#38bdff', bg: 'rgba(56,189,255,0.1)',   border: 'rgba(56,189,255,0.2)',   icon: 'ti-database' },
-        { label: "today's vibe",value: avgScore ? scoreToLabel(parseFloat(avgScore)) : '—', c: '#ffcf40', bg: 'rgba(255,207,64,0.1)', border: 'rgba(255,207,64,0.2)', icon: 'ti-sparkles' },
-      ]
-    : [
-        { label: 'avg score',   value: avgScore || '—',              c: '#4a0080', bg: '#f0e0ff', border: '#a84fff', icon: 'ti-chart-line' },
-        { label: 'today logs',  value: String(todayEntries.length),  c: '#005c41', bg: '#d0fff2', border: '#00c987', icon: 'ti-check' },
-        { label: 'total logs',  value: String(entries.length),       c: '#003f5c', bg: '#d6f2ff', border: '#009de0', icon: 'ti-database' },
-        { label: "today's vibe",value: avgScore ? scoreToLabel(parseFloat(avgScore)) : '—', c: '#7a5c00', bg: '#fff7d6', border: '#f5c800', icon: 'ti-sparkles' },
-      ]
+  const statCards = [
+    { label: 'avg score',    value: avgScore || '—',             c: '#d4607a', bg: dark ? 'rgba(212,96,122,0.12)'  : '#fde8ee', border: dark ? 'rgba(212,96,122,0.25)'  : '#f2b3c0', icon: 'ti-chart-line' },
+    { label: "today's logs", value: String(todayEntries.length), c: '#5a8c63', bg: dark ? 'rgba(90,140,99,0.12)'   : '#edf6ee', border: dark ? 'rgba(90,140,99,0.25)'   : '#a8c9ae', icon: 'ti-check' },
+    { label: 'total entries',value: String(entries.length),      c: '#9b7ec8', bg: dark ? 'rgba(155,126,200,0.12)' : '#f3edfb', border: dark ? 'rgba(155,126,200,0.25)' : '#c9b8e8', icon: 'ti-database' },
+    { label: "today's vibe", value: avgScore ? scoreToLabel(parseFloat(avgScore)) : '—', c: '#b8860b', bg: dark ? 'rgba(184,134,11,0.12)' : '#fef8e7', border: dark ? 'rgba(184,134,11,0.25)' : '#f5ddb4', icon: 'ti-sparkles' },
+  ]
 
   const tabs: { key: 'log' | 'history' | 'ai'; label: string; icon: string }[] = [
-    { key: 'log',     label: 'log mood', icon: 'ti-pencil' },
-    { key: 'history', label: 'history',  icon: 'ti-history' },
+    { key: 'log',     label: 'log mood',  icon: 'ti-pencil' },
+    { key: 'history', label: 'history',   icon: 'ti-history' },
     { key: 'ai',      label: 'AI report', icon: 'ti-brain' },
   ]
 
-  // light tab active colors
-  const tabActiveConfigs: Record<string, { bg: string; border: string; color: string }> = {
-    log:     dark ? { bg: 'rgba(191,127,255,0.22)', border: 'rgba(191,127,255,0.55)', color: '#bf7fff' }
-                  : { bg: '#f0e0ff',                 border: '#a84fff',               color: '#4a0080' },
-    history: dark ? { bg: 'rgba(191,127,255,0.22)', border: 'rgba(191,127,255,0.55)', color: '#bf7fff' }
-                  : { bg: '#d6f2ff',                 border: '#009de0',               color: '#003f5c' },
-    ai:      dark ? { bg: 'rgba(255,107,138,0.22)', border: 'rgba(255,107,138,0.55)', color: '#ff6b8a' }
-                  : { bg: '#ffe0e7',                 border: '#e0003a',               color: '#6b001e' },
+  const tabActive = {
+    log:     dark ? { bg: 'rgba(212,96,122,0.18)',  border: 'rgba(212,96,122,0.5)',  color: '#f2b3c0' } : { bg: '#fde8ee', border: '#e8a0b0', color: '#7a1a35' },
+    history: dark ? { bg: 'rgba(155,126,200,0.18)', border: 'rgba(155,126,200,0.5)', color: '#c9b8e8' } : { bg: '#f3edfb', border: '#c9b8e8', color: '#4a2a80' },
+    ai:      dark ? { bg: 'rgba(90,140,99,0.18)',   border: 'rgba(90,140,99,0.5)',   color: '#a8c9ae' } : { bg: '#edf6ee', border: '#a8c9ae', color: '#2a5c33' },
   }
 
   return (
     <>
       <style>{css}</style>
       <div className="mp" style={{ background: root, color: txt1 }}>
-        {/* conditional bg layer */}
-        <div className={dark ? 'mp-bg-dark' : 'mp-bg-light'} />
+        <div className={dark ? 'mp-bg-dark' : 'mp-bg'} />
 
         <div className="mp-inner">
 
-          {/* Header */}
+          {/* ── Header ── */}
           <motion.div className="mp-hrow"
-            initial={{ opacity: 0, y: -14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.42 }}>
+            initial={{ opacity: 0, y: -14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.44 }}>
             <div>
-              <h1 className={`mp-h1 ${!dark ? 'mp-h1-light' : ''}`}>mood tracker</h1>
-              <p className="mp-sub" style={{ color: txt2 }}>how are you feeling right now?</p>
+              <h1 className="mp-h1" style={{ color: dark ? '#f2b3c0' : '#d4607a' }}>
+                mood journal
+              </h1>
+              <p className="mp-sub" style={{ color: txt2 }}>how is your heart feeling today?</p>
             </div>
             <div className="mp-hbtns">
               <motion.button className="mp-btn-pill" whileTap={{ scale: 0.96 }}
                 onClick={handleAISummary} disabled={aiLoading || entries.length === 0}
-                style={dark
-                  ? { background: 'rgba(191,127,255,0.1)', border: '1px solid rgba(191,127,255,0.22)', color: '#bf7fff', opacity: entries.length === 0 ? 0.4 : 1, cursor: entries.length === 0 ? 'not-allowed' : 'pointer' }
-                  : { background: '#f0e0ff', border: '2px solid #a84fff', color: '#4a0080', opacity: entries.length === 0 ? 0.4 : 1, cursor: entries.length === 0 ? 'not-allowed' : 'pointer' }
-                }>
+                style={{ background: dark ? 'rgba(212,96,122,0.12)' : '#fde8ee', border: `1px solid ${dark ? 'rgba(212,96,122,0.3)' : '#e8a0b0'}`, color: dark ? '#f2b3c0' : '#7a1a35', opacity: entries.length === 0 ? 0.4 : 1, cursor: entries.length === 0 ? 'not-allowed' : 'pointer' }}>
                 <i className="ti ti-brain" aria-hidden="true" />
-                {aiLoading ? 'analyzing...' : 'AI summary'}
+                {aiLoading ? 'reading...' : 'AI reflection'}
               </motion.button>
 
-              <motion.button className="mp-btn-pill" whileTap={{ scale: 0.96 }}
-                onClick={toggle}
-                style={dark
-                  ? { background: card, border: `1px solid ${bord}`, color: txt1 }
-                  : { background: '#fff7d6', border: '2px solid #f5c800', color: '#7a5c00' }
-                }>
-                <i className={`ti ${dark ? 'ti-sun' : 'ti-moon'}`} aria-hidden="true"
-                  style={{ color: dark ? '#ffcf40' : '#7a5c00' }} />
+              <motion.button className="mp-btn-pill" whileTap={{ scale: 0.96 }} onClick={toggle}
+                style={{ background: dark ? 'rgba(255,255,255,0.04)' : '#fde8ee', border: `1px solid ${dark ? 'rgba(255,255,255,0.09)' : '#e8a0b0'}`, color: dark ? txt1 : '#7a1a35' }}>
+                <i className={`ti ${dark ? 'ti-sun' : 'ti-moon'}`} aria-hidden="true" style={{ color: dark ? '#f5ddb4' : '#d4607a' }} />
                 {dark ? 'light' : 'dark'}
               </motion.button>
             </div>
           </motion.div>
 
-          {/* Live indicator */}
+          {/* ── Live ── */}
           <div className="mp-live">
-            <div className="mp-live-dot" style={{ background: dark ? '#00e5a0' : '#00a36a' }} />
-            <span className="mp-live-txt" style={{ color: dark ? '#00e5a0' : '#00a36a' }}>live updates on</span>
+            <div className="mp-live-dot" style={{ background: dark ? '#a8c9ae' : '#5a8c63' }} />
+            <span className="mp-live-txt" style={{ color: dark ? '#a8c9ae' : '#5a8c63' }}>live updates on</span>
           </div>
 
-          {/* Stat cards */}
+          {/* ── Stats ── */}
           <div className="mp-stats">
             {statCards.map((s, i) => (
               <motion.div key={s.label} className="mp-stat"
-                style={{ background: s.bg, border: `2px solid ${s.border}` }}
+                style={{ background: s.bg, border: `1px solid ${s.border}` }}
                 initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.07 * i }}>
                 <i className={`ti ${s.icon} mp-stat-ico`} aria-hidden="true" style={{ color: s.c }} />
@@ -390,18 +374,18 @@ export default function MoodPage() {
             ))}
           </div>
 
-          {/* Tabs */}
+          {/* ── Tabs ── */}
           <div className="mp-tabs">
             {tabs.map(t => {
               const active = activeTab === t.key
-              const cfg = tabActiveConfigs[t.key]
+              const cfg    = tabActive[t.key]
               return (
                 <motion.button key={t.key} className="mp-tab"
                   onClick={() => setActiveTab(t.key)}
                   style={{
-                    background: active ? cfg.bg : card,
-                    border: active ? `2px solid ${cfg.border}` : `1px solid ${bord}`,
-                    color: active ? cfg.color : txt2,
+                    background: active ? cfg.bg   : card,
+                    border:     active ? `1px solid ${cfg.border}` : `1px solid ${bord}`,
+                    color:      active ? cfg.color : txt2,
                   }}>
                   <i className={`ti ${t.icon}`} aria-hidden="true" />
                   {t.label}
@@ -426,16 +410,9 @@ export default function MoodPage() {
                       <div className="mp-moodgrid">
                         {moods.map((m, i) => {
                           const isActive = selected?.label === m.label
-                          // light mode: each mood chip has its own opaque bg color
-                          const chipBg   = dark
-                            ? (isActive ? m.bg : 'rgba(255,255,255,0.03)')
-                            : (isActive ? m.lightBg : m.lightBg + 'aa')   // slightly muted when inactive
-                          const chipBord = dark
-                            ? `2px solid ${isActive ? m.border : 'rgba(255,255,255,0.06)'}`
-                            : `2px solid ${isActive ? m.lightBorder : m.lightBorder + '66'}`
-                          const chipTxt  = dark
-                            ? (isActive ? m.c : txt2)
-                            : (isActive ? m.lightText : m.lightText + 'aa')
+                          const chipBg   = dark ? (isActive ? `rgba(${m.c.slice(1).match(/.{2}/g)!.map(h => parseInt(h,16)).join(',')},0.18)` : 'rgba(255,255,255,0.03)') : (isActive ? m.lightBg : m.lightBg + 'bb')
+                          const chipBord = dark ? `1px solid ${isActive ? m.border + 'cc' : 'rgba(255,255,255,0.07)'}` : `1px solid ${isActive ? m.lightBorder : m.lightBorder + '88'}`
+                          const chipTxt  = dark ? (isActive ? m.c : txt2) : (isActive ? m.lightText : m.lightText + 'bb')
 
                           return (
                             <motion.button key={m.label} className="mp-moodbtn"
@@ -451,7 +428,7 @@ export default function MoodPage() {
                                   <div key={di} className="mp-dot"
                                     style={{ background: di < m.score
                                       ? (dark ? m.c : m.lightBorder)
-                                      : (dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.12)') }} />
+                                      : (dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)') }} />
                                 ))}
                               </div>
                             </motion.button>
@@ -462,35 +439,35 @@ export default function MoodPage() {
 
                     {/* Note + submit */}
                     <div className="mp-card" style={{ background: card, border: `1px solid ${bord}` }}>
-                      <p className="mp-card-lbl" style={{ color: txt1 }}>add a note</p>
+                      <p className="mp-card-lbl" style={{ color: txt1 }}>add a little note</p>
                       <textarea className="mp-note" value={note} onChange={e => setNote(e.target.value)}
-                        placeholder="what's on your mind..."
+                        placeholder="what's on your heart..."
                         rows={3}
                         style={{
-                          background: dark ? 'rgba(255,255,255,0.04)' : '#f5f0ff',
-                          border: `1px solid ${dark ? 'rgba(255,255,255,0.08)' : 'rgba(168,79,255,0.25)'}`,
+                          background: dark ? 'rgba(255,255,255,0.035)' : '#fdf0f3',
+                          border: `1px solid ${dark ? 'rgba(212,96,122,0.15)' : '#f2b3c0'}`,
                           color: txt1,
                         }} />
                       <button className="mp-submit" onClick={handleLog} disabled={!selected || loading}
                         style={{
                           background: selected
                             ? (dark
-                                ? `linear-gradient(135deg, ${selected.c}, #bf7fff)`
-                                : `linear-gradient(135deg, ${selected.lightBorder}, ${selected.lightText})`)
-                            : (dark ? 'rgba(255,255,255,0.06)' : '#ede8f5'),
+                                ? `linear-gradient(135deg, ${selected.c}, #9b7ec8)`
+                                : `linear-gradient(135deg, ${selected.lightBorder}, ${selected.c})`)
+                            : (dark ? 'rgba(255,255,255,0.05)' : '#f5eef0'),
                           color: selected ? '#fff' : txt3,
                         }}>
-                        {loading ? 'logging...' : success ? 'logged!' : selected ? `log — ${selected.label}` : 'pick a mood first'}
+                        {loading ? 'saving...' : success ? 'saved, lovely' : selected ? `log — ${selected.label}` : 'pick a feeling first'}
                       </button>
                       <AnimatePresence>
                         {success && (
                           <motion.div className="mp-toast"
                             initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
                             style={dark
-                              ? { background: 'rgba(0,229,160,0.1)', border: '1px solid rgba(0,229,160,0.28)', color: '#00e5a0' }
-                              : { background: '#d0fff2', border: '2px solid #00c987', color: '#005c41' }
+                              ? { background: 'rgba(90,140,99,0.15)', border: '1px solid rgba(90,140,99,0.35)', color: '#a8c9ae' }
+                              : { background: '#edf6ee', border: '1px solid #a8c9ae', color: '#2a5c33' }
                             }>
-                            mood saved in realtime
+                            mood bloomed into your journal
                           </motion.div>
                         )}
                       </AnimatePresence>
@@ -500,16 +477,16 @@ export default function MoodPage() {
                   {/* Right col */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
 
-                    {/* Selected preview */}
+                    {/* Preview */}
                     <AnimatePresence>
                       {selected && (
                         <motion.div className="mp-preview"
                           initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }}
-                          style={dark
-                            ? { background: selected.bg, border: `2px solid ${selected.border}` }
-                            : { background: selected.lightBg, border: `3px solid ${selected.lightBorder}` }
-                          }>
-                          <motion.div animate={{ y: [0, -7, 0] }} transition={{ repeat: Infinity, duration: 2.2 }}>
+                          style={{
+                            background: dark ? `rgba(${selected.c.slice(1).match(/.{2}/g)!.map(h=>parseInt(h,16)).join(',')},0.12)` : selected.lightBg,
+                            border: `1px solid ${dark ? selected.border : selected.lightBorder}`,
+                          }}>
+                          <motion.div animate={{ y: [0, -7, 0] }} transition={{ repeat: Infinity, duration: 2.4 }}>
                             <i className={`ti ${selected.icon} mp-preview-ico`} aria-hidden="true"
                               style={{ color: dark ? selected.c : selected.lightText }} />
                           </motion.div>
@@ -519,7 +496,7 @@ export default function MoodPage() {
                               <div key={i} style={{ width: '8px', height: '8px', borderRadius: '50%',
                                 background: i < selected.score
                                   ? (dark ? selected.c : selected.lightBorder)
-                                  : (dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.12)') }} />
+                                  : (dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)') }} />
                             ))}
                           </div>
                           <p className="mp-preview-sub" style={{ color: dark ? txt1 : selected.lightText }}>score: {selected.score} / 5</p>
@@ -530,14 +507,14 @@ export default function MoodPage() {
                     {/* Today's log */}
                     <div className="mp-card" style={{ background: card, border: `1px solid ${bord}`, flex: 1 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
-                        <p className="mp-card-lbl" style={{ color: txt1, marginBottom: 0 }}>today's log</p>
-                        <div className="mp-live-dot" style={{ flexShrink: 0, background: dark ? '#00e5a0' : '#00a36a' }} />
+                        <p className="mp-card-lbl" style={{ color: txt1, marginBottom: 0 }}>today's entries</p>
+                        <div className="mp-live-dot" style={{ flexShrink: 0, background: dark ? '#a8c9ae' : '#5a8c63' }} />
                       </div>
                       {todayEntries.length === 0 ? (
                         <div style={{ textAlign: 'center', padding: '28px 16px' }}>
-                          <i className="ti ti-moon" aria-hidden="true"
+                          <i className="ti ti-flower" aria-hidden="true"
                             style={{ fontSize: '32px', color: txt3, display: 'block', marginBottom: '8px' }} />
-                          <span style={{ fontSize: '13px', color: txt3 }}>no entries yet</span>
+                          <span style={{ fontSize: '13px', color: txt3, fontStyle: 'italic' }}>nothing yet, darling</span>
                         </div>
                       ) : (
                         <div className="mp-loglist">
@@ -550,12 +527,12 @@ export default function MoodPage() {
                                   transition={{ delay: i * 0.04 }}
                                   style={dark
                                     ? { background: 'rgba(255,255,255,0.03)' }
-                                    : { background: m?.lightBg || '#f0e0ff', border: `1px solid ${m?.lightBorder || '#a84fff'}44` }
+                                    : { background: m?.lightBg || '#fde8ee', border: `1px solid ${m?.lightBorder || '#f2b3c0'}66` }
                                   }>
                                   <i className={`ti ${m?.icon || 'ti-circle'} mp-logitem-ico`}
-                                    aria-hidden="true" style={{ color: dark ? (m?.c || '#bf7fff') : (m?.lightText || '#4a0080') }} />
+                                    aria-hidden="true" style={{ color: dark ? (m?.c || '#d4607a') : (m?.lightText || '#7a1a35') }} />
                                   <div style={{ flex: 1, minWidth: 0 }}>
-                                    <div className="mp-logitem-name" style={{ color: dark ? txt1 : (m?.lightText || '#0a0a0f') }}>{e.mood}</div>
+                                    <div className="mp-logitem-name" style={{ color: dark ? txt1 : (m?.lightText || '#3d2a35') }}>{e.mood}</div>
                                     {e.note && <div className="mp-logitem-note" style={{ color: txt2 }}>{e.note}</div>}
                                   </div>
                                   <div className="mp-logitem-time" style={{ color: txt2 }}>
@@ -580,9 +557,9 @@ export default function MoodPage() {
                   <p className="mp-card-lbl" style={{ color: txt1 }}>all entries</p>
                   {entries.length === 0 ? (
                     <div style={{ textAlign: 'center', padding: '48px' }}>
-                      <i className="ti ti-database-off" aria-hidden="true"
+                      <i className="ti ti-leaf" aria-hidden="true"
                         style={{ fontSize: '40px', color: txt3, display: 'block', marginBottom: '10px' }} />
-                      <span style={{ fontSize: '14px', color: txt3 }}>nothing here yet</span>
+                      <span style={{ fontSize: '14px', color: txt3, fontStyle: 'italic' }}>your journal is empty, start blooming</span>
                     </div>
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '9px' }}>
@@ -593,25 +570,25 @@ export default function MoodPage() {
                             initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: i * 0.03 }}
                             style={dark
-                              ? { background: 'rgba(255,255,255,0.025)', border: `1px solid ${m?.border || 'rgba(255,255,255,0.06)'}` }
-                              : { background: m?.lightBg || '#f0e0ff', border: `2px solid ${m?.lightBorder || '#a84fff'}` }
+                              ? { background: 'rgba(255,255,255,0.025)', border: `1px solid ${m?.border || 'rgba(255,255,255,0.07)'}` }
+                              : { background: m?.lightBg || '#fde8ee', border: `1px solid ${m?.lightBorder || '#f2b3c0'}` }
                             }>
                             <i className={`ti ${m?.icon || 'ti-circle'} mp-histitem-ico`}
-                              aria-hidden="true" style={{ color: dark ? (m?.c || '#bf7fff') : (m?.lightText || '#4a0080') }} />
+                              aria-hidden="true" style={{ color: dark ? (m?.c || '#d4607a') : (m?.lightText || '#7a1a35') }} />
                             <div style={{ flex: 1, minWidth: 0 }}>
-                              <div style={{ fontSize: '13px', fontWeight: 700, color: dark ? txt1 : (m?.lightText || '#0a0a0f') }}>{e.mood}</div>
-                              {e.note && <div style={{ fontSize: '12px', color: txt2, marginTop: '2px' }}>"{e.note}"</div>}
+                              <div style={{ fontSize: '13px', fontWeight: 600, color: dark ? txt1 : (m?.lightText || '#3d2a35') }}>{e.mood}</div>
+                              {e.note && <div style={{ fontSize: '12px', color: txt2, marginTop: '2px', fontStyle: 'italic' }}>"{e.note}"</div>}
                             </div>
                             <div style={{ textAlign: 'right', flexShrink: 0 }}>
                               <div className="mp-dots" style={{ justifyContent: 'flex-end', marginBottom: '5px' }}>
                                 {[...Array(5)].map((_, di) => (
                                   <div key={di} className="mp-dot"
                                     style={{ width: '5px', height: '5px', background: di < e.score
-                                      ? (dark ? (m?.c || '#bf7fff') : (m?.lightBorder || '#a84fff'))
-                                      : (dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.12)') }} />
+                                      ? (dark ? (m?.c || '#d4607a') : (m?.lightBorder || '#e8a0b0'))
+                                      : (dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)') }} />
                                 ))}
                               </div>
-                              <div style={{ fontSize: '10px', color: dark ? txt3 : (m?.lightText || '#0a0a0f'), opacity: 0.6 }}>
+                              <div style={{ fontSize: '10px', color: txt3 }}>
                                 {new Date(e.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
                                 {' · '}
                                 {new Date(e.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
@@ -629,50 +606,51 @@ export default function MoodPage() {
             {/* ── AI TAB ── */}
             {activeTab === 'ai' && (
               <motion.div key="ai" initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}>
-                <div className="mp-card" style={{ background: card, border: dark ? '1px solid rgba(191,127,255,0.25)' : '2px solid #a84fff', maxWidth: '680px' }}>
-                  <div className="mp-ai-header">
-                    <div className="mp-ai-avatar">
-                      <i className="ti ti-brain" aria-hidden="true" style={{ fontSize: '20px', color: '#fff' }} />
+                <div className="mp-card" style={{ background: card, border: `1px solid ${dark ? 'rgba(212,96,122,0.25)' : '#f2b3c0'}`, maxWidth: '680px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
+                    <div className="mp-ai-avatar"
+                      style={{ background: dark ? 'rgba(212,96,122,0.15)' : '#fde8ee', border: `1px solid ${dark ? 'rgba(212,96,122,0.3)' : '#e8a0b0'}` }}>
+                      <i className="ti ti-heart" aria-hidden="true" style={{ fontSize: '20px', color: dark ? '#f2b3c0' : '#d4607a' }} />
                     </div>
                     <div>
-                      <div className="mp-ai-title" style={{ color: txt1 }}>AI mood analysis</div>
-                      <div className="mp-ai-sub" style={{ color: txt2 }}>powered by Llama 3.1 via Groq</div>
+                      <div className="mp-ai-title" style={{ color: txt1 }}>AI mood reflection</div>
+                      <div className="mp-ai-sub"   style={{ color: txt2 }}>a gentle read of your entries</div>
                     </div>
                   </div>
 
                   {aiLoading ? (
                     <div style={{ textAlign: 'center', padding: '40px' }}>
-                      <div className="mp-spin" />
-                      <div style={{ color: txt2, fontSize: '13px' }}>analyzing your mood patterns...</div>
+                      <div className="mp-spin" style={{ borderColor: dark ? 'rgba(212,96,122,0.18)' : '#fde8ee', borderTopColor: dark ? '#f2b3c0' : '#d4607a' }} />
+                      <div style={{ color: txt2, fontSize: '13px', fontStyle: 'italic' }}>reading your heart...</div>
                     </div>
                   ) : aiSummary ? (
                     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
                       <div className="mp-ai-body"
                         style={dark
-                          ? { background: 'rgba(191,127,255,0.06)', border: `1px solid rgba(191,127,255,0.15)`, color: txt1 }
-                          : { background: '#f0e0ff', border: `2px solid #a84fff`, color: '#0a0a0f' }
+                          ? { background: 'rgba(212,96,122,0.07)', border: `1px solid rgba(212,96,122,0.18)`, color: txt1 }
+                          : { background: '#fde8ee', border: `1px solid #f2b3c0`, color: '#3d2a35' }
                         }>
                         {aiSummary}
                       </div>
                       <motion.button className="mp-btn-pill" whileTap={{ scale: 0.97 }}
                         onClick={handleAISummary}
-                        style={{ marginTop: '14px', background: 'linear-gradient(135deg, #7000d4, #e0003a)', border: 'none', color: '#fff' }}>
+                        style={{ marginTop: '14px', background: dark ? 'rgba(212,96,122,0.15)' : '#fde8ee', border: `1px solid ${dark ? 'rgba(212,96,122,0.3)' : '#e8a0b0'}`, color: dark ? '#f2b3c0' : '#7a1a35' }}>
                         <i className="ti ti-refresh" aria-hidden="true" />
-                        regenerate
+                        reflect again
                       </motion.button>
                     </motion.div>
                   ) : (
                     <div style={{ textAlign: 'center', padding: '36px' }}>
-                      <i className="ti ti-brain" aria-hidden="true"
-                        style={{ fontSize: '38px', color: dark ? '#bf7fff' : '#7000d4', display: 'block', marginBottom: '12px', opacity: 0.7 }} />
-                      <div style={{ color: txt2, fontSize: '13px', marginBottom: '18px' }}>
-                        click AI summary to analyze your mood patterns
+                      <i className="ti ti-flower" aria-hidden="true"
+                        style={{ fontSize: '38px', color: dark ? '#f2b3c0' : '#d4607a', display: 'block', marginBottom: '12px', opacity: 0.6 }} />
+                      <div style={{ color: txt2, fontSize: '13px', marginBottom: '18px', fontStyle: 'italic' }}>
+                        let AI gently reflect on your mood patterns
                       </div>
                       <motion.button className="mp-btn-pill" whileTap={{ scale: 0.97 }}
                         onClick={handleAISummary} disabled={entries.length === 0}
-                        style={{ background: 'linear-gradient(135deg, #7000d4, #e0003a)', border: 'none', color: '#fff', opacity: entries.length === 0 ? 0.4 : 1 }}>
+                        style={{ background: dark ? 'rgba(212,96,122,0.15)' : '#fde8ee', border: `1px solid ${dark ? 'rgba(212,96,122,0.3)' : '#e8a0b0'}`, color: dark ? '#f2b3c0' : '#7a1a35', opacity: entries.length === 0 ? 0.4 : 1 }}>
                         <i className="ti ti-sparkles" aria-hidden="true" />
-                        analyze my mood
+                        reflect on my mood
                       </motion.button>
                     </div>
                   )}

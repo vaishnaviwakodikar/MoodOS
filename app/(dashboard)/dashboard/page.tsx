@@ -6,301 +6,261 @@ import { createClient } from '@/lib/supabase'
 
 const metrics = [
   {
-    label: 'Mood today',  value: '—',      sub: 'Not logged yet',
-    c: '#bf7fff',
-    bg: 'rgba(191,127,255,0.09)', border: 'rgba(191,127,255,0.22)',
-    icon: 'ti-mood-smile',
+    label: 'mood today',   value: '—',      sub: 'not logged yet',
+    c: '#d4607a',   bg: '#fff9fb',   border: 'rgba(212,96,122,0.1)',
+    dotC: '#e8a0b0', icon: 'ti-mood-smile',
   },
   {
-    label: 'Habits done', value: '0 / 0',  sub: 'No habits added',
-    c: '#00e5a0',
-    bg: 'rgba(0,229,160,0.08)', border: 'rgba(0,229,160,0.2)',
-    icon: 'ti-checks',
+    label: 'habits',       value: '0 / 0',  sub: 'none added yet',
+    c: '#9b7ec8',   bg: '#fdf8ff',   border: 'rgba(201,184,232,0.25)',
+    dotC: '#c9b8e8', icon: 'ti-checks',
   },
   {
-    label: 'Study hours', value: '0h',     sub: 'Today',
-    c: '#ffcf40',
-    bg: 'rgba(255,207,64,0.08)', border: 'rgba(255,207,64,0.2)',
-    icon: 'ti-clock-hour-4',
+    label: 'study time',   value: '0h',     sub: "today's session",
+    c: '#b8860b',   bg: '#fffdf5',   border: 'rgba(245,221,180,0.35)',
+    dotC: '#f5ddb4', icon: 'ti-clock-hour-4',
   },
   {
-    label: 'Attendance',  value: '—%',     sub: 'This month',
-    c: '#38bdff',
-    bg: 'rgba(56,189,255,0.08)', border: 'rgba(56,189,255,0.2)',
-    icon: 'ti-calendar-stats',
+    label: 'attendance',   value: '—%',     sub: "this month's record",
+    c: '#5a8c63',   bg: '#f8fcf8',   border: 'rgba(168,201,174,0.3)',
+    dotC: '#a8c9ae', icon: 'ti-calendar-stats',
   },
   {
-    label: 'Expenses',    value: '₹0',     sub: 'This month',
-    c: '#ff6b8a',
-    bg: 'rgba(255,107,138,0.08)', border: 'rgba(255,107,138,0.2)',
-    icon: 'ti-receipt',
+    label: 'expenses',     value: '₹0',     sub: 'this month',
+    c: '#d4607a',   bg: '#fff9fb',   border: 'rgba(212,96,122,0.1)',
+    dotC: '#e8a0b0', icon: 'ti-receipt',
   },
   {
-    label: 'Streak',      value: '0 days', sub: 'Keep going',
-    c: '#ff9340',
-    bg: 'rgba(255,147,64,0.08)', border: 'rgba(255,147,64,0.2)',
-    icon: 'ti-flame',
+    label: 'streak',       value: '0',      sub: 'days',
+    c: '#9b7ec8',   bg: '#fdf8ff',   border: 'rgba(201,184,232,0.25)',
+    dotC: '#c9b8e8', icon: 'ti-flame',
   },
 ]
 
 const actions = [
-  { label: 'Log mood',    href: '/mood',       c: '#bf7fff', bg: 'rgba(191,127,255,0.1)',  border: 'rgba(191,127,255,0.22)', icon: 'ti-mood-smile' },
-  { label: 'Study timer', href: '/study',      c: '#ffcf40', bg: 'rgba(255,207,64,0.09)',  border: 'rgba(255,207,64,0.22)',  icon: 'ti-clock-play' },
-  { label: 'Add expense', href: '/expenses',   c: '#ff6b8a', bg: 'rgba(255,107,138,0.09)', border: 'rgba(255,107,138,0.22)',icon: 'ti-cash' },
-  { label: 'Attendance',  href: '/attendance', c: '#38bdff', bg: 'rgba(56,189,255,0.09)',  border: 'rgba(56,189,255,0.22)', icon: 'ti-calendar-check' },
-  { label: 'Habits',      href: '/habits',     c: '#00e5a0', bg: 'rgba(0,229,160,0.09)',   border: 'rgba(0,229,160,0.22)',  icon: 'ti-checks' },
-  { label: 'Insights',    href: '/insights',   c: '#e879f9', bg: 'rgba(232,121,249,0.09)', border: 'rgba(232,121,249,0.22)',icon: 'ti-chart-bar' },
+  { label: 'log mood',    href: '/mood',       iconC: '#d4607a', icon: 'ti-mood-smile' },
+  { label: 'study',       href: '/study',      iconC: '#b8860b', icon: 'ti-clock-play' },
+  { label: 'expenses',    href: '/expenses',   iconC: '#d4607a', icon: 'ti-cash' },
+  { label: 'attendance',  href: '/attendance', iconC: '#5a8c63', icon: 'ti-calendar-check' },
+  { label: 'habits',      href: '/habits',     iconC: '#9b7ec8', icon: 'ti-checks' },
+  { label: 'insights',    href: '/insights',   iconC: '#d4607a', icon: 'ti-chart-bar' },
 ]
 
 const vibes = [
-  'you got this',
-  'stay focused',
-  'big brain energy',
-  'doing great today',
-  'main character energy',
+  "you're blooming so beautifully",
+  'soft days deserve soft starts',
+  'gentle progress is still progress',
+  'your best is always enough',
+  "you're growing, even on slow days",
 ]
 
 const css = `
-  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;1,9..144,300;1,9..144,400&family=DM+Sans:wght@300;400;500&display=swap');
   @import url('https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css');
 
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-  .db {
+  .sg {
+    --blush: #f2c4ce;
+    --blush2: #e8a0b0;
+    --rose: #d4607a;
+    --petal: #fde8ee;
+    --lavender: #e8daf5;
+    --lav2: #c9b8e8;
+    --butter: #fef3e2;
+    --butter2: #f5ddb4;
+    --sage: #d4e8d8;
+    --sage2: #a8c9ae;
+    --cream: #fdf7f0;
+    --ink: #3d2a35;
+    --ink2: #7a5c68;
+    --ink3: #b09aa4;
+    --card: #fff9fb;
     font-family: 'DM Sans', sans-serif;
-    background: #070710;
+    background: var(--cream);
+    color: var(--ink);
     min-height: 100vh;
-    /* generous padding — overridden on mobile below */
-    padding: clamp(20px,5vw,52px) clamp(20px,4vw,44px);
-    color: #f0eeff;
-    /* prevent any ancestor clipping */
+    padding: clamp(20px,5vw,48px) clamp(20px,4vw,40px);
     overflow-x: hidden;
     width: 100%;
   }
 
-  .db::before {
-    content: '';
-    position: fixed; inset: 0; z-index: 0;
-    background-image:
-      radial-gradient(ellipse 70% 55% at 80% 10%, rgba(191,127,255,0.13) 0%, transparent 55%),
-      radial-gradient(ellipse 55% 40% at 10% 85%, rgba(0,229,160,0.09) 0%, transparent 55%),
-      radial-gradient(ellipse 40% 35% at 55% 95%, rgba(56,189,255,0.07) 0%, transparent 55%);
-    pointer-events: none;
-  }
-
-  .db-inner {
-    position: relative; z-index: 1;
-    max-width: 100%;
-  }
-
   /* ── header ── */
-  .db-header { margin-bottom: clamp(24px,4vw,48px); }
-  .db-row {
-    display: flex; align-items: flex-start;
-    justify-content: space-between;
-    gap: 16px; flex-wrap: wrap;
+  .sg-header {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    margin-bottom: 24px; gap: 16px; flex-wrap: wrap;
   }
+  .sg-header-left { flex: 1; min-width: 0; }
 
-  .db-eyebrow {
-    font-size: 10px; font-weight: 600; letter-spacing: 3px;
-    text-transform: uppercase; color: rgba(240,238,255,0.28); margin-bottom: 10px;
+  .sg-eyebrow {
+    font-size: 10px; font-weight: 400; letter-spacing: 3px; text-transform: uppercase;
+    color: var(--ink3); margin-bottom: 8px;
+    display: flex; align-items: center; gap: 7px;
   }
+  .sg-petal-ico { font-size: 13px; color: var(--blush2); }
 
-  .db-h1 {
-    font-size: clamp(28px,6vw,52px); font-weight: 700;
-    letter-spacing: -2px; line-height: 1.05; color: #f0eeff; margin-bottom: 14px;
-    /* ensure it never clips */
-    overflow: visible;
+  .sg-name {
+    font-family: 'Fraunces', serif;
+    font-size: clamp(30px, 6vw, 48px); font-weight: 300; font-style: italic;
+    letter-spacing: -1px; line-height: 1.05;
+    color: var(--ink); margin-bottom: 14px;
     word-break: break-word;
   }
+  .sg-name .accent { color: var(--rose); }
 
-  .db-h1 em {
-    font-style: normal;
-    background: linear-gradient(105deg, #bf7fff 0%, #38bdff 45%, #00e5a0 100%);
-    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
-    display: inline-block; /* gradient needs block context to not clip */
-    padding-right: 4px;    /* prevent right-edge gradient crop */
+  .sg-vibe {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--petal); border: 1px solid rgba(212,96,122,0.18);
+    border-radius: 999px; padding: 6px 16px;
+    font-size: 12px; font-weight: 400; color: var(--rose);
+    font-family: 'Fraunces', serif; font-style: italic;
   }
-
-  .db-vibe {
-    display: inline-flex; align-items: center; gap: 6px;
-    font-size: 12px; font-weight: 600; letter-spacing: 0.3px;
-    color: rgba(191,127,255,0.9);
-    background: rgba(191,127,255,0.1);
-    border: 1px solid rgba(191,127,255,0.22);
-    border-radius: 100px; padding: 5px 14px;
+  .sg-vibe-heart {
+    font-size: 12px; color: var(--blush2);
+    animation: hbeat 2.4s ease-in-out infinite;
+    display: inline-block;
   }
-
-  .db-vibe-dot {
-    width: 6px; height: 6px; border-radius: 50%;
-    background: #bf7fff;
-    box-shadow: 0 0 6px 2px rgba(191,127,255,0.7);
-    animation: pulse-dot 2s ease-in-out infinite;
-    flex-shrink: 0;
-  }
-
-  @keyframes pulse-dot {
-    0%, 100% { opacity: 1; transform: scale(1); }
-    50% { opacity: 0.5; transform: scale(0.75); }
+  @keyframes hbeat {
+    0%, 100% { transform: scale(1); }
+    45%       { transform: scale(1.3); }
+    55%       { transform: scale(1.1); }
   }
 
   /* ── clock ── */
-  .db-clock {
-    background: rgba(255,255,255,0.035);
-    border: 1px solid rgba(255,255,255,0.08);
-    border-radius: 16px; padding: 12px 18px;
-    flex-shrink: 0;
+  .sg-clock-card {
+    background: var(--lavender); border: 1px solid rgba(201,184,232,0.5);
+    border-radius: 18px; padding: 14px 18px; text-align: right; flex-shrink: 0;
+  }
+  .sg-clock-val {
+    font-family: 'Fraunces', serif; font-size: clamp(18px,3vw,26px); font-weight: 300;
+    color: var(--ink); letter-spacing: -0.5px; line-height: 1;
+  }
+  .sg-clock-sub {
+    font-size: 9px; letter-spacing: 2px; text-transform: uppercase;
+    color: var(--ink3); margin-top: 4px;
   }
 
-  .db-clock-val {
-    font-size: clamp(18px,3vw,28px); font-weight: 700;
-    color: #f0eeff; letter-spacing: -0.5px;
-    font-variant-numeric: tabular-nums; line-height: 1;
+  /* ── divider ── */
+  .sg-divider {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 16px;
   }
-
-  .db-clock-sub {
-    font-size: 10px; letter-spacing: 2.5px;
-    text-transform: uppercase; color: rgba(240,238,255,0.2); margin-top: 5px;
+  .sg-divider-line { flex: 1; height: 1px; background: rgba(212,96,122,0.12); }
+  .sg-divider-label {
+    font-size: 9px; font-weight: 500; letter-spacing: 3px; text-transform: uppercase;
+    color: var(--ink3); white-space: nowrap;
   }
-
-  /* ── section label ── */
-  .sl {
-    font-size: 10px; font-weight: 700; letter-spacing: 3px;
-    text-transform: uppercase; color: rgba(240,238,255,0.2); margin-bottom: 14px;
-  }
+  .sg-divider-flower { font-size: 11px; color: var(--blush2); }
 
   /* ── metric cards ── */
-  .db-metrics {
-    display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; margin-bottom: 28px;
+  .sg-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px;
   }
 
-  .db-card {
-    border-radius: 18px;
-    padding: clamp(12px,2vw,20px);
-    position: relative; overflow: hidden; cursor: default;
-    transition: transform 0.22s ease;
+  .sg-card {
+    border-radius: 20px; padding: clamp(14px,2vw,20px) clamp(12px,1.5vw,16px);
+    position: relative; overflow: hidden;
+    transition: transform 0.2s ease, border-color 0.2s;
+    cursor: default;
   }
-  .db-card:hover { transform: translateY(-4px); }
+  .sg-card:hover { transform: translateY(-3px); }
 
-  .db-card-ico {
-    position: absolute; top: 12px; right: 14px;
-    font-size: 17px; opacity: 0.28;
-  }
-
-  .db-card-lbl {
-    font-size: 10px; font-weight: 700; letter-spacing: 1.2px;
-    text-transform: uppercase; color: rgba(240,238,255,0.3);
-    margin-bottom: 9px; padding-left: 10px;
+  .sg-card::after {
+    content: ''; position: absolute; bottom: -18px; right: -18px;
+    width: 56px; height: 56px; border-radius: 50%;
+    opacity: 0.22; pointer-events: none;
+    background: var(--dot-c, #f2c4ce);
   }
 
-  .db-card-val {
-    font-size: clamp(22px,3.5vw,34px); font-weight: 700;
-    letter-spacing: -1px; line-height: 1;
-    margin-bottom: 5px; padding-left: 10px;
+  .sg-card-lbl {
+    font-size: 9px; font-weight: 500; letter-spacing: 2.5px; text-transform: uppercase;
+    color: var(--ink3); margin-bottom: 10px;
+    display: flex; align-items: center; gap: 5px;
   }
+  .sg-card-lbl-dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
 
-  .db-card-sub {
-    font-size: 11px; color: rgba(240,238,255,0.22); padding-left: 10px;
+  .sg-card-val {
+    font-family: 'Fraunces', serif;
+    font-size: clamp(24px,3.5vw,32px); font-weight: 300; letter-spacing: -0.5px; line-height: 1;
+    margin-bottom: 5px;
   }
+  .sg-card-sub  { font-size: 11px; color: var(--ink3); }
+  .sg-card-ico  { position: absolute; top: 14px; right: 14px; font-size: 16px; opacity: 0.22; }
 
   /* ── actions ── */
-  .db-actions { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-bottom: 24px; }
-
-  .db-action {
-    display: flex; align-items: center; gap: 8px;
-    padding: clamp(10px,1.5vw,13px) clamp(10px,2vw,14px);
-    border-radius: 13px;
-    font-family: 'DM Sans', sans-serif;
-    font-size: clamp(11px,1.4vw,13px); font-weight: 600;
-    color: rgba(240,238,255,0.72); text-decoration: none;
-    transition: transform 0.15s ease, color 0.15s ease;
-    overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+  .sg-acts {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 16px;
   }
-  .db-action:hover { transform: translateY(-2px) scale(1.03); color: #f0eeff; }
-  .db-action:active { transform: scale(0.97); }
-  .db-action-ico { font-size: 15px; flex-shrink: 0; }
+
+  .sg-act {
+    display: flex; flex-direction: column; align-items: flex-start; gap: 7px;
+    padding: clamp(10px,1.5vw,14px) clamp(10px,1.5vw,12px);
+    border-radius: 18px; border: 1px solid rgba(212,96,122,0.1);
+    background: var(--card); text-decoration: none; color: var(--ink2);
+    font-size: 11px; font-weight: 500; letter-spacing: 0.2px;
+    font-family: 'DM Sans', sans-serif;
+    transition: all 0.17s ease;
+  }
+  .sg-act:hover {
+    background: var(--petal); border-color: rgba(212,96,122,0.25);
+    color: var(--rose); transform: translateY(-2px);
+  }
+  .sg-act:active { transform: scale(0.97); }
+  .sg-act-ico { font-size: 17px; }
 
   /* ── footer ── */
-  .db-footer {
-    display: flex; align-items: center; justify-content: space-between; gap: 16px;
-    background: rgba(255,255,255,0.025);
-    border: 1px solid rgba(191,127,255,0.14);
-    border-radius: 18px; padding: 16px 20px;
-    position: relative; overflow: hidden;
+  .sg-footer {
+    background: linear-gradient(135deg, var(--petal) 0%, var(--lavender) 100%);
+    border: 1px solid rgba(212,96,122,0.14);
+    border-radius: 20px; padding: 18px 22px;
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
   }
-
-  .db-footer::after {
-    content: '';
-    position: absolute; top: 0; left: -60%; width: 40%; height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.03), transparent);
-    animation: shimmer 4s ease-in-out infinite;
+  .sg-footer-lbl {
+    font-size: 9px; font-weight: 500; letter-spacing: 2.5px; text-transform: uppercase;
+    color: var(--ink3); margin-bottom: 5px;
   }
-  @keyframes shimmer { to { left: 130%; } }
-
-  .db-footer-lbl {
-    font-size: 10px; font-weight: 700; letter-spacing: 2.5px;
-    text-transform: uppercase; color: rgba(240,238,255,0.22); margin-bottom: 5px;
+  .sg-footer-msg {
+    font-family: 'Fraunces', serif; font-style: italic;
+    font-size: 15px; font-weight: 300; color: var(--ink2);
   }
+  .sg-footer-right { display: flex; align-items: center; gap: 6px; }
+  .sg-footer-ico   { font-size: 20px; color: var(--blush2); }
 
-  .db-footer-txt {
-    font-size: clamp(12px,2vw,14px); font-weight: 500;
-    color: rgba(240,238,255,0.65); line-height: 1.45;
-  }
-
-  .db-footer-ico { font-size: 22px; color: rgba(191,127,255,0.55); flex-shrink: 0; }
-
-  /* ── MOBILE ── */
+  /* ── mobile ── */
   @media (max-width: 768px) {
-    .db {
-      /* top: clear fixed topbar (56px); sides: 20px breathing room; bottom: clear tab bar (72px) */
-      padding: 72px 20px 88px 20px;
-    }
-
-    .db-row { flex-direction: column; gap: 12px; }
-
-    /* clock sits below greeting on mobile, left-aligned */
-    .db-clock { text-align: left; align-self: flex-start; }
-    .db-clock-val { font-size: 20px; }
-
-    .db-metrics { grid-template-columns: repeat(2,1fr); gap: 10px; }
-    .db-actions  { grid-template-columns: repeat(2,1fr); gap: 8px; }
-
-    .db-footer { flex-direction: column; align-items: flex-start; }
-
-    /* make h1 slightly smaller so it never clips */
-    .db-h1 { font-size: clamp(26px, 7vw, 36px); letter-spacing: -1.5px; }
+    .sg { padding: 72px 20px 88px; }
+    .sg-header { flex-direction: column; gap: 12px; }
+    .sg-clock-card { align-self: flex-start; text-align: left; }
+    .sg-grid  { grid-template-columns: repeat(2, 1fr); }
+    .sg-acts  { grid-template-columns: repeat(2, 1fr); }
+    .sg-footer { flex-direction: column; align-items: flex-start; }
   }
 
   @media (max-width: 380px) {
-    .db { padding-left: 16px; padding-right: 16px; }
-    .db-h1 { font-size: 24px; }
-    .db-metrics { grid-template-columns: repeat(2,1fr); }
-    .db-actions  { grid-template-columns: repeat(2,1fr); }
+    .sg { padding-left: 16px; padding-right: 16px; }
+    .sg-name { font-size: 26px; }
   }
 `
 
 export default function DashboardPage() {
   const supabase = createClient()
   const [greeting, setGreeting] = useState('')
-  const [vibe, setVibe]         = useState('')
-  const [date, setDate]         = useState('')
+  const [vibe,     setVibe]     = useState('')
+  const [date,     setDate]     = useState('')
   const [userName, setUserName] = useState('')
 
   useEffect(() => {
     const h = new Date().getHours()
-    setGreeting(h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening')
+    setGreeting(h < 12 ? 'good morning' : h < 17 ? 'good afternoon' : 'good evening')
     setVibe(vibes[Math.floor(Math.random() * vibes.length)])
     setDate(new Date().toLocaleDateString('en-IN', { weekday: 'long', month: 'long', day: 'numeric' }))
 
-    // fetch user name from supabase auth
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) return
       const full = user.user_metadata?.full_name as string | undefined
       if (full) {
-        // use first name only for the greeting
         setUserName(full.split(' ')[0])
       } else if (user.email) {
-        // fallback: capitalise the part before @
         const part = user.email.split('@')[0]
         setUserName(part.charAt(0).toUpperCase() + part.slice(1))
       }
@@ -310,79 +270,98 @@ export default function DashboardPage() {
   return (
     <>
       <style>{css}</style>
-      <div className="db">
-        <div className="db-inner">
+      <div className="sg">
 
-          {/* ── Header ── */}
-          <motion.header className="db-header"
-            initial={{ opacity: 0, y: -14 }} animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.44 }}>
-            <div className="db-row">
-              <div style={{ minWidth: 0, flex: 1 }}>
-                <p className="db-eyebrow">{date}</p>
-                <h1 className="db-h1">
-                  {greeting},<br />
-                  <em>{userName || '...'}</em>
-                </h1>
-                <motion.span className="db-vibe"
-                  initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.32 }}>
-                  <span className="db-vibe-dot" />
-                  {vibe}
-                </motion.span>
-              </div>
-              <LiveTime />
-            </div>
-          </motion.header>
-
-          {/* ── Metrics ── */}
-          <p className="sl">overview</p>
-          <div className="db-metrics">
-            {metrics.map((m, i) => (
-              <motion.div key={m.label} className="db-card"
-                style={{ background: m.bg, border: `1px solid ${m.border}` }}
-                initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.05 * i, duration: 0.38 }}>
-                <div style={{
-                  position: 'absolute', left: 0, top: '16%', bottom: '16%',
-                  width: 3, borderRadius: '0 3px 3px 0', background: m.c, opacity: 0.7,
-                }} />
-                <i className={`ti ${m.icon} db-card-ico`} aria-hidden="true" style={{ color: m.c }} />
-                <p className="db-card-lbl">{m.label}</p>
-                <p className="db-card-val" style={{ color: m.c }}>{m.value}</p>
-                <p className="db-card-sub">{m.sub}</p>
-              </motion.div>
-            ))}
+        {/* ── Header ── */}
+        <motion.header className="sg-header"
+          initial={{ opacity: 0, y: -14 }} animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.44 }}>
+          <div className="sg-header-left">
+            <p className="sg-eyebrow">
+              <i className="ti ti-leaf sg-petal-ico" aria-hidden="true" />
+              {date}
+            </p>
+            <h1 className="sg-name">
+              {greeting},<br />
+              <span className="accent">{userName || '...'}</span>
+            </h1>
+            <motion.span className="sg-vibe"
+              initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}>
+              <i className="ti ti-heart sg-vibe-heart" aria-hidden="true" />
+              {vibe}
+            </motion.span>
           </div>
+          <LiveTime />
+        </motion.header>
 
-          {/* ── Quick actions ── */}
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}>
-            <p className="sl">quick actions</p>
-            <div className="db-actions">
-              {actions.map((a, i) => (
-                <motion.a key={a.label} href={a.href} className="db-action"
-                  style={{ background: a.bg, border: `1px solid ${a.border}` }}
-                  initial={{ opacity: 0, scale: 0.94 }} animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: 0.4 + i * 0.05 }}>
-                  <i className={`ti ${a.icon} db-action-ico`} aria-hidden="true" style={{ color: a.c }} />
-                  {a.label}
-                </motion.a>
-              ))}
-            </div>
-          </motion.div>
-
-          {/* ── Footer ── */}
-          <motion.div className="db-footer"
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.75 }}>
-            <div>
-              <p className="db-footer-lbl">today's mission</p>
-              <p className="db-footer-txt">Log your mood, crush your habits, stay on track.</p>
-            </div>
-            <i className="ti ti-rocket db-footer-ico" aria-hidden="true" />
-          </motion.div>
-
+        {/* ── Divider ── */}
+        <div className="sg-divider">
+          <div className="sg-divider-line" />
+          <i className="ti ti-circle sg-divider-flower" aria-hidden="true" />
+          <span className="sg-divider-label">your day at a glance</span>
+          <i className="ti ti-circle sg-divider-flower" aria-hidden="true" />
+          <div className="sg-divider-line" />
         </div>
+
+        {/* ── Metrics ── */}
+        <div className="sg-grid">
+          {metrics.map((m, i) => (
+            <motion.div key={m.label} className="sg-card"
+              style={{
+                background: m.bg,
+                border: `1px solid ${m.border}`,
+                ['--dot-c' as string]: m.dotC,
+              }}
+              initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.05 * i, duration: 0.36 }}>
+              <i className={`ti ${m.icon} sg-card-ico`} aria-hidden="true" style={{ color: m.c }} />
+              <p className="sg-card-lbl">
+                <span className="sg-card-lbl-dot" style={{ background: m.dotC }} />
+                {m.label}
+              </p>
+              <p className="sg-card-val" style={{ color: m.c }}>{m.value}</p>
+              <p className="sg-card-sub">{m.sub}</p>
+            </motion.div>
+          ))}
+        </div>
+
+        {/* ── Actions divider ── */}
+        <div className="sg-divider">
+          <div className="sg-divider-line" />
+          <i className="ti ti-circle sg-divider-flower" aria-hidden="true" />
+          <span className="sg-divider-label">quick actions</span>
+          <i className="ti ti-circle sg-divider-flower" aria-hidden="true" />
+          <div className="sg-divider-line" />
+        </div>
+
+        {/* ── Actions ── */}
+        <motion.div className="sg-acts"
+          initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.38 }}>
+          {actions.map((a, i) => (
+            <motion.a key={a.label} href={a.href} className="sg-act"
+              initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.38 + i * 0.05 }}>
+              <i className={`ti ${a.icon} sg-act-ico`} aria-hidden="true" style={{ color: a.iconC }} />
+              {a.label}
+            </motion.a>
+          ))}
+        </motion.div>
+
+        {/* ── Footer ── */}
+        <motion.div className="sg-footer"
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.7 }}>
+          <div>
+            <p className="sg-footer-lbl">today's intention</p>
+            <p className="sg-footer-msg">log your mood, tend your habits, bloom gently.</p>
+          </div>
+          <div className="sg-footer-right">
+            <i className="ti ti-heart sg-footer-ico" aria-hidden="true" />
+            <i className="ti ti-flower sg-footer-ico" aria-hidden="true" />
+          </div>
+        </motion.div>
+
       </div>
     </>
   )
@@ -399,10 +378,10 @@ function LiveTime() {
   }, [])
 
   return (
-    <motion.div className="db-clock"
-      initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.26 }}>
-      <p className="db-clock-val">{time}</p>
-      <p className="db-clock-sub">IST</p>
+    <motion.div className="sg-clock-card"
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.24 }}>
+      <p className="sg-clock-val">{time}</p>
+      <p className="sg-clock-sub">IST</p>
     </motion.div>
   )
 }
