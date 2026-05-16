@@ -3,43 +3,42 @@
 import { motion } from 'framer-motion'
 import { useEffect, useState } from 'react'
 
-// Each card gets its own vivid accent stop
 const metrics = [
   {
     label: 'Mood today',  value: '—',      sub: 'Not logged yet',
-    c: '#bf7fff', // vivid violet
+    c: '#bf7fff',
     bg: 'rgba(191,127,255,0.09)', border: 'rgba(191,127,255,0.22)',
-    bar: 'rgba(191,127,255,0.35)', icon: 'ti-mood-smile',
+    icon: 'ti-mood-smile',
   },
   {
     label: 'Habits done', value: '0 / 0',  sub: 'No habits added',
-    c: '#00e5a0', // electric mint
+    c: '#00e5a0',
     bg: 'rgba(0,229,160,0.08)', border: 'rgba(0,229,160,0.2)',
-    bar: 'rgba(0,229,160,0.32)', icon: 'ti-checks',
+    icon: 'ti-checks',
   },
   {
     label: 'Study hours', value: '0h',     sub: 'Today',
-    c: '#ffcf40', // warm gold
+    c: '#ffcf40',
     bg: 'rgba(255,207,64,0.08)', border: 'rgba(255,207,64,0.2)',
-    bar: 'rgba(255,207,64,0.32)', icon: 'ti-clock-hour-4',
+    icon: 'ti-clock-hour-4',
   },
   {
     label: 'Attendance',  value: '—%',     sub: 'This month',
-    c: '#38bdff', // sky blue
+    c: '#38bdff',
     bg: 'rgba(56,189,255,0.08)', border: 'rgba(56,189,255,0.2)',
-    bar: 'rgba(56,189,255,0.3)', icon: 'ti-calendar-stats',
+    icon: 'ti-calendar-stats',
   },
   {
     label: 'Expenses',    value: '₹0',     sub: 'This month',
-    c: '#ff6b8a', // coral pink
+    c: '#ff6b8a',
     bg: 'rgba(255,107,138,0.08)', border: 'rgba(255,107,138,0.2)',
-    bar: 'rgba(255,107,138,0.3)', icon: 'ti-receipt',
+    icon: 'ti-receipt',
   },
   {
     label: 'Streak',      value: '0 days', sub: 'Keep going',
-    c: '#ff9340', // tangerine
+    c: '#ff9340',
     bg: 'rgba(255,147,64,0.08)', border: 'rgba(255,147,64,0.2)',
-    bar: 'rgba(255,147,64,0.3)', icon: 'ti-flame',
+    icon: 'ti-flame',
   },
 ]
 
@@ -70,11 +69,14 @@ const css = `
     font-family: 'DM Sans', sans-serif;
     background: #070710;
     min-height: 100vh;
-    padding: clamp(20px,5vw,52px) clamp(16px,4vw,44px);
+    /* generous padding — overridden on mobile below */
+    padding: clamp(20px,5vw,52px) clamp(20px,4vw,44px);
     color: #f0eeff;
+    /* prevent any ancestor clipping */
+    overflow-x: hidden;
+    width: 100%;
   }
 
-  /* subtle noise grain via repeating pattern – no external img */
   .db::before {
     content: '';
     position: fixed; inset: 0; z-index: 0;
@@ -85,11 +87,18 @@ const css = `
     pointer-events: none;
   }
 
-  .db-inner { position: relative; z-index: 1; }
+  .db-inner {
+    position: relative; z-index: 1;
+    max-width: 100%;
+  }
 
   /* ── header ── */
-  .db-header { margin-bottom: clamp(28px,4vw,48px); }
-  .db-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; flex-wrap: wrap; }
+  .db-header { margin-bottom: clamp(24px,4vw,48px); }
+  .db-row {
+    display: flex; align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px; flex-wrap: wrap;
+  }
 
   .db-eyebrow {
     font-size: 10px; font-weight: 600; letter-spacing: 3px;
@@ -97,15 +106,19 @@ const css = `
   }
 
   .db-h1 {
-    font-size: clamp(30px,6vw,52px); font-weight: 700;
-    letter-spacing: -2.5px; line-height: 1.0; color: #f0eeff; margin-bottom: 16px;
+    font-size: clamp(28px,6vw,52px); font-weight: 700;
+    letter-spacing: -2px; line-height: 1.05; color: #f0eeff; margin-bottom: 14px;
+    /* ensure it never clips */
+    overflow: visible;
+    word-break: break-word;
   }
 
   .db-h1 em {
     font-style: normal;
-    /* tri-colour gradient — violet → cyan → lime */
     background: linear-gradient(105deg, #bf7fff 0%, #38bdff 45%, #00e5a0 100%);
     -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    display: inline-block; /* gradient needs block context to not clip */
+    padding-right: 4px;    /* prevent right-edge gradient crop */
   }
 
   .db-vibe {
@@ -122,6 +135,7 @@ const css = `
     background: #bf7fff;
     box-shadow: 0 0 6px 2px rgba(191,127,255,0.7);
     animation: pulse-dot 2s ease-in-out infinite;
+    flex-shrink: 0;
   }
 
   @keyframes pulse-dot {
@@ -133,12 +147,12 @@ const css = `
   .db-clock {
     background: rgba(255,255,255,0.035);
     border: 1px solid rgba(255,255,255,0.08);
-    border-radius: 16px; padding: 14px 22px;
-    text-align: right; flex-shrink: 0;
+    border-radius: 16px; padding: 12px 18px;
+    flex-shrink: 0;
   }
 
   .db-clock-val {
-    font-size: clamp(20px,3vw,28px); font-weight: 700;
+    font-size: clamp(18px,3vw,28px); font-weight: 700;
     color: #f0eeff; letter-spacing: -0.5px;
     font-variant-numeric: tabular-nums; line-height: 1;
   }
@@ -156,39 +170,32 @@ const css = `
 
   /* ── metric cards ── */
   .db-metrics {
-    display: grid; grid-template-columns: repeat(3,1fr); gap: 13px; margin-bottom: 30px;
+    display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; margin-bottom: 28px;
   }
 
   .db-card {
     border-radius: 18px;
-    padding: clamp(14px,2vw,22px);
+    padding: clamp(12px,2vw,20px);
     position: relative; overflow: hidden; cursor: default;
     transition: transform 0.22s ease;
   }
   .db-card:hover { transform: translateY(-4px); }
 
-  /* coloured left-edge accent bar */
-  .db-card::before {
-    content: ''; position: absolute;
-    left: 0; top: 16%; bottom: 16%;
-    width: 3px; border-radius: 0 3px 3px 0;
-  }
-
   .db-card-ico {
-    position: absolute; top: 14px; right: 16px;
-    font-size: 18px; opacity: 0.28;
+    position: absolute; top: 12px; right: 14px;
+    font-size: 17px; opacity: 0.28;
   }
 
   .db-card-lbl {
     font-size: 10px; font-weight: 700; letter-spacing: 1.2px;
     text-transform: uppercase; color: rgba(240,238,255,0.3);
-    margin-bottom: 10px; padding-left: 10px;
+    margin-bottom: 9px; padding-left: 10px;
   }
 
   .db-card-val {
-    font-size: clamp(24px,4vw,36px); font-weight: 700;
-    letter-spacing: -1.5px; line-height: 1;
-    margin-bottom: 6px; padding-left: 10px;
+    font-size: clamp(22px,3.5vw,34px); font-weight: 700;
+    letter-spacing: -1px; line-height: 1;
+    margin-bottom: 5px; padding-left: 10px;
   }
 
   .db-card-sub {
@@ -199,15 +206,14 @@ const css = `
   .db-actions { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-bottom: 24px; }
 
   .db-action {
-    display: flex; align-items: center; gap: 9px;
-    padding: clamp(11px,1.5vw,14px) clamp(12px,2vw,16px);
+    display: flex; align-items: center; gap: 8px;
+    padding: clamp(10px,1.5vw,13px) clamp(10px,2vw,14px);
     border-radius: 13px;
     font-family: 'DM Sans', sans-serif;
-    font-size: clamp(12px,1.4vw,13px); font-weight: 600;
+    font-size: clamp(11px,1.4vw,13px); font-weight: 600;
     color: rgba(240,238,255,0.72); text-decoration: none;
     transition: transform 0.15s ease, color 0.15s ease;
     overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
-    position: relative;
   }
   .db-action:hover { transform: translateY(-2px) scale(1.03); color: #f0eeff; }
   .db-action:active { transform: scale(0.97); }
@@ -218,11 +224,10 @@ const css = `
     display: flex; align-items: center; justify-content: space-between; gap: 16px;
     background: rgba(255,255,255,0.025);
     border: 1px solid rgba(191,127,255,0.14);
-    border-radius: 18px; padding: 18px 24px;
+    border-radius: 18px; padding: 16px 20px;
     position: relative; overflow: hidden;
   }
 
-  /* shimmer stripe on footer */
   .db-footer::after {
     content: '';
     position: absolute; top: 0; left: -60%; width: 40%; height: 100%;
@@ -237,19 +242,39 @@ const css = `
   }
 
   .db-footer-txt {
-    font-size: clamp(13px,2vw,15px); font-weight: 500;
+    font-size: clamp(12px,2vw,14px); font-weight: 500;
     color: rgba(240,238,255,0.65); line-height: 1.45;
   }
 
   .db-footer-ico { font-size: 22px; color: rgba(191,127,255,0.55); flex-shrink: 0; }
 
-  /* ── responsive ── */
-  @media (max-width: 600px) {
+  /* ── MOBILE ── */
+  @media (max-width: 768px) {
+    .db {
+      /* top: clear fixed topbar (56px); sides: 20px breathing room; bottom: clear tab bar (72px) */
+      padding: 72px 20px 88px 20px;
+    }
+
+    .db-row { flex-direction: column; gap: 12px; }
+
+    /* clock sits below greeting on mobile, left-aligned */
+    .db-clock { text-align: left; align-self: flex-start; }
+    .db-clock-val { font-size: 20px; }
+
+    .db-metrics { grid-template-columns: repeat(2,1fr); gap: 10px; }
+    .db-actions  { grid-template-columns: repeat(2,1fr); gap: 8px; }
+
+    .db-footer { flex-direction: column; align-items: flex-start; }
+
+    /* make h1 slightly smaller so it never clips */
+    .db-h1 { font-size: clamp(26px, 7vw, 36px); letter-spacing: -1.5px; }
+  }
+
+  @media (max-width: 380px) {
+    .db { padding-left: 16px; padding-right: 16px; }
+    .db-h1 { font-size: 24px; }
     .db-metrics { grid-template-columns: repeat(2,1fr); }
     .db-actions  { grid-template-columns: repeat(2,1fr); }
-    .db-row { flex-direction: column; }
-    .db-clock { text-align: left; }
-    .db-footer { flex-direction: column; align-items: flex-start; }
   }
 `
 
@@ -276,7 +301,7 @@ export default function DashboardPage() {
             initial={{ opacity: 0, y: -14 }} animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.44 }}>
             <div className="db-row">
-              <div>
+              <div style={{ minWidth: 0, flex: 1 }}>
                 <p className="db-eyebrow">{date}</p>
                 <h1 className="db-h1">
                   {greeting},<br />
@@ -298,21 +323,13 @@ export default function DashboardPage() {
           <div className="db-metrics">
             {metrics.map((m, i) => (
               <motion.div key={m.label} className="db-card"
-                style={{
-                  background: m.bg,
-                  border: `1px solid ${m.border}`,
-                  '--bar': m.bar,
-                }}
+                style={{ background: m.bg, border: `1px solid ${m.border}` }}
                 initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.05 * i, duration: 0.38 }}>
-                {/* left bar via pseudo needs inline CSS var */}
-                <style>{`.db-card-bar-${i}::before { background: ${m.c}; }`}</style>
-                <div className={`db-card-bar-${i}`}
-                  style={{
-                    position: 'absolute', left: 0, top: '16%', bottom: '16%',
-                    width: 3, borderRadius: '0 3px 3px 0', background: m.c,
-                    opacity: 0.7,
-                  }} />
+                <div style={{
+                  position: 'absolute', left: 0, top: '16%', bottom: '16%',
+                  width: 3, borderRadius: '0 3px 3px 0', background: m.c, opacity: 0.7,
+                }} />
                 <i className={`ti ${m.icon} db-card-ico`} aria-hidden="true" style={{ color: m.c }} />
                 <p className="db-card-lbl">{m.label}</p>
                 <p className="db-card-val" style={{ color: m.c }}>{m.value}</p>
