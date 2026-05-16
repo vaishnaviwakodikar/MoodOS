@@ -2,6 +2,7 @@
 
 import { motion } from 'framer-motion'
 import { useEffect, useState } from 'react'
+import { createClient } from '@/lib/supabase'
 
 const metrics = [
   {
@@ -279,15 +280,31 @@ const css = `
 `
 
 export default function DashboardPage() {
+  const supabase = createClient()
   const [greeting, setGreeting] = useState('')
   const [vibe, setVibe]         = useState('')
   const [date, setDate]         = useState('')
+  const [userName, setUserName] = useState('')
 
   useEffect(() => {
     const h = new Date().getHours()
     setGreeting(h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening')
     setVibe(vibes[Math.floor(Math.random() * vibes.length)])
     setDate(new Date().toLocaleDateString('en-IN', { weekday: 'long', month: 'long', day: 'numeric' }))
+
+    // fetch user name from supabase auth
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) return
+      const full = user.user_metadata?.full_name as string | undefined
+      if (full) {
+        // use first name only for the greeting
+        setUserName(full.split(' ')[0])
+      } else if (user.email) {
+        // fallback: capitalise the part before @
+        const part = user.email.split('@')[0]
+        setUserName(part.charAt(0).toUpperCase() + part.slice(1))
+      }
+    })
   }, [])
 
   return (
@@ -305,7 +322,7 @@ export default function DashboardPage() {
                 <p className="db-eyebrow">{date}</p>
                 <h1 className="db-h1">
                   {greeting},<br />
-                  <em>Vaishnavi</em>
+                  <em>{userName || '...'}</em>
                 </h1>
                 <motion.span className="db-vibe"
                   initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }}
