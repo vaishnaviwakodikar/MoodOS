@@ -350,7 +350,7 @@ function OnboardingFlow({ onComplete }: { onComplete: (profile: CycleProfile) =>
     },
     {
       icon: 'ti-check',
-      title: <>you&apos;re all <span className={styles.accent}>set!</span></>,
+      title: <>you&apos;re all <span className={styles.accent}>set!!!</span></>,
       sub: 'Your cycle profile is ready. Everything can be updated any time from settings.',
       content: (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
