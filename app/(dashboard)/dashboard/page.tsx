@@ -35,6 +35,10 @@ const metrics = [
     c: '#9b7ec8',   bg: '#fdf8ff',   border: 'rgba(201,184,232,0.25)',
     dotC: '#c9b8e8', icon: 'ti-flame',
   },
+  { label: 'periods',      value: '—',      sub: 'not tracked yet',
+    c: '#9b7ec8',   bg: '#fdf8ff',   border: 'rgba(201,184,232,0.25)',
+    dotC: '#c9b8e8', icon: 'ti-calendar-heart',
+   },
 ]
 
 const actions = [
@@ -44,6 +48,8 @@ const actions = [
   { label: 'attendance',  href: '/attendance', iconC: '#5a8c63', icon: 'ti-calendar-check' },
   { label: 'habits',      href: '/habits',     iconC: '#9b7ec8', icon: 'ti-checks' },
   { label: 'insights',    href: '/insights',   iconC: '#d4607a', icon: 'ti-chart-bar' },
+  { label: 'periods',     href: '/',    iconC: '#9b7ec8', icon: 'ti-calendar-heart' },
+  
 ]
 
 const vibes = [
@@ -251,7 +257,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     const h = new Date().getHours()
-    setGreeting(h < 12 ? 'good morning' : h < 17 ? 'good afternoon' : 'good evening')
+    setGreeting(h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening')
     setVibe(vibes[Math.floor(Math.random() * vibes.length)])
     setDate(new Date().toLocaleDateString('en-IN', { weekday: 'long', month: 'long', day: 'numeric' }))
 
@@ -283,7 +289,24 @@ export default function DashboardPage() {
             </p>
             <h1 className="sg-name">
               {greeting},<br />
-              <span className="accent">{userName || '...'}</span>
+              <span className="accent">
+  {userName || '...'}{' '}
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    style={{ display: 'inline', verticalAlign: 'middle' }}
+    aria-hidden="true"
+  >
+    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+  </svg>
+</span>
             </h1>
             <motion.span className="sg-vibe"
               initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }}

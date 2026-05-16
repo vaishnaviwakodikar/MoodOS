@@ -275,9 +275,25 @@ export default function MoodPage() {
     if (!selected) return
     setLoading(true)
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
-    await supabase.from('mood_entries').insert({ user_id: user.id, mood: selected.label, score: selected.score, note: note.trim() || null })
-    setSuccess(true); setSelected(null); setNote('')
+    if (!user) {
+      setLoading(false)
+      return
+    }
+    const { error } = await supabase.from('mood_entries').insert({
+  user_id: user.id,
+  mood: selected.label,
+  emoji: selected.icon,   // ← this was missing
+  score: selected.score,
+  note: note.trim() || null,
+})
+    if (error) {
+      console.error('Mood insert error:', error)
+      setLoading(false)
+      return
+    }
+    setSuccess(true)
+    setSelected(null)
+    setNote('')
     setTimeout(() => setSuccess(false), 3000)
     setLoading(false)
   }
