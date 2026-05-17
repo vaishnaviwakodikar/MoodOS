@@ -1,186 +1,44 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { createClient } from '@/lib/supabase'
 
-// ── constants ────────────────────────────────────────────────────────────────
+// ── Constants ────────────────────────────────────────────────────────────────
 
-const CATEGORIES = [
-  { id: 'food',        label: 'Food',        icon: 'ti-salad',        c: '#5a8c63', bg: '#f8fcf8', border: 'rgba(168,201,174,0.35)', dotC: '#a8c9ae' },
-  { id: 'transport',   label: 'Transport',   icon: 'ti-car',          c: '#9b7ec8', bg: '#fdf8ff', border: 'rgba(201,184,232,0.3)',  dotC: '#c9b8e8' },
-  { id: 'shopping',    label: 'Shopping',    icon: 'ti-shopping-bag', c: '#d4607a', bg: '#fff9fb', border: 'rgba(212,96,122,0.18)',  dotC: '#e8a0b0' },
-  { id: 'health',      label: 'Health',      icon: 'ti-heart-pulse',  c: '#d4607a', bg: '#fff9fb', border: 'rgba(212,96,122,0.18)',  dotC: '#e8a0b0' },
-  { id: 'bills',       label: 'Bills',       icon: 'ti-receipt',      c: '#b8860b', bg: '#fffdf5', border: 'rgba(245,221,180,0.4)',  dotC: '#f5ddb4' },
-  { id: 'education',   label: 'Education',   icon: 'ti-book',         c: '#b8860b', bg: '#fffdf5', border: 'rgba(245,221,180,0.4)',  dotC: '#f5ddb4' },
-  { id: 'entertainment',label:'Fun',         icon: 'ti-confetti',     c: '#9b7ec8', bg: '#fdf8ff', border: 'rgba(201,184,232,0.3)',  dotC: '#c9b8e8' },
-  { id: 'savings',     label: 'Savings',     icon: 'ti-piggy-bank',   c: '#5a8c63', bg: '#f8fcf8', border: 'rgba(168,201,174,0.35)', dotC: '#a8c9ae' },
-  { id: 'other',       label: 'Other',       icon: 'ti-sparkles',     c: '#b09aa4', bg: '#f5f0f2', border: 'rgba(176,154,164,0.2)',  dotC: '#d0bcc8' },
-]
+const CATS = [
+  { id: 'food',          label: 'Food',      icon: 'ti-salad',        c: '#5a8c63', bg: '#f0f7f1', bc: 'rgba(90,140,99,.2)'   },
+  { id: 'transport',     label: 'Transport', icon: 'ti-car',           c: '#7a5ec8', bg: '#f3f0fb', bc: 'rgba(122,94,200,.2)'  },
+  { id: 'shopping',      label: 'Shopping',  icon: 'ti-shopping-bag',  c: '#c85070', bg: '#fde8f0', bc: 'rgba(200,80,112,.2)'  },
+  { id: 'health',        label: 'Health',    icon: 'ti-heart-pulse',   c: '#c05060', bg: '#fde8ee', bc: 'rgba(192,80,96,.2)'   },
+  { id: 'bills',         label: 'Bills',     icon: 'ti-receipt',       c: '#b8860b', bg: '#fffdf0', bc: 'rgba(184,134,11,.2)'  },
+  { id: 'education',     label: 'Study',     icon: 'ti-book',          c: '#1a6b9a', bg: '#ebf5fb', bc: 'rgba(26,107,154,.2)'  },
+  { id: 'entertainment', label: 'Fun',       icon: 'ti-confetti',      c: '#9b4ec8', bg: '#f5eafb', bc: 'rgba(155,78,200,.2)'  },
+  { id: 'savings',       label: 'Savings',   icon: 'ti-piggy-bank',    c: '#3a8c6a', bg: '#eaf7f0', bc: 'rgba(58,140,106,.2)'  },
+  { id: 'other',         label: 'Other',     icon: 'ti-sparkles',      c: '#a08898', bg: '#f7f0f4', bc: 'rgba(160,136,152,.2)' },
+] as const
 
-const PAYMENT_METHODS = ['cash', 'UPI', 'card', 'net banking', 'wallet']
+type CatId = typeof CATS[number]['id']
+
+const PAYMENT_METHODS = ['cash', 'UPI', 'card', 'net banking', 'wallet'] as const
 
 const todayIso = new Date().toISOString().slice(0, 10)
 
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
 function getCat(id: string) {
-  return CATEGORIES.find(c => c.id === id) || CATEGORIES[8]
+  return CATS.find(c => c.id === id) ?? CATS[8]
 }
+
 function fmtINR(n: number) {
   return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(n)
 }
-function fmtINRShort(n: number) {
+
+function fmtShort(n: number) {
   if (n >= 100000) return `₹${(n / 100000).toFixed(1)}L`
   if (n >= 1000)   return `₹${(n / 1000).toFixed(1)}k`
   return `₹${Math.round(n)}`
 }
-
-// ── CSS ──────────────────────────────────────────────────────────────────────
-
-const css = `
-  .ex {
-    --rose:   #d4607a;
-    --petal:  #fde8ee;
-    --blush:  #f2c4ce;
-    --blush2: #e8a0b0;
-    --lav:    #e8daf5;
-    --lav2:   #c9b8e8;
-    --purple: #9b7ec8;
-    --cream:  #fdf7f0;
-    --ink:    #3d2a35;
-    --ink2:   #7a5c68;
-    --ink3:   #b09aa4;
-    --card:   #fff9fb;
-    --sage:   #d4e8d8;
-    --sage2:  #a8c9ae;
-    --butter: #fef3e2;
-    font-family: 'DM Sans', sans-serif;
-    background: var(--cream);
-    color: var(--ink);
-    min-height: 100vh;
-    padding: clamp(16px,3vw,32px) clamp(16px,3vw,32px) 40px;
-    overflow-x: hidden;
-    width: 100%;
-  }
-
-  /* header */
-  .ex-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 24px; gap: 16px; flex-wrap: wrap; }
-  .ex-header-left { flex: 1; min-width: 0; }
-  .ex-eyebrow { font-size: 10px; font-weight: 400; letter-spacing: 3px; text-transform: uppercase; color: var(--ink3); margin-bottom: 8px; display: flex; align-items: center; gap: 7px; }
-  .ex-h1 { font-family: 'Fraunces', serif; font-size: clamp(28px,5.5vw,44px); font-weight: 300; font-style: italic; letter-spacing: -1px; line-height: 1.05; color: var(--ink); margin-bottom: 12px; }
-  .ex-h1 .accent { color: var(--rose); }
-  .ex-vibe { display: inline-flex; align-items: center; gap: 8px; background: var(--petal); border: 1px solid rgba(212,96,122,0.18); border-radius: 999px; padding: 6px 16px; font-size: 12px; color: var(--rose); font-family: 'Fraunces', serif; font-style: italic; }
-
-  /* month nav */
-  .ex-month-nav { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
-  .ex-month-btn { width: 32px; height: 32px; border-radius: 50%; background: rgba(212,96,122,0.08); border: 1px solid rgba(212,96,122,0.18); display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 14px; color: var(--rose); transition: background 0.15s; }
-  .ex-month-btn:hover { background: rgba(212,96,122,0.16); }
-  .ex-month-label { font-family: 'Fraunces', serif; font-size: 18px; font-weight: 300; font-style: italic; color: var(--ink); white-space: nowrap; }
-
-  /* divider */
-  .ex-divider { display: flex; align-items: center; gap: 10px; margin: 16px 0; }
-  .ex-divider-line { flex: 1; height: 1px; background: rgba(212,96,122,0.12); }
-  .ex-divider-label { font-size: 9px; font-weight: 500; letter-spacing: 3px; text-transform: uppercase; color: var(--ink3); white-space: nowrap; }
-  .ex-divider-ico { font-size: 11px; color: var(--blush2); }
-
-  /* stat cards */
-  .ex-stats { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; margin-bottom: 16px; }
-  .ex-stat { border-radius: 20px; padding: 16px; position: relative; overflow: hidden; transition: transform 0.2s ease; }
-  .ex-stat:hover { transform: translateY(-3px); }
-  .ex-stat::after { content: ''; position: absolute; bottom: -18px; right: -18px; width: 56px; height: 56px; border-radius: 50%; opacity: 0.22; pointer-events: none; background: var(--dot-c, #f2c4ce); }
-  .ex-stat-ico { font-size: 16px; opacity: 0.45; margin-bottom: 8px; }
-  .ex-stat-val { font-family: 'Fraunces', serif; font-size: 22px; font-weight: 300; letter-spacing: -0.5px; line-height: 1; margin-bottom: 4px; }
-  .ex-stat-lbl { font-size: 9px; font-weight: 500; letter-spacing: 2px; text-transform: uppercase; opacity: 0.5; }
-
-  /* tabs */
-  .ex-tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
-  .ex-tab { display: inline-flex; align-items: center; gap: 7px; padding: 8px 16px; border-radius: 999px; font-family: 'DM Sans', sans-serif; font-size: 11px; font-weight: 600; cursor: pointer; transition: all 0.15s ease; border: 1px solid; background: none; }
-  .ex-tab:hover { transform: scale(1.03); }
-  .ex-tab i { font-size: 13px; }
-
-  /* card */
-  .ex-card { background: var(--card); border: 1px solid rgba(212,96,122,0.12); border-radius: 22px; padding: clamp(16px,2vw,24px); }
-  .ex-card-lbl { font-size: 9px; font-weight: 500; letter-spacing: 2.5px; text-transform: uppercase; color: var(--ink3); margin-bottom: 14px; display: flex; align-items: center; gap: 6px; }
-  .ex-card-lbl i { font-size: 12px; color: var(--rose); }
-
-  /* inputs */
-  .ex-input { width: 100%; padding: 10px 14px; border-radius: 12px; background: rgba(212,96,122,0.04); border: 1px solid rgba(212,96,122,0.15); color: var(--ink); font-size: 13px; font-family: 'DM Sans', sans-serif; outline: none; transition: all 0.15s; margin-bottom: 10px; }
-  .ex-input:focus { border-color: rgba(212,96,122,0.4); background: rgba(212,96,122,0.06); box-shadow: 0 0 0 3px rgba(212,96,122,0.08); }
-  .ex-input-lbl { font-size: 9px; font-weight: 500; letter-spacing: 2px; text-transform: uppercase; color: var(--ink3); margin-bottom: 5px; display: flex; align-items: center; gap: 5px; }
-  .ex-input-lbl i { font-size: 11px; color: var(--rose); }
-
-  /* amount input — special */
-  .ex-amount-wrap { position: relative; margin-bottom: 10px; }
-  .ex-amount-prefix { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); font-family: 'Fraunces', serif; font-size: 18px; font-weight: 300; color: var(--rose); pointer-events: none; }
-  .ex-amount-input { width: 100%; padding: 12px 14px 12px 30px; border-radius: 12px; background: rgba(212,96,122,0.04); border: 1px solid rgba(212,96,122,0.2); color: var(--ink); font-family: 'Fraunces', serif; font-size: 22px; font-weight: 300; letter-spacing: -0.5px; outline: none; transition: all 0.15s; }
-  .ex-amount-input:focus { border-color: rgba(212,96,122,0.45); background: rgba(212,96,122,0.06); box-shadow: 0 0 0 3px rgba(212,96,122,0.1); }
-  .ex-amount-input::placeholder { color: rgba(212,96,122,0.3); }
-
-  /* category grid */
-  .ex-cat-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 7px; margin-bottom: 10px; }
-  .ex-cat-btn { display: flex; align-items: center; gap: 8px; padding: 9px 10px; border-radius: 12px; cursor: pointer; font-family: 'DM Sans', sans-serif; background: rgba(253,247,240,0.8); border: 1px solid rgba(212,96,122,0.1); transition: all 0.15s; }
-  .ex-cat-btn:hover { transform: translateX(2px); }
-  .ex-cat-btn i { font-size: 14px; flex-shrink: 0; }
-  .ex-cat-lbl { font-size: 11px; font-weight: 500; }
-
-  /* chips */
-  .ex-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
-  .ex-chip { display: inline-flex; align-items: center; gap: 4px; padding: 5px 12px; border-radius: 999px; border: 1px solid; font-size: 11px; font-weight: 600; cursor: pointer; transition: all 0.15s; background: none; font-family: 'DM Sans', sans-serif; }
-  .ex-chip:hover { transform: scale(1.04); }
-
-  /* submit */
-  .ex-submit { width: 100%; padding: 12px; border-radius: 999px; border: none; font-family: 'Fraunces', serif; font-size: 15px; font-weight: 300; font-style: italic; cursor: pointer; transition: transform 0.15s, opacity 0.15s; }
-  .ex-submit:hover { transform: scale(1.02); }
-  .ex-submit:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
-
-  /* expense list */
-  .ex-list { display: flex; flex-direction: column; gap: 8px; }
-  .ex-item { display: flex; align-items: center; gap: 11px; padding: 13px 14px; border-radius: 16px; border: 1px solid rgba(212,96,122,0.08); background: rgba(253,247,240,0.6); transition: transform 0.15s; }
-  .ex-item:hover { transform: translateX(2px); }
-  .ex-item-ico { width: 38px; height: 38px; border-radius: 11px; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
-  .ex-item-name { font-size: 13px; font-weight: 600; color: var(--ink); }
-  .ex-item-meta { font-size: 10px; color: var(--ink3); margin-top: 2px; display: flex; align-items: center; gap: 5px; }
-  .ex-item-amount { margin-left: auto; font-family: 'Fraunces', serif; font-size: 18px; font-weight: 300; flex-shrink: 0; }
-  .ex-del-btn { background: none; border: none; cursor: pointer; color: var(--ink3); font-size: 13px; padding: 4px; transition: color 0.15s; flex-shrink: 0; }
-  .ex-del-btn:hover { color: var(--rose); }
-
-  /* budget bar */
-  .ex-budget-track { height: 6px; border-radius: 999px; background: rgba(212,96,122,0.08); overflow: hidden; margin-top: 6px; }
-  .ex-budget-fill  { height: 100%; border-radius: 999px; transition: width 0.6s ease; }
-
-  /* donut chart area */
-  .ex-donut-wrap { display: flex; flex-direction: column; align-items: center; padding: 8px 0; }
-
-  /* toast */
-  .ex-toast { padding: 9px 14px; border-radius: 12px; font-size: 11px; font-family: 'Fraunces', serif; font-style: italic; background: var(--sage); border: 1px solid rgba(168,201,174,0.5); color: #5a8c63; text-align: center; margin-top: 8px; }
-
-  /* empty */
-  .ex-empty { text-align: center; padding: 32px 20px; color: var(--ink3); font-size: 13px; font-style: italic; }
-  .ex-empty i { font-size: 30px; display: block; margin-bottom: 10px; opacity: 0.35; }
-
-  /* footer */
-  .ex-footer { background: linear-gradient(135deg, var(--petal) 0%, var(--lav) 100%); border: 1px solid rgba(212,96,122,0.14); border-radius: 20px; padding: 18px 22px; display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 16px; }
-  .ex-footer-lbl { font-size: 9px; font-weight: 500; letter-spacing: 2.5px; text-transform: uppercase; color: var(--ink3); margin-bottom: 4px; }
-  .ex-footer-msg { font-family: 'Fraunces', serif; font-style: italic; font-size: 15px; font-weight: 300; color: var(--ink2); }
-  .ex-footer-ico { font-size: 20px; color: var(--blush2); }
-
-  /* budget set form */
-  .ex-budget-form { display: flex; gap: 8px; align-items: flex-end; margin-bottom: 16px; }
-  .ex-budget-form .ex-input { margin-bottom: 0; flex: 1; }
-  .ex-budget-save { padding: 10px 18px; border-radius: 999px; border: none; font-family: 'DM Sans', sans-serif; font-size: 11px; font-weight: 600; cursor: pointer; background: var(--petal); color: var(--rose); border: 1px solid rgba(212,96,122,0.25); transition: all 0.15s; white-space: nowrap; }
-  .ex-budget-save:hover { transform: scale(1.03); }
-
-  @keyframes spin { to { transform: rotate(360deg); } }
-  .spinning { animation: spin 0.9s linear infinite; display: inline-block; }
-
-  @media (max-width: 768px) {
-    .ex-stats  { grid-template-columns: repeat(2,1fr); }
-    .ex-two-col { grid-template-columns: 1fr !important; }
-    .ex-cat-grid { grid-template-columns: repeat(3,1fr); }
-  }
-  @media (max-width: 380px) {
-    .ex { padding-left: 14px; padding-right: 14px; }
-  }
-`
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -199,49 +57,254 @@ type Expense = {
 type Budget = {
   id: string
   user_id: string
-  month: string   // YYYY-MM
+  month: string
   amount: number
 }
 
-// ── Main ─────────────────────────────────────────────────────────────────────
+type Tab = 'log' | 'overview' | 'budget' | 'history'
+
+// ── Sub-components ───────────────────────────────────────────────────────────
+
+function Divider({ label }: { label: string }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '22px 0' }}>
+      <div style={{ flex: 1, height: 1, background: 'rgba(200,80,112,.1)' }} />
+      <span style={{ fontSize: 9, letterSpacing: '3px', textTransform: 'uppercase', color: '#a08898' }}>{label}</span>
+      <div style={{ flex: 1, height: 1, background: 'rgba(200,80,112,.1)' }} />
+    </div>
+  )
+}
+
+function StatCard({
+  label, value, icon, c, bg, bc, glyph,
+}: { label: string; value: string; icon: string; c: string; bg: string; bc: string; glyph: string }) {
+  return (
+    <motion.div
+      whileHover={{ y: -4 }}
+      style={{
+        background: bg, border: `1px solid ${bc}`, borderRadius: 20,
+        padding: '18px 16px', position: 'relative', overflow: 'hidden', cursor: 'default',
+      }}
+    >
+      <div style={{ position: 'absolute', bottom: -10, right: -6, fontSize: 48, opacity: .07, lineHeight: 1, color: c }}>{glyph}</div>
+      <i className={`ti ${icon}`} style={{ fontSize: 15, color: c, display: 'block', marginBottom: 10 }} />
+      <div style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: 'clamp(18px,3vw,26px)', fontWeight: 300, letterSpacing: '-.5px', color: c, lineHeight: 1, marginBottom: 5 }}>{value}</div>
+      <div style={{ fontSize: 9.5, fontWeight: 600, letterSpacing: '2px', textTransform: 'uppercase', color: c, opacity: .55 }}>{label}</div>
+    </motion.div>
+  )
+}
+
+function ExpenseItem({
+  exp, onDelete, showDelete = true,
+}: { exp: Expense; onDelete?: (id: string) => void; showDelete?: boolean }) {
+  const cat = getCat(exp.category)
+  return (
+    <motion.div
+      layout
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, x: -20 }}
+      whileHover={{ x: 3 }}
+      style={{
+        display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px',
+        borderRadius: 16, border: '1px solid rgba(200,80,112,.08)',
+        background: 'rgba(253,247,242,.7)',
+      }}
+    >
+      <div style={{ width: 40, height: 40, borderRadius: 12, background: cat.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 17, flexShrink: 0 }}>
+        <i className={`ti ${cat.icon}`} style={{ color: cat.c }} />
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 13, fontWeight: 600, color: '#2e1f28' }}>{exp.title}</div>
+        <div style={{ fontSize: 10, color: '#a08898', marginTop: 2, display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
+          <span style={{ color: cat.c, fontWeight: 600 }}>{cat.label}</span>
+          <span>·</span>
+          <span>{exp.payment_method}</span>
+          {exp.notes && <><span>·</span><span style={{ fontStyle: 'italic' }}>{exp.notes}</span></>}
+        </div>
+      </div>
+      <div style={{ marginLeft: 'auto', fontFamily: 'Fraunces, Georgia, serif', fontSize: 19, fontWeight: 300, color: cat.c, flexShrink: 0 }}>
+        {fmtINR(exp.amount)}
+      </div>
+      {showDelete && onDelete && (
+        <button onClick={() => onDelete(exp.id)}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#a08898', fontSize: 14, padding: 4, transition: 'color .15s', flexShrink: 0 }}
+          onMouseEnter={e => (e.currentTarget.style.color = '#c85070')}
+          onMouseLeave={e => (e.currentTarget.style.color = '#a08898')}
+        >
+          <i className="ti ti-trash" />
+        </button>
+      )}
+    </motion.div>
+  )
+}
+
+function BarTrack({ pct, color, height = 6 }: { pct: number; color: string; height?: number }) {
+  return (
+    <div style={{ height, borderRadius: 999, background: 'rgba(200,80,112,.08)', overflow: 'hidden', marginTop: 6 }}>
+      <motion.div
+        initial={{ width: 0 }}
+        animate={{ width: `${pct}%` }}
+        transition={{ duration: .7, ease: 'easeOut' }}
+        style={{ height: '100%', borderRadius: 999, background: color }}
+      />
+    </div>
+  )
+}
+
+// ── CSS ──────────────────────────────────────────────────────────────────────
+
+const css = `
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,300&family=Fraunces:ital,wght@0,300;0,400;1,300;1,400&display=swap');
+.ex-root{
+  --rose:#c85070;--petal:#fde8f0;--blush:#f5d0de;--rose2:#e8a0b8;
+  --lav:#e8daf5;--purple:#9b7ec8;
+  --sage:#d4e8d8;--sage2:#5a8c63;--sage3:#a8c9ae;
+  --amber:#b8860b;--butter:#fef3e2;
+  --cream:#fdf7f2;--ink:#2e1f28;--ink2:#6b4d5c;--ink3:#a08898;
+  --card:#fffbfd;--border:rgba(200,80,112,0.1);
+  font-family:'DM Sans',sans-serif;
+  background:var(--cream);color:var(--ink);
+  min-height:100vh;padding:clamp(16px,3vw,32px) clamp(16px,3vw,32px) 48px;
+  overflow-x:hidden;position:relative;
+}
+.ex-root::before{
+  content:'';position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.025;
+  background-image:radial-gradient(circle,#c85070 1px,transparent 1px);
+  background-size:32px 32px;
+}
+.ex-inner{position:relative;z-index:1;max-width:900px;margin:0 auto;}
+
+/* header */
+.ex-header{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;margin-bottom:32px;flex-wrap:wrap;}
+.ex-eyebrow{font-size:10px;letter-spacing:3px;text-transform:uppercase;color:var(--ink3);margin-bottom:10px;display:flex;align-items:center;gap:6px;}
+.ex-h1{font-family:'Fraunces',serif;font-size:clamp(32px,5vw,50px);font-weight:300;font-style:italic;line-height:1;color:var(--ink);letter-spacing:-1px;margin-bottom:14px;}
+.ex-h1 em{color:var(--rose);font-style:normal;}
+.ex-tag{display:inline-flex;align-items:center;gap:7px;background:var(--petal);border:1px solid var(--blush);border-radius:999px;padding:7px 18px;font-size:12px;color:var(--rose);font-family:'Fraunces',serif;font-style:italic;}
+
+/* month nav */
+.ex-month-nav{display:flex;flex-direction:column;align-items:flex-end;gap:10px;}
+.ex-month-row{display:flex;align-items:center;gap:10px;}
+.ex-mbtn{width:34px;height:34px;border-radius:50%;background:var(--petal);border:1px solid var(--blush);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--rose);font-size:14px;transition:.15s;}
+.ex-mbtn:hover{background:var(--blush);}
+.ex-mbtn:disabled{opacity:.28;cursor:not-allowed;}
+.ex-month-label{font-family:'Fraunces',serif;font-size:20px;font-weight:300;font-style:italic;color:var(--ink);}
+
+/* stats */
+.ex-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:28px;}
+
+/* tabs */
+.ex-tabs{display:flex;gap:8px;margin-bottom:22px;flex-wrap:wrap;}
+.ex-tab{display:inline-flex;align-items:center;gap:8px;padding:10px 20px;border-radius:999px;font-size:11.5px;font-weight:600;cursor:pointer;transition:all .18s;border:1.5px solid;font-family:'DM Sans',sans-serif;}
+.ex-tab i{font-size:14px;}
+.ex-tab:hover{transform:scale(1.03);}
+
+/* two-col grid */
+.ex-two{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.ex-col{display:flex;flex-direction:column;gap:16px;}
+
+/* card */
+.ex-card{background:var(--card);border:1px solid var(--border);border-radius:22px;padding:22px 20px;}
+.ex-card-lbl{font-size:9.5px;font-weight:600;letter-spacing:2.5px;text-transform:uppercase;color:var(--ink3);margin-bottom:16px;display:flex;align-items:center;gap:7px;}
+.ex-card-lbl i{font-size:13px;color:var(--rose);}
+
+/* inputs */
+.ex-field-lbl{font-size:9.5px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--ink3);margin-bottom:6px;display:flex;align-items:center;gap:5px;}
+.ex-field-lbl i{font-size:11px;color:var(--rose);}
+.ex-input{width:100%;padding:11px 14px;border-radius:12px;background:rgba(200,80,112,.04);border:1px solid rgba(200,80,112,.14);color:var(--ink);font-size:13px;font-family:'DM Sans',sans-serif;outline:none;transition:.15s;margin-bottom:12px;}
+.ex-input:focus{border-color:rgba(200,80,112,.4);background:rgba(200,80,112,.06);box-shadow:0 0 0 3px rgba(200,80,112,.07);}
+.ex-amount-wrap{position:relative;margin-bottom:12px;}
+.ex-amount-pre{position:absolute;left:14px;top:50%;transform:translateY(-50%);font-family:'Fraunces',serif;font-size:20px;font-weight:300;color:var(--rose);pointer-events:none;}
+.ex-amount-in{width:100%;padding:13px 14px 13px 32px;border-radius:14px;background:rgba(200,80,112,.04);border:1.5px solid rgba(200,80,112,.18);color:var(--ink);font-family:'Fraunces',serif;font-size:28px;font-weight:300;letter-spacing:-.5px;outline:none;transition:.15s;}
+.ex-amount-in:focus{border-color:rgba(200,80,112,.45);background:rgba(200,80,112,.06);box-shadow:0 0 0 4px rgba(200,80,112,.08);}
+.ex-amount-in::placeholder{color:rgba(200,80,112,.25);}
+
+/* category */
+.ex-cat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:14px;}
+.ex-cat-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;padding:10px 6px;border-radius:14px;cursor:pointer;font-family:'DM Sans',sans-serif;border:1.5px solid rgba(200,80,112,.1);background:rgba(253,247,242,.7);transition:all .15s;}
+.ex-cat-btn:hover{transform:translateY(-2px);}
+.ex-cat-btn i{font-size:18px;}
+.ex-cat-lbl{font-size:10px;font-weight:600;}
+
+/* chips */
+.ex-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;}
+.ex-chip{display:inline-flex;align-items:center;padding:5px 13px;border-radius:999px;border:1.5px solid;font-size:11px;font-weight:600;cursor:pointer;transition:all .15s;font-family:'DM Sans',sans-serif;}
+.ex-chip:hover{transform:scale(1.05);}
+
+/* submit */
+.ex-submit{width:100%;padding:13px;border-radius:999px;border:none;font-family:'Fraunces',serif;font-size:16px;font-weight:300;font-style:italic;cursor:pointer;transition:transform .15s,opacity .15s;margin-top:4px;}
+.ex-submit:hover:not(:disabled){transform:scale(1.015);}
+.ex-submit:disabled{opacity:.35;cursor:not-allowed;}
+
+/* toast */
+.ex-toast{padding:10px 14px;border-radius:14px;font-size:12px;font-family:'Fraunces',serif;font-style:italic;background:var(--sage);border:1px solid var(--sage3);color:var(--sage2);text-align:center;margin-top:10px;}
+
+/* empty */
+.ex-empty{text-align:center;padding:32px 20px;color:var(--ink3);font-size:13px;font-style:italic;}
+.ex-empty i{font-size:28px;display:block;margin-bottom:10px;opacity:.3;}
+
+/* pacing rows */
+.ex-pace-row{display:flex;align-items:center;justify-content:space-between;padding:11px 14px;border-radius:13px;background:rgba(200,80,112,.04);border:1px solid rgba(200,80,112,.07);margin-bottom:8px;}
+
+/* budget form */
+.ex-budget-row{display:flex;gap:8px;align-items:flex-end;margin-bottom:16px;}
+.ex-bsave{padding:11px 18px;border-radius:999px;border:1.5px solid rgba(200,80,112,.25);font-size:11px;font-weight:600;cursor:pointer;background:var(--petal);color:var(--rose);transition:all .15s;white-space:nowrap;font-family:'DM Sans',sans-serif;}
+.ex-bsave:hover{transform:scale(1.03);}
+
+/* footer */
+.ex-footer{background:linear-gradient(135deg,var(--petal) 0%,var(--lav) 100%);border:1px solid var(--blush);border-radius:22px;padding:20px 24px;display:flex;align-items:center;justify-content:space-between;gap:16px;margin-top:20px;}
+.ex-footer-lbl{font-size:9px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:var(--ink3);margin-bottom:4px;}
+.ex-footer-msg{font-family:'Fraunces',serif;font-style:italic;font-size:16px;font-weight:300;color:var(--ink2);}
+
+@keyframes spin{to{transform:rotate(360deg)}}
+.spinning{animation:spin .9s linear infinite;display:inline-block;}
+
+@media(max-width:640px){
+  .ex-stats{grid-template-columns:repeat(2,1fr);}
+  .ex-two{grid-template-columns:1fr;}
+}
+`
+
+// ── Main Page ────────────────────────────────────────────────────────────────
 
 export default function ExpensesPage() {
   const supabase = createClient()
 
-  const [expenses,   setExpenses]   = useState<Expense[]>([])
-  const [budget,     setBudget]     = useState<Budget | null>(null)
-  const [loading,    setLoading]    = useState(true)
-  const [activeTab,  setActiveTab]  = useState<'log' | 'overview' | 'budget' | 'history'>('log')
-  const [dateStr,    setDateStr]    = useState('')
+  const [expenses,     setExpenses]     = useState<Expense[]>([])
+  const [budget,       setBudget]       = useState<Budget | null>(null)
+  const [loading,      setLoading]      = useState(true)
+  const [activeTab,    setActiveTab]    = useState<Tab>('log')
+  const [dateStr,      setDateStr]      = useState('')
 
-  // month navigation
   const [viewMonth, setViewMonth] = useState(() => {
-    const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`
+    const d = new Date()
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
   })
 
-  // add form
-  const [title,         setTitle]         = useState('')
-  const [amount,        setAmount]        = useState('')
-  const [category,      setCategory]      = useState('food')
-  const [payMethod,     setPayMethod]     = useState('UPI')
-  const [expDate,       setExpDate]       = useState(todayIso)
-  const [expNotes,      setExpNotes]      = useState('')
-  const [saving,        setSaving]        = useState(false)
-  const [saved,         setSaved]         = useState(false)
+  // Form state
+  const [title,     setTitle]     = useState('')
+  const [amount,    setAmount]    = useState('')
+  const [category,  setCategory]  = useState<CatId>('food')
+  const [payMethod, setPayMethod] = useState('UPI')
+  const [expDate,   setExpDate]   = useState(todayIso)
+  const [expNotes,  setExpNotes]  = useState('')
+  const [saving,    setSaving]    = useState(false)
+  const [saved,     setSaved]     = useState(false)
 
-  // budget form
-  const [budgetInput,   setBudgetInput]   = useState('')
-  const [savingBudget,  setSavingBudget]  = useState(false)
-  const [savedBudget,   setSavedBudget]   = useState(false)
+  // Budget form
+  const [budgetInput,  setBudgetInput]  = useState('')
+  const [savingBudget, setSavingBudget] = useState(false)
+  const [savedBudget,  setSavedBudget]  = useState(false)
 
   useEffect(() => {
     setDateStr(new Date().toLocaleDateString('en-IN', { weekday: 'long', month: 'long', day: 'numeric' }))
     fetchAll()
   }, [viewMonth])
 
-  const fetchAll = async () => {
+  const fetchAll = useCallback(async () => {
+    setLoading(true)
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
+    if (!user) { setLoading(false); return }
     const [{ data: e }, { data: b }] = await Promise.all([
       supabase.from('expenses')
         .select('*')
@@ -258,7 +321,7 @@ export default function ExpensesPage() {
     setBudget(b || null)
     if (b) setBudgetInput(String(b.amount))
     setLoading(false)
-  }
+  }, [viewMonth])
 
   const addExpense = async () => {
     const amt = parseFloat(amount)
@@ -267,17 +330,14 @@ export default function ExpensesPage() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { setSaving(false); return }
     await supabase.from('expenses').insert({
-      user_id: user.id,
-      title: title.trim(),
-      amount: amt,
-      category,
-      payment_method: payMethod,
-      date: expDate,
+      user_id: user.id, title: title.trim(), amount: amt,
+      category, payment_method: payMethod, date: expDate,
       notes: expNotes.trim() || null,
     })
     setTitle(''); setAmount(''); setExpNotes('')
-    setSaved(true); setTimeout(() => setSaved(false), 2500)
-    setSaving(false); fetchAll()
+    setSaving(false); setSaved(true)
+    setTimeout(() => setSaved(false), 2500)
+    fetchAll()
   }
 
   const deleteExpense = async (id: string) => {
@@ -291,618 +351,504 @@ export default function ExpensesPage() {
     setSavingBudget(true)
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { setSavingBudget(false); return }
-    await supabase.from('expense_budgets').upsert({
-      user_id: user.id, month: viewMonth, amount: amt,
-    }, { onConflict: 'user_id,month' })
-    setSavedBudget(true); setTimeout(() => setSavedBudget(false), 2000)
-    setSavingBudget(false); fetchAll()
+    await supabase.from('expense_budgets').upsert(
+      { user_id: user.id, month: viewMonth, amount: amt },
+      { onConflict: 'user_id,month' }
+    )
+    setSavingBudget(false); setSavedBudget(true)
+    setTimeout(() => setSavedBudget(false), 2000)
+    fetchAll()
   }
 
-  const prevMonth = () => {
+  const navMonth = (dir: -1 | 1) => {
     const [y, m] = viewMonth.split('-').map(Number)
-    const d = new Date(y, m - 2, 1)
-    setViewMonth(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`)
+    const d = new Date(y, m - 1 + dir, 1)
+    setViewMonth(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`)
   }
-  const nextMonth = () => {
-    const [y, m] = viewMonth.split('-').map(Number)
-    const d = new Date(y, m, 1)
-    setViewMonth(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`)
-  }
+
   const monthLabel = new Date(viewMonth + '-01').toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })
   const isCurrentMonth = viewMonth === todayIso.slice(0, 7)
+  const budgetAmt = budget?.amount ?? 0
 
-  // derived
-  const totalSpent    = expenses.reduce((a, e) => a + e.amount, 0)
-  const budgetAmt     = budget?.amount ?? 0
-  const budgetPct     = budgetAmt > 0 ? Math.min(100, Math.round((totalSpent / budgetAmt) * 100)) : 0
-  const budgetLeft    = budgetAmt - totalSpent
-  const todaySpent    = expenses.filter(e => e.date === todayIso).reduce((a, e) => a + e.amount, 0)
-  const avgPerDay     = (() => {
-    const days = new Set(expenses.map(e => e.date)).size
-    return days > 0 ? totalSpent / days : 0
-  })()
+  // Derived
+  const totalSpent  = expenses.reduce((a, e) => a + e.amount, 0)
+  const todaySpent  = expenses.filter(e => e.date === todayIso).reduce((a, e) => a + e.amount, 0)
+  const uniqueDays  = new Set(expenses.map(e => e.date)).size
+  const avgPerDay   = uniqueDays > 0 ? totalSpent / uniqueDays : 0
+  const budgetPct   = budgetAmt > 0 ? Math.min(100, Math.round((totalSpent / budgetAmt) * 100)) : 0
+  const budgetLeft  = budgetAmt - totalSpent
 
-  // category breakdown
-  const catBreakdown = CATEGORIES.map(cat => ({
+  const catBreakdown = CATS.map(cat => ({
     ...cat,
     total: expenses.filter(e => e.category === cat.id).reduce((a, e) => a + e.amount, 0),
     count: expenses.filter(e => e.category === cat.id).length,
   })).filter(c => c.total > 0).sort((a, b) => b.total - a.total)
 
-  // donut segments
-  const donutSegments = (() => {
-    if (!totalSpent) return []
-    let offset = 0
-    const R = 52, CIRC = 2 * Math.PI * R
-    return catBreakdown.map(cat => {
-      const pct = cat.total / totalSpent
-      const dash = CIRC * pct
-      const seg = { ...cat, dash, offset, pct: Math.round(pct * 100) }
-      offset += dash
-      return seg
-    })
-  })()
+  // Donut segments
+  const CIRC = 2 * Math.PI * 52
+  let offset = 0
+  const donutSegs = totalSpent > 0 ? catBreakdown.map(cat => {
+    const dash = CIRC * (cat.total / totalSpent)
+    const seg = { ...cat, dash, offset }
+    offset += dash
+    return seg
+  }) : []
 
   const statCards = [
-    { label: 'spent this month', value: fmtINRShort(totalSpent),   c: '#d4607a', bg: '#fff9fb', border: 'rgba(212,96,122,0.12)', dotC: '#e8a0b0', icon: 'ti-receipt' },
-    { label: 'today',            value: fmtINRShort(todaySpent),   c: '#9b7ec8', bg: '#fdf8ff', border: 'rgba(201,184,232,0.3)', dotC: '#c9b8e8', icon: 'ti-calendar' },
-    { label: 'budget left',      value: budgetAmt > 0 ? fmtINRShort(Math.abs(budgetLeft)) : '—', c: budgetLeft < 0 ? '#d4607a' : '#5a8c63', bg: budgetLeft < 0 ? '#fff9fb' : '#f8fcf8', border: budgetLeft < 0 ? 'rgba(212,96,122,0.12)' : 'rgba(168,201,174,0.3)', dotC: budgetLeft < 0 ? '#e8a0b0' : '#a8c9ae', icon: budgetLeft < 0 ? 'ti-alert-triangle' : 'ti-piggy-bank' },
-    { label: 'avg / day',        value: fmtINRShort(avgPerDay),    c: '#b8860b', bg: '#fffdf5', border: 'rgba(245,221,180,0.4)', dotC: '#f5ddb4', icon: 'ti-trending-up' },
+    { label: 'spent this month', value: fmtShort(totalSpent),  icon: 'ti-receipt',       c: '#c85070', bg: '#fde8f0', bc: 'rgba(200,80,112,.12)', glyph: '₹' },
+    { label: 'spent today',      value: fmtShort(todaySpent),  icon: 'ti-calendar',      c: '#7a5ec8', bg: '#f3f0fb', bc: 'rgba(122,94,200,.12)', glyph: '₹' },
+    {
+      label: 'budget left',
+      value: budgetAmt > 0 ? fmtShort(Math.abs(budgetLeft)) : '—',
+      icon: budgetLeft < 0 ? 'ti-alert-triangle' : 'ti-piggy-bank',
+      c: budgetLeft < 0 ? '#c85070' : '#3a8c6a',
+      bg: budgetLeft < 0 ? '#fde8f0' : '#eaf7f0',
+      bc: budgetLeft < 0 ? 'rgba(200,80,112,.12)' : 'rgba(58,140,106,.12)',
+      glyph: budgetLeft < 0 ? '⚠' : '✓',
+    },
+    { label: 'avg per day',      value: fmtShort(avgPerDay),   icon: 'ti-trending-up',   c: '#b8860b', bg: '#fffdf0', bc: 'rgba(184,134,11,.12)', glyph: '₹' },
   ]
 
-  const tabColors: Record<string, { bg: string; border: string; color: string }> = {
-    log:      { bg: '#fde8ee', border: '#e8a0b0', color: '#7a1a35' },
-    overview: { bg: '#f3edfb', border: '#c9b8e8', color: '#4a2a80' },
-    budget:   { bg: '#f8fcf8', border: '#a8c9ae', color: '#1a4a22' },
-    history:  { bg: '#fffdf5', border: '#f5ddb4', color: '#5a3a00' },
-  }
+  const tabCfg = {
+    log:      { bg: '#fde8f0', bc: '#e8a0b8', c: '#7a1a35' },
+    overview: { bg: '#f3edfb', bc: '#c9b8e8', c: '#4a2a80' },
+    budget:   { bg: '#eaf7f0', bc: '#a8c9ae', c: '#1a4a22' },
+    history:  { bg: '#fffdf0', bc: '#f5ddb4', c: '#5a3a00' },
+  } satisfies Record<Tab, { bg: string; bc: string; c: string }>
+
+  const tabMeta: { id: Tab; icon: string; label: string }[] = [
+    { id: 'log',      icon: 'ti-plus',       label: 'log expense' },
+    { id: 'overview', icon: 'ti-chart-pie',  label: 'overview'    },
+    { id: 'budget',   icon: 'ti-piggy-bank', label: 'budget'      },
+    { id: 'history',  icon: 'ti-history',    label: 'history'     },
+  ]
+
+  const footerMsg =
+    budgetPct >= 100 ? `over budget by ${fmtINR(Math.abs(budgetLeft))} — be gentle with yourself.`
+    : budgetPct >= 80  ? `${100 - budgetPct}% of budget left — spend mindfully.`
+    : totalSpent > 0   ? `${fmtINR(totalSpent)} spent with intention this month.`
+    : 'track every rupee, grow your peace of mind.'
 
   return (
     <>
       <style>{css}</style>
-      <div className="ex">
+      <div className="ex-root">
+        <div className="ex-inner">
 
-        {/* Header */}
-        <motion.div className="ex-header"
-          initial={{ opacity: 0, y: -14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.44 }}>
-          <div className="ex-header-left">
+          {/* Header */}
+          <motion.div initial={{ opacity: 0, y: -14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: .4 }}>
             <p className="ex-eyebrow">
-              <i className="ti ti-coin" style={{ color: '#e8a0b0', fontSize: 13 }} />
+              <i className="ti ti-sparkles" style={{ color: '#e8a0b8', fontSize: 12 }} />
               {dateStr}
             </p>
-            <h1 className="ex-h1">your <span className="accent">money,</span><br />your story</h1>
-            <span className="ex-vibe">
-              <i className="ti ti-leaf" style={{ fontSize: 12, color: '#e8a0b0' }} />
-              spend with intention
-            </span>
-          </div>
 
-          {/* Month nav */}
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 10, flexShrink: 0 }}>
-            <div className="ex-month-nav">
-              <button className="ex-month-btn" onClick={prevMonth}><i className="ti ti-chevron-left" /></button>
-              <span className="ex-month-label">{monthLabel}</span>
-              <button className="ex-month-btn" onClick={nextMonth} disabled={isCurrentMonth}
-                style={{ opacity: isCurrentMonth ? 0.3 : 1, cursor: isCurrentMonth ? 'not-allowed' : 'pointer' }}>
-                <i className="ti ti-chevron-right" />
-              </button>
-            </div>
-            {budgetAmt > 0 && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 14px', borderRadius: 999, background: budgetPct >= 90 ? '#fde8ee' : '#f8fcf8', border: `1px solid ${budgetPct >= 90 ? 'rgba(212,96,122,0.25)' : 'rgba(168,201,174,0.3)'}` }}>
-                <span style={{ fontSize: 11, fontWeight: 600, color: budgetPct >= 90 ? '#d4607a' : '#5a8c63' }}>{budgetPct}% of budget used</span>
-                {budgetPct >= 90 && <i className="ti ti-alert-triangle" style={{ color: '#d4607a', fontSize: 12 }} />}
-              </div>
-            )}
-          </div>
-        </motion.div>
-
-        {/* Stats */}
-        <ExDivider label="this month at a glance" />
-        <div className="ex-stats">
-          {statCards.map((s, i) => (
-            <motion.div key={s.label} className="ex-stat"
-              style={{ background: s.bg, border: `1px solid ${s.border}`, ['--dot-c' as string]: s.dotC }}
-              initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.06 * i }}>
-              <i className={`ti ${s.icon} ex-stat-ico`} style={{ color: s.c }} />
-              <div className="ex-stat-val" style={{ color: s.c }}>{s.value}</div>
-              <div className="ex-stat-lbl" style={{ color: s.c }}>{s.label}</div>
-            </motion.div>
-          ))}
-        </div>
-
-        <ExDivider label="manage expenses" />
-
-        {/* Tabs */}
-        <div className="ex-tabs">
-          {(['log', 'overview', 'budget', 'history'] as const).map(t => {
-            const active = activeTab === t
-            const cfg = tabColors[t]
-            const icons = { log: 'ti-plus', overview: 'ti-chart-pie', budget: 'ti-piggy-bank', history: 'ti-history' }
-            const labels = { log: 'log expense', overview: 'overview', budget: 'budget', history: 'history' }
-            return (
-              <button key={t} className="ex-tab"
-                onClick={() => setActiveTab(t)}
-                style={{
-                  background: active ? cfg.bg : 'var(--card)',
-                  borderColor: active ? cfg.border : 'rgba(212,96,122,0.12)',
-                  color: active ? cfg.color : '#b09aa4',
-                }}>
-                <i className={`ti ${icons[t]}`} />
-                {labels[t]}
-              </button>
-            )
-          })}
-        </div>
-
-        <AnimatePresence mode="wait">
-
-          {/* ── LOG ── */}
-          {activeTab === 'log' && (
-            <motion.div key="log"
-              style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}
-              className="ex-two-col"
-              initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 16 }}>
-
-              {/* Form */}
-              <div className="ex-card">
-                <p className="ex-card-lbl"><i className="ti ti-plus" /> add expense</p>
-
-                <div className="ex-input-lbl"><i className="ti ti-currency-rupee" /> amount</div>
-                <div className="ex-amount-wrap">
-                  <span className="ex-amount-prefix">₹</span>
-                  <input className="ex-amount-input" type="number" placeholder="0"
-                    value={amount} onChange={e => setAmount(e.target.value)}
-                    onKeyDown={e => e.key === 'Enter' && addExpense()} />
-                </div>
-
-                <div className="ex-input-lbl"><i className="ti ti-pencil" /> description</div>
-                <input className="ex-input" placeholder="what did you spend on?"
-                  value={title} onChange={e => setTitle(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && addExpense()} />
-
-                <div className="ex-input-lbl"><i className="ti ti-tag" /> category</div>
-                <div className="ex-cat-grid">
-                  {CATEGORIES.map(c => (
-                    <button key={c.id} className="ex-cat-btn"
-                      onClick={() => setCategory(c.id)}
-                      style={{
-                        background: category === c.id ? c.bg : undefined,
-                        borderColor: category === c.id ? c.c : undefined,
-                      }}>
-                      <i className={`ti ${c.icon}`} style={{ color: category === c.id ? c.c : '#b09aa4' }} />
-                      <span className="ex-cat-lbl" style={{ color: category === c.id ? c.c : '#b09aa4' }}>{c.label}</span>
-                    </button>
-                  ))}
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                  <div>
-                    <div className="ex-input-lbl"><i className="ti ti-calendar" /> date</div>
-                    <input type="date" className="ex-input" value={expDate} onChange={e => setExpDate(e.target.value)} />
-                  </div>
-                  <div>
-                    <div className="ex-input-lbl"><i className="ti ti-wallet" /> paid via</div>
-                    <div className="ex-chips">
-                      {PAYMENT_METHODS.map(pm => (
-                        <button key={pm} className="ex-chip"
-                          onClick={() => setPayMethod(pm)}
-                          style={{
-                            background: payMethod === pm ? 'var(--petal)' : 'transparent',
-                            borderColor: payMethod === pm ? 'rgba(212,96,122,0.35)' : 'rgba(212,96,122,0.15)',
-                            color: payMethod === pm ? '#7a1a35' : '#b09aa4',
-                          }}>
-                          {pm}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                <button className="ex-submit" onClick={addExpense}
-                  disabled={!title.trim() || !amount || saving}
-                  style={{
-                    background: title.trim() && amount ? 'linear-gradient(135deg,#d4607a,#9b7ec8)' : 'rgba(212,96,122,0.08)',
-                    color: title.trim() && amount ? '#fff' : '#b09aa4',
-                    marginTop: 4,
-                  }}>
-                  {saving ? 'saving...' : saved ? 'expense logged ✨' : title.trim() && amount ? 'log expense' : 'fill in details first'}
-                </button>
-                <AnimatePresence>
-                  {saved && (
-                    <motion.div className="ex-toast"
-                      initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-                      expense logged — every rupee accounted for 🌿
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+            <div className="ex-header">
+              <div>
+                <h1 className="ex-h1">your <em>money,</em><br />your story</h1>
+                <span className="ex-tag">
+                  <i className="ti ti-leaf" style={{ fontSize: 12, color: '#e8a0b8' }} />
+                  spend with intention
+                </span>
               </div>
 
-              {/* Today's expenses */}
-              <div className="ex-card">
-                <p className="ex-card-lbl"><i className="ti ti-calendar-check" /> today's expenses</p>
-                {loading ? (
-                  <div style={{ textAlign: 'center', padding: '28px' }}>
-                    <i className="ti ti-loader-2 spinning" style={{ fontSize: 22, color: 'var(--rose)' }} />
-                  </div>
-                ) : expenses.filter(e => e.date === todayIso).length === 0 ? (
-                  <div className="ex-empty"><i className="ti ti-coin" />nothing logged today yet</div>
-                ) : (
-                  <>
-                    <div className="ex-list">
-                      {expenses.filter(e => e.date === todayIso).map((exp, i) => {
-                        const cat = getCat(exp.category)
-                        return (
-                          <motion.div key={exp.id} className="ex-item"
-                            initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: i * 0.04 }}>
-                            <div className="ex-item-ico" style={{ background: cat.bg }}>
-                              <i className={`ti ${cat.icon}`} style={{ color: cat.c }} />
-                            </div>
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                              <div className="ex-item-name">{exp.title}</div>
-                              <div className="ex-item-meta">
-                                <span style={{ color: cat.c, fontWeight: 600 }}>{cat.label}</span>
-                                <span>·</span>
-                                <span>{exp.payment_method}</span>
-                              </div>
-                            </div>
-                            <div className="ex-item-amount" style={{ color: cat.c }}>{fmtINR(exp.amount)}</div>
-                            <button className="ex-del-btn" onClick={() => deleteExpense(exp.id)}>
-                              <i className="ti ti-trash" />
-                            </button>
-                          </motion.div>
-                        )
-                      })}
-                    </div>
-                    <div style={{ marginTop: 12, padding: '10px 14px', borderRadius: 12, background: 'rgba(212,96,122,0.04)', border: '1px solid rgba(212,96,122,0.1)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: 11, color: '#b09aa4', fontWeight: 500 }}>today's total</span>
-                      <span style={{ fontFamily: 'Fraunces,serif', fontSize: 20, fontWeight: 300, color: '#d4607a' }}>{fmtINR(todaySpent)}</span>
-                    </div>
-                  </>
-                )}
-              </div>
-            </motion.div>
-          )}
-
-          {/* ── OVERVIEW ── */}
-          {activeTab === 'overview' && (
-            <motion.div key="overview"
-              style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}
-              className="ex-two-col"
-              initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 16 }}>
-
-              {/* Donut + breakdown */}
-              <div className="ex-card">
-                <p className="ex-card-lbl"><i className="ti ti-chart-pie" /> spending by category</p>
-                {catBreakdown.length === 0 ? (
-                  <div className="ex-empty"><i className="ti ti-chart-pie" />no expenses this month</div>
-                ) : (
-                  <>
-                    {/* Donut */}
-                    <div className="ex-donut-wrap">
-                      <svg width="128" height="128" viewBox="0 0 128 128">
-                        {donutSegments.map((seg, i) => {
-                          const CIRC = 2 * Math.PI * 52
-                          return (
-                            <motion.circle key={seg.id}
-                              cx="64" cy="64" r="52"
-                              fill="none"
-                              stroke={seg.c}
-                              strokeWidth="18"
-                              strokeLinecap="butt"
-                              strokeDasharray={`${seg.dash} ${CIRC - seg.dash}`}
-                              strokeDashoffset={-seg.offset}
-                              transform="rotate(-90 64 64)"
-                              initial={{ opacity: 0 }}
-                              animate={{ opacity: 1 }}
-                              transition={{ delay: i * 0.08 }}
-                            />
-                          )
-                        })}
-                        <text x="64" y="60" textAnchor="middle" fontSize="13" fontFamily="Fraunces,serif" fontWeight="300" fill="#3d2a35">{fmtINRShort(totalSpent)}</text>
-                        <text x="64" y="74" textAnchor="middle" fontSize="8" fontWeight="500" fontFamily="DM Sans" letterSpacing="1.5" fill="#b09aa4">TOTAL</text>
-                      </svg>
-                    </div>
-
-                    {/* Legend / bars */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                      {catBreakdown.map((cat, i) => (
-                        <motion.div key={cat.id}
-                          initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}
-                          transition={{ delay: i * 0.05 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 4 }}>
-                            <i className={`ti ${cat.icon}`} style={{ fontSize: 12, color: cat.c }} />
-                            <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--ink)', flex: 1 }}>{cat.label}</span>
-                            <span style={{ fontSize: 11, color: '#b09aa4' }}>{cat.count} items</span>
-                            <span style={{ fontFamily: 'Fraunces,serif', fontSize: 14, fontWeight: 300, color: cat.c }}>{fmtINR(cat.total)}</span>
-                          </div>
-                          <div className="ex-budget-track">
-                            <motion.div className="ex-budget-fill"
-                              initial={{ width: 0 }} animate={{ width: `${Math.round((cat.total / totalSpent) * 100)}%` }}
-                              transition={{ duration: 0.65, delay: i * 0.04 }}
-                              style={{ background: `linear-gradient(90deg,${cat.c},${cat.dotC})` }} />
-                          </div>
-                        </motion.div>
-                      ))}
-                    </div>
-                  </>
-                )}
-              </div>
-
-              {/* Budget progress + top expenses */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                {budgetAmt > 0 && (
-                  <div className="ex-card">
-                    <p className="ex-card-lbl"><i className="ti ti-piggy-bank" /> budget tracker</p>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8 }}>
-                      <span style={{ fontFamily: 'Fraunces,serif', fontSize: 28, fontWeight: 300, color: budgetPct >= 100 ? '#d4607a' : '#3d2a35' }}>{fmtINR(totalSpent)}</span>
-                      <span style={{ fontSize: 12, color: '#b09aa4' }}>of {fmtINR(budgetAmt)}</span>
-                    </div>
-                    <div className="ex-budget-track" style={{ height: 10 }}>
-                      <motion.div className="ex-budget-fill"
-                        initial={{ width: 0 }} animate={{ width: `${budgetPct}%` }}
-                        transition={{ duration: 0.8 }}
-                        style={{ background: budgetPct >= 100 ? '#d4607a' : budgetPct >= 80 ? '#b8860b' : '#5a8c63' }} />
-                    </div>
-                    <div style={{ marginTop: 8, fontSize: 11, color: budgetLeft < 0 ? '#d4607a' : '#5a8c63', fontWeight: 600 }}>
-                      {budgetLeft < 0
-                        ? `₹${Math.abs(Math.round(budgetLeft))} over budget`
-                        : `₹${Math.round(budgetLeft)} remaining`}
-                    </div>
-                  </div>
-                )}
-
-                <div className="ex-card" style={{ flex: 1 }}>
-                  <p className="ex-card-lbl"><i className="ti ti-trending-up" /> top expenses this month</p>
-                  {expenses.length === 0 ? (
-                    <div className="ex-empty" style={{ padding: '16px' }}><i className="ti ti-receipt" />no expenses yet</div>
-                  ) : (
-                    <div className="ex-list">
-                      {[...expenses].sort((a,b) => b.amount - a.amount).slice(0, 5).map((exp, i) => {
-                        const cat = getCat(exp.category)
-                        return (
-                          <div key={exp.id} className="ex-item">
-                            <div className="ex-item-ico" style={{ background: cat.bg }}>
-                              <i className={`ti ${cat.icon}`} style={{ color: cat.c }} />
-                            </div>
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                              <div className="ex-item-name">{exp.title}</div>
-                              <div className="ex-item-meta">
-                                <span style={{ color: cat.c, fontWeight: 600 }}>{cat.label}</span>
-                                <span>·</span>
-                                <span>{new Date(exp.date + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</span>
-                              </div>
-                            </div>
-                            <div className="ex-item-amount" style={{ color: cat.c }}>{fmtINR(exp.amount)}</div>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </motion.div>
-          )}
-
-          {/* ── BUDGET ── */}
-          {activeTab === 'budget' && (
-            <motion.div key="budget"
-              style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}
-              className="ex-two-col"
-              initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}>
-
-              <div className="ex-card">
-                <p className="ex-card-lbl"><i className="ti ti-piggy-bank" /> set monthly budget</p>
-                <p style={{ fontSize: 12, color: '#b09aa4', marginBottom: 16, lineHeight: 1.5 }}>
-                  Set a spending limit for {monthLabel}. We'll track how you're doing throughout the month.
-                </p>
-
-                <div className="ex-input-lbl"><i className="ti ti-currency-rupee" /> monthly budget (₹)</div>
-                <div className="ex-budget-form">
-                  <div className="ex-amount-wrap" style={{ flex: 1, marginBottom: 0 }}>
-                    <span className="ex-amount-prefix">₹</span>
-                    <input className="ex-amount-input" type="number" placeholder="0"
-                      value={budgetInput} onChange={e => setBudgetInput(e.target.value)} />
-                  </div>
-                  <button className="ex-budget-save" onClick={saveBudget} disabled={savingBudget}>
-                    {savingBudget ? <i className="ti ti-loader-2 spinning" /> : savedBudget ? 'saved ✓' : 'save budget'}
+              <div className="ex-month-nav">
+                <div className="ex-month-row">
+                  <button className="ex-mbtn" onClick={() => navMonth(-1)}>
+                    <i className="ti ti-chevron-left" />
+                  </button>
+                  <span className="ex-month-label">{monthLabel}</span>
+                  <button className="ex-mbtn" onClick={() => navMonth(1)} disabled={isCurrentMonth}
+                    style={{ opacity: isCurrentMonth ? .28 : 1, cursor: isCurrentMonth ? 'not-allowed' : 'pointer' }}>
+                    <i className="ti ti-chevron-right" />
                   </button>
                 </div>
-
                 {budgetAmt > 0 && (
-                  <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-                    style={{ padding: '14px', borderRadius: 14, background: budgetPct >= 100 ? '#fde8ee' : '#f8fcf8', border: `1px solid ${budgetPct >= 100 ? 'rgba(212,96,122,0.2)' : 'rgba(168,201,174,0.3)'}`, marginTop: 4 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8 }}>
-                      <span style={{ fontSize: 12, fontWeight: 600, color: budgetPct >= 100 ? '#d4607a' : '#5a8c63' }}>
-                        {budgetPct >= 100 ? '⚠ over budget' : `${100 - budgetPct}% remaining`}
-                      </span>
-                      <span style={{ fontSize: 11, color: '#b09aa4' }}>{fmtINR(totalSpent)} / {fmtINR(budgetAmt)}</span>
-                    </div>
-                    <div className="ex-budget-track" style={{ height: 8 }}>
-                      <motion.div className="ex-budget-fill"
-                        initial={{ width: 0 }} animate={{ width: `${Math.min(100, budgetPct)}%` }}
-                        transition={{ duration: 0.8 }}
-                        style={{ background: budgetPct >= 100 ? '#d4607a' : budgetPct >= 80 ? '#b8860b' : '#5a8c63' }} />
-                    </div>
-                  </motion.div>
+                  <div style={{
+                    display: 'flex', alignItems: 'center', gap: 7, padding: '6px 15px', borderRadius: 999, fontSize: 11, fontWeight: 600, whiteSpace: 'nowrap',
+                    background: budgetPct >= 100 ? '#fde8f0' : '#eaf7f0',
+                    border: `1px solid ${budgetPct >= 100 ? 'rgba(200,80,112,.25)' : 'rgba(58,140,106,.3)'}`,
+                    color: budgetPct >= 100 ? '#c85070' : '#3a8c6a',
+                  }}>
+                    <i className={`ti ${budgetPct >= 100 ? 'ti-alert-triangle' : 'ti-check'}`} style={{ fontSize: 12 }} />
+                    {budgetPct}% of budget used
+                  </div>
                 )}
-
-                {/* Quick preset budgets */}
-                <div className="ex-input-lbl" style={{ marginTop: 16 }}><i className="ti ti-zap" /> quick set</div>
-                <div className="ex-chips">
-                  {[5000, 10000, 15000, 20000, 30000, 50000].map(amt => (
-                    <button key={amt} className="ex-chip"
-                      onClick={() => setBudgetInput(String(amt))}
-                      style={{
-                        background: budgetInput === String(amt) ? 'rgba(90,140,99,0.1)' : 'transparent',
-                        borderColor: budgetInput === String(amt) ? '#5a8c63' : 'rgba(212,96,122,0.15)',
-                        color: budgetInput === String(amt) ? '#5a8c63' : '#b09aa4',
-                      }}>
-                      {fmtINRShort(amt)}
-                    </button>
-                  ))}
-                </div>
               </div>
+            </div>
+          </motion.div>
 
-              {/* Daily average & pacing */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          <Divider label="this month at a glance" />
+
+          {/* Stats */}
+          <div className="ex-stats">
+            {statCards.map((s, i) => (
+              <motion.div key={s.label} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: .06 * i }}>
+                <StatCard {...s} />
+              </motion.div>
+            ))}
+          </div>
+
+          <Divider label="manage expenses" />
+
+          {/* Tabs */}
+          <div className="ex-tabs">
+            {tabMeta.map(t => {
+              const active = activeTab === t.id
+              const cfg = tabCfg[t.id]
+              return (
+                <button key={t.id} className="ex-tab" onClick={() => setActiveTab(t.id)}
+                  style={{
+                    background: active ? cfg.bg : 'transparent',
+                    borderColor: active ? cfg.bc : 'rgba(200,80,112,.14)',
+                    color: active ? cfg.c : '#a08898',
+                  }}>
+                  <i className={`ti ${t.icon}`} />
+                  {t.label}
+                </button>
+              )
+            })}
+          </div>
+
+          <AnimatePresence mode="wait">
+
+            {/* ── LOG ── */}
+            {activeTab === 'log' && (
+              <motion.div key="log" className="ex-two"
+                initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 16 }}>
+
+                {/* Form */}
                 <div className="ex-card">
-                  <p className="ex-card-lbl"><i className="ti ti-calendar-stats" /> monthly pacing</p>
-                  {(() => {
-                    const [y, m] = viewMonth.split('-').map(Number)
-                    const daysInMonth = new Date(y, m, 0).getDate()
-                    const dayOfMonth  = isCurrentMonth ? new Date().getDate() : daysInMonth
-                    const projectedTotal = dayOfMonth > 0 ? (totalSpent / dayOfMonth) * daysInMonth : 0
-                    return (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                        {[
-                          { label: 'days tracked',      value: `${new Set(expenses.map(e=>e.date)).size} / ${daysInMonth}`, c: '#9b7ec8' },
-                          { label: 'avg per day',        value: fmtINR(avgPerDay),                    c: '#b8860b' },
-                          { label: 'projected total',    value: fmtINR(projectedTotal),               c: projectedTotal > budgetAmt && budgetAmt > 0 ? '#d4607a' : '#5a8c63' },
-                          { label: 'transactions',       value: String(expenses.length),              c: '#d4607a' },
-                        ].map(row => (
-                          <div key={row.label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', borderRadius: 12, background: 'rgba(212,96,122,0.04)', border: '1px solid rgba(212,96,122,0.08)' }}>
-                            <span style={{ fontSize: 12, color: '#b09aa4', fontWeight: 500 }}>{row.label}</span>
-                            <span style={{ fontFamily: 'Fraunces,serif', fontSize: 16, fontWeight: 300, color: row.c }}>{row.value}</span>
-                          </div>
+                  <p className="ex-card-lbl"><i className="ti ti-plus" /> add expense</p>
+
+                  <div className="ex-field-lbl"><i className="ti ti-currency-rupee" /> amount</div>
+                  <div className="ex-amount-wrap">
+                    <span className="ex-amount-pre">₹</span>
+                    <input className="ex-amount-in" type="number" placeholder="0"
+                      value={amount} onChange={e => setAmount(e.target.value)}
+                      onKeyDown={e => e.key === 'Enter' && addExpense()} />
+                  </div>
+
+                  <div className="ex-field-lbl"><i className="ti ti-pencil" /> description</div>
+                  <input className="ex-input" type="text" placeholder="what did you spend on?"
+                    value={title} onChange={e => setTitle(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && addExpense()} />
+
+                  <div className="ex-field-lbl"><i className="ti ti-tag" /> category</div>
+                  <div className="ex-cat-grid">
+                    {CATS.map(c => (
+                      <button key={c.id} className="ex-cat-btn" onClick={() => setCategory(c.id)}
+                        style={category === c.id ? { background: c.bg, borderColor: c.c } : {}}>
+                        <i className={`ti ${c.icon}`} style={{ color: category === c.id ? c.c : '#a08898' }} />
+                        <span className="ex-cat-lbl" style={{ color: category === c.id ? c.c : '#a08898' }}>{c.label}</span>
+                      </button>
+                    ))}
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                    <div>
+                      <div className="ex-field-lbl"><i className="ti ti-calendar" /> date</div>
+                      <input type="date" className="ex-input" style={{ marginBottom: 0 }} value={expDate} onChange={e => setExpDate(e.target.value)} />
+                    </div>
+                    <div>
+                      <div className="ex-field-lbl"><i className="ti ti-wallet" /> paid via</div>
+                      <div className="ex-chips">
+                        {PAYMENT_METHODS.map(pm => (
+                          <button key={pm} className="ex-chip" onClick={() => setPayMethod(pm)}
+                            style={{
+                              background: payMethod === pm ? '#fde8f0' : 'transparent',
+                              borderColor: payMethod === pm ? 'rgba(200,80,112,.35)' : 'rgba(200,80,112,.15)',
+                              color: payMethod === pm ? '#7a1a35' : '#a08898',
+                            }}>
+                            {pm}
+                          </button>
                         ))}
                       </div>
-                    )
-                  })()}
+                    </div>
+                  </div>
+
+                  <button className="ex-submit" onClick={addExpense}
+                    disabled={!title.trim() || !amount || saving}
+                    style={{
+                      background: title.trim() && amount ? 'linear-gradient(135deg,#c85070,#9b7ec8)' : 'rgba(200,80,112,.07)',
+                      color: title.trim() && amount ? '#fff' : '#b09aa4',
+                    }}>
+                    {saving ? 'saving…' : saved ? 'expense logged ✨' : 'log this expense'}
+                  </button>
+
+                  <AnimatePresence>
+                    {saved && (
+                      <motion.div className="ex-toast"
+                        initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                        expense logged — every rupee accounted for 🌿
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
+
+                {/* Today's list */}
+                <div className="ex-card">
+                  <p className="ex-card-lbl"><i className="ti ti-calendar-check" /> today's expenses</p>
+                  {loading ? (
+                    <div style={{ textAlign: 'center', padding: 28 }}>
+                      <i className="ti ti-loader-2 spinning" style={{ fontSize: 22, color: '#c85070' }} />
+                    </div>
+                  ) : expenses.filter(e => e.date === todayIso).length === 0 ? (
+                    <div className="ex-empty"><i className="ti ti-coin" />nothing logged today yet</div>
+                  ) : (
+                    <>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        <AnimatePresence>
+                          {expenses.filter(e => e.date === todayIso).map(exp => (
+                            <ExpenseItem key={exp.id} exp={exp} onDelete={deleteExpense} />
+                          ))}
+                        </AnimatePresence>
+                      </div>
+                      <div style={{ marginTop: 14, padding: '12px 16px', borderRadius: 14, background: 'rgba(200,80,112,.05)', border: '1px solid rgba(200,80,112,.1)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: 11, color: '#a08898', fontWeight: 600 }}>today's total</span>
+                        <span style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: 22, fontWeight: 300, color: '#c85070' }}>{fmtINR(todaySpent)}</span>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </motion.div>
+            )}
+
+            {/* ── OVERVIEW ── */}
+            {activeTab === 'overview' && (
+              <motion.div key="overview" className="ex-two"
+                initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 16 }}>
+
+                {/* Donut + breakdown */}
+                <div className="ex-card">
+                  <p className="ex-card-lbl"><i className="ti ti-chart-pie" /> spending by category</p>
+                  {catBreakdown.length === 0 ? (
+                    <div className="ex-empty"><i className="ti ti-chart-pie" />no expenses this month</div>
+                  ) : (
+                    <>
+                      <div style={{ display: 'flex', justifyContent: 'center', padding: '8px 0 16px' }}>
+                        <svg width="130" height="130" viewBox="0 0 130 130">
+                          {donutSegs.map((seg, i) => (
+                            <motion.circle key={seg.id}
+                              cx="65" cy="65" r="52"
+                              fill="none"
+                              stroke={seg.c}
+                              strokeWidth="19"
+                              strokeDasharray={`${seg.dash} ${CIRC - seg.dash}`}
+                              strokeDashoffset={-seg.offset}
+                              transform="rotate(-90 65 65)"
+                              initial={{ opacity: 0 }}
+                              animate={{ opacity: 1 }}
+                              transition={{ delay: i * .08 }}
+                            />
+                          ))}
+                          <text x="65" y="62" textAnchor="middle" fontFamily="Fraunces,serif" fontSize="13" fontWeight="300" fill="#2e1f28">{fmtShort(totalSpent)}</text>
+                          <text x="65" y="75" textAnchor="middle" fontFamily="DM Sans,sans-serif" fontSize="8" fontWeight="600" fill="#a08898" letterSpacing="1.5">TOTAL</text>
+                        </svg>
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                        {catBreakdown.map((cat, i) => (
+                          <motion.div key={cat.id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * .05 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                              <i className={`ti ${cat.icon}`} style={{ fontSize: 12, color: cat.c }} />
+                              <span style={{ fontSize: 12, fontWeight: 600, color: '#2e1f28', flex: 1 }}>{cat.label}</span>
+                              <span style={{ fontSize: 10, color: '#a08898' }}>{cat.count} items</span>
+                              <span style={{ fontFamily: 'Fraunces,serif', fontSize: 15, fontWeight: 300, color: cat.c }}>{fmtINR(cat.total)}</span>
+                            </div>
+                            <BarTrack pct={Math.round(cat.total / totalSpent * 100)} color={`linear-gradient(90deg,${cat.c},${cat.bg})`} />
+                          </motion.div>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {/* Budget + top expenses */}
+                <div className="ex-col">
+                  {budgetAmt > 0 && (
+                    <div className="ex-card">
+                      <p className="ex-card-lbl"><i className="ti ti-piggy-bank" /> budget tracker</p>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 10 }}>
+                        <span style={{ fontFamily: 'Fraunces,serif', fontSize: 30, fontWeight: 300, color: budgetPct >= 100 ? '#c85070' : '#2e1f28' }}>{fmtINR(totalSpent)}</span>
+                        <span style={{ fontSize: 12, color: '#a08898' }}>of {fmtINR(budgetAmt)}</span>
+                      </div>
+                      <BarTrack pct={budgetPct} color={budgetPct >= 100 ? '#c85070' : budgetPct >= 80 ? '#b8860b' : '#3a8c6a'} height={10} />
+                      <div style={{ marginTop: 8, fontSize: 11, fontWeight: 600, color: budgetLeft < 0 ? '#c85070' : '#3a8c6a' }}>
+                        {budgetLeft < 0 ? `₹${Math.abs(Math.round(budgetLeft))} over budget` : `₹${Math.round(budgetLeft)} remaining`}
+                      </div>
+                    </div>
+                  )}
+                  <div className="ex-card" style={{ flex: 1 }}>
+                    <p className="ex-card-lbl"><i className="ti ti-trending-up" /> top expenses</p>
+                    {expenses.length === 0 ? (
+                      <div className="ex-empty" style={{ padding: 16 }}><i className="ti ti-receipt" />no expenses yet</div>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        {[...expenses].sort((a, b) => b.amount - a.amount).slice(0, 5).map(exp => (
+                          <ExpenseItem key={exp.id} exp={exp} showDelete={false} />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            {/* ── BUDGET ── */}
+            {activeTab === 'budget' && (
+              <motion.div key="budget" className="ex-two"
+                initial={{ opacity: 0, scale: .97 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}>
 
                 <div className="ex-card">
-                  <p className="ex-card-lbl"><i className="ti ti-wallet" /> by payment method</p>
-                  {PAYMENT_METHODS.map(pm => {
-                    const pmTotal = expenses.filter(e => e.payment_method === pm).reduce((a, e) => a + e.amount, 0)
-                    if (!pmTotal) return null
-                    const pct = totalSpent ? Math.round((pmTotal / totalSpent) * 100) : 0
-                    return (
-                      <div key={pm} style={{ marginBottom: 10 }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                          <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--ink)' }}>{pm}</span>
-                          <span style={{ fontSize: 11, color: '#b09aa4' }}>{fmtINR(pmTotal)}</span>
-                        </div>
-                        <div className="ex-budget-track">
-                          <motion.div className="ex-budget-fill"
-                            initial={{ width: 0 }} animate={{ width: `${pct}%` }}
-                            transition={{ duration: 0.6 }}
-                            style={{ background: 'linear-gradient(90deg,#d4607a,#9b7ec8)' }} />
-                        </div>
-                      </div>
-                    )
-                  })}
-                  {expenses.length === 0 && <div className="ex-empty" style={{ padding: '12px' }}><i className="ti ti-wallet" />no data</div>}
-                </div>
-              </div>
-            </motion.div>
-          )}
-
-          {/* ── HISTORY ── */}
-          {activeTab === 'history' && (
-            <motion.div key="history"
-              initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 16 }}>
-              <div className="ex-card">
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-                  <p className="ex-card-lbl" style={{ marginBottom: 0 }}>
-                    <i className="ti ti-history" />
-                    {expenses.length} expense{expenses.length !== 1 ? 's' : ''} · {fmtINR(totalSpent)}
+                  <p className="ex-card-lbl"><i className="ti ti-piggy-bank" /> set monthly budget</p>
+                  <p style={{ fontSize: 12, color: '#a08898', marginBottom: 18, lineHeight: 1.6 }}>
+                    Set a spending limit for {monthLabel}. We'll track how you're doing throughout the month.
                   </p>
-                </div>
-                {loading ? (
-                  <div style={{ textAlign: 'center', padding: '28px' }}>
-                    <i className="ti ti-loader-2 spinning" style={{ fontSize: 22, color: 'var(--rose)' }} />
+
+                  <div className="ex-field-lbl"><i className="ti ti-currency-rupee" /> monthly budget</div>
+                  <div className="ex-budget-row">
+                    <div className="ex-amount-wrap" style={{ flex: 1, marginBottom: 0 }}>
+                      <span className="ex-amount-pre">₹</span>
+                      <input className="ex-amount-in" type="number" placeholder="0" style={{ fontSize: 22 }}
+                        value={budgetInput} onChange={e => setBudgetInput(e.target.value)} />
+                    </div>
+                    <button className="ex-bsave" onClick={saveBudget} disabled={savingBudget}>
+                      {savingBudget ? <i className="ti ti-loader-2 spinning" /> : savedBudget ? 'saved ✓' : 'save budget'}
+                    </button>
                   </div>
-                ) : expenses.length === 0 ? (
-                  <div className="ex-empty"><i className="ti ti-receipt" />no expenses logged for {monthLabel}</div>
-                ) : (
-                  (() => {
-                    // group by date
+
+                  {budgetAmt > 0 && (
+                    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+                      style={{ padding: 14, borderRadius: 16, background: budgetPct >= 100 ? '#fde8f0' : '#eaf7f0', border: `1px solid ${budgetPct >= 100 ? 'rgba(200,80,112,.2)' : 'rgba(58,140,106,.3)'}` }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 10 }}>
+                        <span style={{ fontSize: 12, fontWeight: 600, color: budgetPct >= 100 ? '#c85070' : '#3a8c6a' }}>
+                          {budgetPct >= 100 ? '⚠ over budget' : `${100 - budgetPct}% remaining`}
+                        </span>
+                        <span style={{ fontSize: 11, color: '#a08898' }}>{fmtINR(totalSpent)} / {fmtINR(budgetAmt)}</span>
+                      </div>
+                      <BarTrack pct={Math.min(100, budgetPct)} color={budgetPct >= 100 ? '#c85070' : budgetPct >= 80 ? '#b8860b' : '#3a8c6a'} height={8} />
+                    </motion.div>
+                  )}
+
+                  <div className="ex-field-lbl" style={{ marginTop: 18 }}><i className="ti ti-zap" /> quick set</div>
+                  <div className="ex-chips">
+                    {[5000, 10000, 15000, 20000, 30000, 50000].map(amt => (
+                      <button key={amt} className="ex-chip" onClick={() => setBudgetInput(String(amt))}
+                        style={{
+                          background: budgetInput === String(amt) ? 'rgba(58,140,106,.1)' : 'transparent',
+                          borderColor: budgetInput === String(amt) ? '#3a8c6a' : 'rgba(200,80,112,.15)',
+                          color: budgetInput === String(amt) ? '#3a8c6a' : '#a08898',
+                        }}>
+                        {fmtShort(amt)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="ex-col">
+                  {/* Pacing */}
+                  <div className="ex-card">
+                    <p className="ex-card-lbl"><i className="ti ti-calendar-stats" /> monthly pacing</p>
+                    {(() => {
+                      const [y, m] = viewMonth.split('-').map(Number)
+                      const daysInMonth = new Date(y, m, 0).getDate()
+                      const dayOfMonth  = isCurrentMonth ? new Date().getDate() : daysInMonth
+                      const projected   = dayOfMonth > 0 ? (totalSpent / dayOfMonth) * daysInMonth : 0
+                      return [
+                        { label: 'days tracked',   value: `${uniqueDays} / ${daysInMonth}`, c: '#7a5ec8' },
+                        { label: 'avg per day',    value: fmtINR(avgPerDay),                 c: '#b8860b' },
+                        { label: 'projected total',value: fmtINR(projected),                 c: projected > budgetAmt && budgetAmt > 0 ? '#c85070' : '#3a8c6a' },
+                        { label: 'transactions',   value: String(expenses.length),            c: '#c85070' },
+                      ].map(row => (
+                        <div key={row.label} className="ex-pace-row">
+                          <span style={{ fontSize: 12, color: '#a08898', fontWeight: 500 }}>{row.label}</span>
+                          <span style={{ fontFamily: 'Fraunces,serif', fontSize: 17, fontWeight: 300, color: row.c }}>{row.value}</span>
+                        </div>
+                      ))
+                    })()}
+                  </div>
+
+                  {/* By payment method */}
+                  <div className="ex-card" style={{ flex: 1 }}>
+                    <p className="ex-card-lbl"><i className="ti ti-wallet" /> by payment method</p>
+                    {PAYMENT_METHODS.map(pm => {
+                      const pmTotal = expenses.filter(e => e.payment_method === pm).reduce((a, e) => a + e.amount, 0)
+                      if (!pmTotal) return null
+                      return (
+                        <div key={pm} style={{ marginBottom: 12 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                            <span style={{ fontSize: 12, fontWeight: 600, color: '#2e1f28' }}>{pm}</span>
+                            <span style={{ fontSize: 11, color: '#a08898' }}>{fmtINR(pmTotal)}</span>
+                          </div>
+                          <BarTrack pct={totalSpent ? Math.round(pmTotal / totalSpent * 100) : 0} color="linear-gradient(90deg,#c85070,#9b7ec8)" />
+                        </div>
+                      )
+                    })}
+                    {expenses.length === 0 && <div className="ex-empty" style={{ padding: 12 }}><i className="ti ti-wallet" />no data yet</div>}
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            {/* ── HISTORY ── */}
+            {activeTab === 'history' && (
+              <motion.div key="history"
+                initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 16 }}>
+                <div className="ex-card">
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
+                    <p className="ex-card-lbl" style={{ marginBottom: 0 }}>
+                      <i className="ti ti-history" />
+                      {expenses.length} expense{expenses.length !== 1 ? 's' : ''}
+                    </p>
+                    <span style={{ fontFamily: 'Fraunces,serif', fontSize: 18, fontWeight: 300, color: '#c85070' }}>{fmtINR(totalSpent)}</span>
+                  </div>
+
+                  {loading ? (
+                    <div style={{ textAlign: 'center', padding: 28 }}>
+                      <i className="ti ti-loader-2 spinning" style={{ fontSize: 22, color: '#c85070' }} />
+                    </div>
+                  ) : expenses.length === 0 ? (
+                    <div className="ex-empty"><i className="ti ti-receipt" />no expenses logged for {monthLabel}</div>
+                  ) : (() => {
                     const grouped: Record<string, Expense[]> = {}
                     expenses.forEach(e => { if (!grouped[e.date]) grouped[e.date] = []; grouped[e.date].push(e) })
                     return Object.entries(grouped).map(([date, exps], gi) => (
-                      <motion.div key={date}
-                        initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: gi * 0.05 }}
-                        style={{ marginBottom: 16 }}>
+                      <motion.div key={date} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: gi * .05 }}
+                        style={{ marginBottom: 20 }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                          <span style={{ fontSize: 11, fontWeight: 600, color: date === todayIso ? '#d4607a' : '#b09aa4', letterSpacing: '0.5px' }}>
+                          <span style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: '.5px', color: date === todayIso ? '#c85070' : '#a08898' }}>
                             {date === todayIso ? 'today' : new Date(date + 'T00:00:00').toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' })}
                           </span>
-                          <span style={{ fontFamily: 'Fraunces,serif', fontSize: 14, fontWeight: 300, color: '#d4607a' }}>
+                          <span style={{ fontFamily: 'Fraunces,serif', fontSize: 15, fontWeight: 300, color: '#c85070' }}>
                             {fmtINR(exps.reduce((a, e) => a + e.amount, 0))}
                           </span>
                         </div>
-                        <div className="ex-list">
-                          {exps.map((exp, i) => {
-                            const cat = getCat(exp.category)
-                            return (
-                              <div key={exp.id} className="ex-item">
-                                <div className="ex-item-ico" style={{ background: cat.bg }}>
-                                  <i className={`ti ${cat.icon}`} style={{ color: cat.c }} />
-                                </div>
-                                <div style={{ flex: 1, minWidth: 0 }}>
-                                  <div className="ex-item-name">{exp.title}</div>
-                                  <div className="ex-item-meta">
-                                    <span style={{ color: cat.c, fontWeight: 600 }}>{cat.label}</span>
-                                    <span>·</span>
-                                    <span>{exp.payment_method}</span>
-                                    {exp.notes && <><span>·</span><span style={{ fontStyle: 'italic' }}>{exp.notes}</span></>}
-                                  </div>
-                                </div>
-                                <div className="ex-item-amount" style={{ color: cat.c }}>{fmtINR(exp.amount)}</div>
-                                <button className="ex-del-btn" onClick={() => deleteExpense(exp.id)}>
-                                  <i className="ti ti-trash" />
-                                </button>
-                              </div>
-                            )
-                          })}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                          <AnimatePresence>
+                            {exps.map(exp => <ExpenseItem key={exp.id} exp={exp} onDelete={deleteExpense} />)}
+                          </AnimatePresence>
                         </div>
                       </motion.div>
                     ))
-                  })()
-                )}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+                  })()}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
-        {/* Footer */}
-        <motion.div className="ex-footer"
-          initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }}>
-          <div>
-            <p className="ex-footer-lbl">money intention</p>
-            <p className="ex-footer-msg">
-              {budgetPct >= 100
-                ? `over budget by ${fmtINR(Math.abs(budgetLeft))} — be gentle with yourself.`
-                : budgetPct >= 80
-                  ? `${100 - budgetPct}% of budget left — spend mindfully.`
-                  : totalSpent > 0
-                    ? `${fmtINR(totalSpent)} spent with intention this month.`
-                    : 'track every rupee, grow your peace of mind.'}
-            </p>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <i className="ti ti-coin ex-footer-ico" />
-            <i className="ti ti-leaf ex-footer-ico" />
-          </div>
-        </motion.div>
+          {/* Footer */}
+          <motion.div className="ex-footer" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: .6 }}>
+            <div>
+              <p className="ex-footer-lbl">money intention</p>
+              <p className="ex-footer-msg">{footerMsg}</p>
+            </div>
+            <div style={{ display: 'flex', gap: 6, fontSize: 20, color: '#e8a0b8', flexShrink: 0 }}>
+              <i className="ti ti-coin" />
+              <i className="ti ti-leaf" />
+            </div>
+          </motion.div>
+
+        </div>
       </div>
     </>
-  )
-}
-
-// ── helpers ──────────────────────────────────────────────────────────────────
-
-function ExDivider({ label }: { label: string }) {
-  return (
-    <div className="ex-divider">
-      <div className="ex-divider-line" />
-      <i className="ti ti-circle ex-divider-ico" />
-      <span className="ex-divider-label">{label}</span>
-      <i className="ti ti-circle ex-divider-ico" />
-      <div className="ex-divider-line" />
-    </div>
   )
 }
