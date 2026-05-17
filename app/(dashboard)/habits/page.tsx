@@ -362,8 +362,21 @@ const css = `
 export default function HabitsPage() {
   const supabase = createClient()
 
-  const [habits,    setHabits]    = useState([])
-  const [logs,      setLogs]      = useState([])
+  type Habit = {
+  id: string
+  name: string
+  category: string
+  frequency: string
+  archived: boolean
+}
+
+type HabitLog = {
+  habit_id: string
+  date: string
+}
+
+const [habits, setHabits] = useState<Habit[]>([])
+const [logs, setLogs] = useState<HabitLog[]>([])
   const [loading,   setLoading]   = useState(true)
   const [activeTab, setActiveTab] = useState('today')
   const [date,      setDate]      = useState('')
@@ -400,7 +413,7 @@ const channelRef = useRef<RealtimeChannel | null>(null)
     setHabits(h || []); setLogs(l || []); setLoading(false)
   }
 
-  const toggleLog = async (habitId) => {
+  const toggleLog = async (habitId: string) => {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
     const done = isLogged(habitId, todayIso)
@@ -426,25 +439,25 @@ const channelRef = useRef<RealtimeChannel | null>(null)
     setSaving(false); fetchAll()
   }
 
-  const archiveHabit = async (id) => {
+  const archiveHabit = async (id: string) => {
     await supabase.from('habits').update({ archived: true }).eq('id', id); fetchAll()
   }
-  const restoreHabit = async (id) => {
+  const restoreHabit = async (id: string) => {
     await supabase.from('habits').update({ archived: false }).eq('id', id); fetchAll()
   }
-  const deleteHabit  = async (id) => {
+  const deleteHabit  = async (id: string) => {
     await supabase.from('habits').delete().eq('id', id); fetchAll()
   }
 
-  const isLogged = (hid, date) => logs.some(l => l.habit_id === hid && l.date === date)
-  const streakOf = (hid) => {
+  const isLogged = (hid: string, date: string) => logs.some(l => l.habit_id === hid && l.date === date)
+  const streakOf = (hid: string) => {
     let s = 0, d = new Date()
     while (logs.some(l => l.habit_id === hid && l.date === d.toISOString().slice(0, 10))) {
       s++; d.setDate(d.getDate() - 1)
     }
     return s
   }
-  const cat = (id) => CATEGORIES.find(c => c.id === id) || CATEGORIES[7]
+  const cat = (id: string) => CATEGORIES.find(c => c.id === id) || CATEGORIES[7]
 
   const activeHabits = habits.filter(h => !h.archived)
   const archived     = habits.filter(h => h.archived)
@@ -505,7 +518,11 @@ const channelRef = useRef<RealtimeChannel | null>(null)
         <div className="sg-grid">
           {statCards.map((s, i) => (
             <motion.div key={s.label} className="sg-card"
-              style={{ background: s.bg, border: `1px solid ${s.border}`, '--dot-c': s.dotC }}
+              style={{
+  background: s.bg,
+  border: `1px solid ${s.border}`,
+  ['--dot-c' as any]: s.dotC,
+}}
               initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.05 * i, duration: 0.36 }}>
               <i className={`ti ${s.icon} sg-card-ico`} style={{ color: s.c }} aria-hidden="true" />
@@ -851,7 +868,7 @@ const channelRef = useRef<RealtimeChannel | null>(null)
 }
 
 // ── Divider — exact copy from dashboard ─────────────────────────────────────
-function Divider({ label }) {
+function Divider({ label }: { label: string }) {
   return (
     <div className="sg-divider">
       <div className="sg-divider-line" />
