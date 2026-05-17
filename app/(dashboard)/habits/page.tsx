@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { createClient } from '@/lib/supabase'
+ import type { RealtimeChannel } from '@supabase/supabase-js'
 
 // ── categories — tinted with the dashboard palette ──────────────────────────
 const CATEGORIES = [
@@ -373,7 +374,9 @@ export default function HabitsPage() {
   const [saving, setSaving] = useState(false)
   const [saved,  setSaved]  = useState(false)
 
-  const channelRef = useRef(null)
+
+
+const channelRef = useRef<RealtimeChannel | null>(null)
   const week = getWeekDates()
 
   useEffect(() => {
