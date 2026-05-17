@@ -16,12 +16,15 @@ const moods = [
   { label: 'Stressed', score: 1, c: '#c05878', bg: '#fbe8ee', border: '#e8b0c0', lightBg: '#fbe8ee', lightBorder: '#e8b0c0', lightText: '#6b1a30', icon: 'ti-flame' },
 ]
 
+// Matches mood_entries table exactly
 type Entry = {
   id: string
-  mood: string
-  note: string
-  score: number
-  created_at: string
+  user_id: string
+  mood: string       // text — matches moods[].label
+  emoji: string      // text — tabler icon class e.g. 'ti-star'
+  note: string | null
+  score: number      // int4
+  created_at: string // timestampz
 }
 
 const css = `
@@ -140,13 +143,6 @@ const css = `
     text-transform: uppercase; margin-bottom: 16px; opacity: 0.4;
   }
 
-  /* ── section divider ── */
-  .mp-divider {
-    display: flex; align-items: center; gap: 8px; margin-bottom: 16px;
-  }
-  .mp-divider-line { flex: 1; height: 1px; }
-  .mp-divider-ico { font-size: 10px; opacity: 0.4; }
-
   /* ── mood grid ── */
   .mp-moodgrid { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; }
   .mp-moodbtn {
@@ -191,18 +187,31 @@ const css = `
 
   /* ── log list ── */
   .mp-loglist { display: flex; flex-direction: column; gap: 8px;
-    max-height: 300px; overflow-y: auto; }
+    max-height: 320px; overflow-y: auto; }
   .mp-logitem { display: flex; align-items: center; gap: 10px;
     padding: 10px 12px; border-radius: 14px; }
   .mp-logitem-ico  { font-size: 18px; flex-shrink: 0; }
   .mp-logitem-name { font-size: 13px; font-weight: 600; }
-  .mp-logitem-note { font-size: 11px; margin-top: 2px; opacity: 0.45; font-style: italic; }
+  .mp-logitem-note { font-size: 11px; margin-top: 2px; opacity: 0.45; font-style: italic; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .mp-logitem-time { font-size: 10px; opacity: 0.35; margin-left: auto; flex-shrink: 0; }
+
+  /* ── score badge ── */
+  .mp-score-badge {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 20px; height: 20px; border-radius: 50%;
+    font-size: 10px; font-weight: 700; flex-shrink: 0;
+  }
 
   /* ── history ── */
   .mp-histitem { display: flex; align-items: center; gap: 14px;
     padding: 14px 16px; border-radius: 16px; }
   .mp-histitem-ico { font-size: 20px; flex-shrink: 0; }
+
+  /* ── history note ── */
+  .mp-hist-note {
+    font-size: 12px; margin-top: 3px; font-style: italic;
+    opacity: 0.55; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
 
   /* ── AI tab ── */
   .mp-ai-avatar {
@@ -225,6 +234,11 @@ const css = `
   .mp-toast { padding: 10px 14px; border-radius: 999px; font-size: 12px;
     font-weight: 600; text-align: center; margin-top: 10px; font-style: italic; }
 
+  /* ── empty state ── */
+  .mp-empty { text-align: center; padding: 28px 16px; }
+  .mp-empty-ico { font-size: 32px; display: block; margin-bottom: 8px; }
+  .mp-empty-txt { font-size: 13px; font-style: italic; }
+
   /* ── responsive ── */
   @media (max-width: 580px) {
     .mp-moodgrid { grid-template-columns: repeat(4,1fr); gap: 6px; }
@@ -245,11 +259,12 @@ export default function MoodPage() {
   const { theme, toggle } = useTheme()
   const dark = theme === 'dark'
 
-  const [selected, setSelected]   = useState<typeof moods[0] | null>(null)
-  const [note,     setNote]        = useState('')
-  const [loading,  setLoading]     = useState(false)
-  const [entries,  setEntries]     = useState<Entry[]>([])
-  const [success,  setSuccess]     = useState(false)
+  const [selected,  setSelected]  = useState<typeof moods[0] | null>(null)
+  const [note,      setNote]       = useState('')
+  const [loading,   setLoading]    = useState(false)
+  const [entries,   setEntries]    = useState<Entry[]>([])
+  const [fetching,  setFetching]   = useState(true)
+  const [success,   setSuccess]    = useState(false)
   const [activeTab, setActiveTab]  = useState<'log' | 'history' | 'ai'>('log')
   const [aiSummary, setAiSummary]  = useState('')
   const [aiLoading, setAiLoading]  = useState(false)
@@ -257,40 +272,58 @@ export default function MoodPage() {
 
   useEffect(() => {
     fetchEntries()
+
+    // realtime: INSERT only for current user's rows
     channelRef.current = supabase
       .channel('mood-realtime')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'mood_entries' }, (payload) => {
-        setEntries(prev => [payload.new as Entry, ...prev])
-      })
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'mood_entries' },
+        (payload) => {
+          setEntries(prev => [payload.new as Entry, ...prev])
+        }
+      )
       .subscribe()
-    return () => { if (channelRef.current) supabase.removeChannel(channelRef.current) }
+
+    return () => {
+      if (channelRef.current) supabase.removeChannel(channelRef.current)
+    }
   }, [])
 
   const fetchEntries = async () => {
-    const { data } = await supabase.from('mood_entries').select('*').order('created_at', { ascending: false }).limit(20)
-    if (data) setEntries(data)
+    setFetching(true)
+    const { data, error } = await supabase
+      .from('mood_entries')
+      .select('id, user_id, mood, emoji, note, score, created_at')
+      .order('created_at', { ascending: false })
+      .limit(50)
+
+    if (error) console.error('fetch mood_entries:', error)
+    if (data) setEntries(data as Entry[])
+    setFetching(false)
   }
 
   const handleLog = async () => {
     if (!selected) return
     setLoading(true)
+
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-      setLoading(false)
-      return
-    }
+    if (!user) { setLoading(false); return }
+
     const { error } = await supabase.from('mood_entries').insert({
-  user_id: user.id,
-  mood: selected.label,
-  emoji: selected.icon,   // ← this was missing
-  score: selected.score,
-  note: note.trim() || null,
-})
+      user_id:    user.id,
+      mood:       selected.label,   // text  e.g. 'Amazing'
+      emoji:      selected.icon,    // text  e.g. 'ti-star'
+      score:      selected.score,   // int4  e.g. 5
+      note:       note.trim() || null, // text | null
+    })
+
     if (error) {
-      console.error('Mood insert error:', error)
+      console.error('mood insert error:', error)
       setLoading(false)
       return
     }
+
     setSuccess(true)
     setSelected(null)
     setNote('')
@@ -299,36 +332,89 @@ export default function MoodPage() {
   }
 
   const handleAISummary = async () => {
-    setAiLoading(true); setActiveTab('ai')
-    const res  = await fetch('/api/ai-summary', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ entries }) })
+    setAiLoading(true)
+    setActiveTab('ai')
+    const res  = await fetch('/api/ai-summary', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      // send only what the API needs — mood label, score, note, timestamp
+      body: JSON.stringify({
+        entries: entries.map(e => ({
+          mood:       e.mood,
+          score:      e.score,
+          note:       e.note,
+          created_at: e.created_at,
+        }))
+      })
+    })
     const data = await res.json()
     setAiSummary(data.summary)
     setAiLoading(false)
   }
 
-  const todayEntries = entries.filter(e => new Date(e.created_at).toDateString() === new Date().toDateString())
-  const avgScore     = todayEntries.length ? (todayEntries.reduce((a, e) => a + e.score, 0) / todayEntries.length).toFixed(1) : null
-  const scoreToLabel = (s: number) => s >= 4.5 ? 'blooming' : s >= 3.5 ? 'glowing' : s >= 2.5 ? 'gentle' : s >= 1.5 ? 'tender' : 'healing'
+  // ── derived stats from real data ──
+  const todayStr     = new Date().toDateString()
+  const todayEntries = entries.filter(e => new Date(e.created_at).toDateString() === todayStr)
+  const avgScore     = todayEntries.length
+    ? (todayEntries.reduce((a, e) => a + e.score, 0) / todayEntries.length).toFixed(1)
+    : null
+  const scoreToLabel = (s: number) =>
+    s >= 4.5 ? 'blooming' : s >= 3.5 ? 'glowing' : s >= 2.5 ? 'gentle' : s >= 1.5 ? 'tender' : 'healing'
+
+  // helper: look up local mood config from an entry's mood label
+  // falls back gracefully if label doesn't match (e.g. old data)
+  const getMoodConfig = (entry: Entry) =>
+    moods.find(m => m.label === entry.mood) ?? null
 
   // ── design tokens ──
-  const root   = dark ? '#1a0f13' : '#fdf7f0'
-  const card   = dark ? 'rgba(255,255,255,0.04)' : '#ffffff'
-  const bord   = dark ? 'rgba(255,255,255,0.09)' : 'rgba(212,96,122,0.1)'
-  const txt1   = dark ? '#f5eef0' : '#3d2a35'
-  const txt2   = dark ? 'rgba(245,238,240,0.45)' : '#b09aa4'
-  const txt3   = dark ? 'rgba(245,238,240,0.22)' : '#d4bfc5'
+  const root = dark ? '#1a0f13' : '#fdf7f0'
+  const card = dark ? 'rgba(255,255,255,0.04)' : '#ffffff'
+  const bord = dark ? 'rgba(255,255,255,0.09)' : 'rgba(212,96,122,0.1)'
+  const txt1 = dark ? '#f5eef0' : '#3d2a35'
+  const txt2 = dark ? 'rgba(245,238,240,0.45)' : '#b09aa4'
+  const txt3 = dark ? 'rgba(245,238,240,0.22)' : '#d4bfc5'
 
   const statCards = [
-    { label: 'avg score',    value: avgScore || '—',             c: '#d4607a', bg: dark ? 'rgba(212,96,122,0.12)'  : '#fde8ee', border: dark ? 'rgba(212,96,122,0.25)'  : '#f2b3c0', icon: 'ti-chart-line' },
-    { label: "today's logs", value: String(todayEntries.length), c: '#5a8c63', bg: dark ? 'rgba(90,140,99,0.12)'   : '#edf6ee', border: dark ? 'rgba(90,140,99,0.25)'   : '#a8c9ae', icon: 'ti-check' },
-    { label: 'total entries',value: String(entries.length),      c: '#9b7ec8', bg: dark ? 'rgba(155,126,200,0.12)' : '#f3edfb', border: dark ? 'rgba(155,126,200,0.25)' : '#c9b8e8', icon: 'ti-database' },
-    { label: "today's vibe", value: avgScore ? scoreToLabel(parseFloat(avgScore)) : '—', c: '#b8860b', bg: dark ? 'rgba(184,134,11,0.12)' : '#fef8e7', border: dark ? 'rgba(184,134,11,0.25)' : '#f5ddb4', icon: 'ti-sparkles' },
+    {
+      label: 'avg score',
+      // use the actual numeric average, not a label
+      value: avgScore ?? '—',
+      c:      '#d4607a',
+      bg:     dark ? 'rgba(212,96,122,0.12)'  : '#fde8ee',
+      border: dark ? 'rgba(212,96,122,0.25)'  : '#f2b3c0',
+      icon:   'ti-chart-line',
+    },
+    {
+      label: "today's logs",
+      value: String(todayEntries.length),
+      c:      '#5a8c63',
+      bg:     dark ? 'rgba(90,140,99,0.12)'   : '#edf6ee',
+      border: dark ? 'rgba(90,140,99,0.25)'   : '#a8c9ae',
+      icon:   'ti-check',
+    },
+    {
+      label: 'total entries',
+      value: String(entries.length),
+      c:      '#9b7ec8',
+      bg:     dark ? 'rgba(155,126,200,0.12)' : '#f3edfb',
+      border: dark ? 'rgba(155,126,200,0.25)' : '#c9b8e8',
+      icon:   'ti-database',
+    },
+    {
+      label: "today's vibe",
+      // derived from today's average score
+      value: avgScore ? scoreToLabel(parseFloat(avgScore)) : '—',
+      c:      '#b8860b',
+      bg:     dark ? 'rgba(184,134,11,0.12)'  : '#fef8e7',
+      border: dark ? 'rgba(184,134,11,0.25)'  : '#f5ddb4',
+      icon:   'ti-sparkles',
+    },
   ]
 
   const tabs: { key: 'log' | 'history' | 'ai'; label: string; icon: string }[] = [
-    { key: 'log',     label: 'log mood',  icon: 'ti-pencil' },
-    { key: 'history', label: 'history',   icon: 'ti-history' },
-    { key: 'ai',      label: 'AI report', icon: 'ti-brain' },
+    { key: 'log',     label: 'log mood',   icon: 'ti-pencil' },
+    { key: 'history', label: 'history',    icon: 'ti-history' },
+    { key: 'ai',      label: 'AI report',  icon: 'ti-brain' },
   ]
 
   const tabActive = {
@@ -356,27 +442,41 @@ export default function MoodPage() {
             </div>
             <div className="mp-hbtns">
               <motion.button className="mp-btn-pill" whileTap={{ scale: 0.96 }}
-                onClick={handleAISummary} disabled={aiLoading || entries.length === 0}
-                style={{ background: dark ? 'rgba(212,96,122,0.12)' : '#fde8ee', border: `1px solid ${dark ? 'rgba(212,96,122,0.3)' : '#e8a0b0'}`, color: dark ? '#f2b3c0' : '#7a1a35', opacity: entries.length === 0 ? 0.4 : 1, cursor: entries.length === 0 ? 'not-allowed' : 'pointer' }}>
+                onClick={handleAISummary}
+                disabled={aiLoading || entries.length === 0}
+                style={{
+                  background: dark ? 'rgba(212,96,122,0.12)' : '#fde8ee',
+                  border: `1px solid ${dark ? 'rgba(212,96,122,0.3)' : '#e8a0b0'}`,
+                  color: dark ? '#f2b3c0' : '#7a1a35',
+                  opacity: entries.length === 0 ? 0.4 : 1,
+                  cursor: entries.length === 0 ? 'not-allowed' : 'pointer',
+                }}>
                 <i className="ti ti-brain" aria-hidden="true" />
                 {aiLoading ? 'reading...' : 'AI reflection'}
               </motion.button>
 
               <motion.button className="mp-btn-pill" whileTap={{ scale: 0.96 }} onClick={toggle}
-                style={{ background: dark ? 'rgba(255,255,255,0.04)' : '#fde8ee', border: `1px solid ${dark ? 'rgba(255,255,255,0.09)' : '#e8a0b0'}`, color: dark ? txt1 : '#7a1a35' }}>
-                <i className={`ti ${dark ? 'ti-sun' : 'ti-moon'}`} aria-hidden="true" style={{ color: dark ? '#f5ddb4' : '#d4607a' }} />
+                style={{
+                  background: dark ? 'rgba(255,255,255,0.04)' : '#fde8ee',
+                  border: `1px solid ${dark ? 'rgba(255,255,255,0.09)' : '#e8a0b0'}`,
+                  color: dark ? txt1 : '#7a1a35',
+                }}>
+                <i className={`ti ${dark ? 'ti-sun' : 'ti-moon'}`} aria-hidden="true"
+                  style={{ color: dark ? '#f5ddb4' : '#d4607a' }} />
                 {dark ? 'light' : 'dark'}
               </motion.button>
             </div>
           </motion.div>
 
-          {/* ── Live ── */}
+          {/* ── Live indicator ── */}
           <div className="mp-live">
             <div className="mp-live-dot" style={{ background: dark ? '#a8c9ae' : '#5a8c63' }} />
-            <span className="mp-live-txt" style={{ color: dark ? '#a8c9ae' : '#5a8c63' }}>live updates on</span>
+            <span className="mp-live-txt" style={{ color: dark ? '#a8c9ae' : '#5a8c63' }}>
+              {fetching ? 'loading...' : 'live updates on'}
+            </span>
           </div>
 
-          {/* ── Stats ── */}
+          {/* ── Stat cards — all derived from real entries ── */}
           <div className="mp-stats">
             {statCards.map((s, i) => (
               <motion.div key={s.label} className="mp-stat"
@@ -399,7 +499,7 @@ export default function MoodPage() {
                 <motion.button key={t.key} className="mp-tab"
                   onClick={() => setActiveTab(t.key)}
                   style={{
-                    background: active ? cfg.bg   : card,
+                    background: active ? cfg.bg : card,
                     border:     active ? `1px solid ${cfg.border}` : `1px solid ${bord}`,
                     color:      active ? cfg.color : txt2,
                   }}>
@@ -412,12 +512,13 @@ export default function MoodPage() {
 
           <AnimatePresence mode="wait">
 
-            {/* ── LOG TAB ── */}
+            {/* ══════════════ LOG TAB ══════════════ */}
             {activeTab === 'log' && (
-              <motion.div key="log" initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 16 }}>
+              <motion.div key="log"
+                initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 16 }}>
                 <div className="mp-log-grid">
 
-                  {/* Left col */}
+                  {/* Left col — picker + note */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
 
                     {/* Mood picker */}
@@ -426,9 +527,15 @@ export default function MoodPage() {
                       <div className="mp-moodgrid">
                         {moods.map((m, i) => {
                           const isActive = selected?.label === m.label
-                          const chipBg   = dark ? (isActive ? `rgba(${m.c.slice(1).match(/.{2}/g)!.map(h => parseInt(h,16)).join(',')},0.18)` : 'rgba(255,255,255,0.03)') : (isActive ? m.lightBg : m.lightBg + 'bb')
-                          const chipBord = dark ? `1px solid ${isActive ? m.border + 'cc' : 'rgba(255,255,255,0.07)'}` : `1px solid ${isActive ? m.lightBorder : m.lightBorder + '88'}`
-                          const chipTxt  = dark ? (isActive ? m.c : txt2) : (isActive ? m.lightText : m.lightText + 'bb')
+                          const chipBg   = dark
+                            ? (isActive ? m.bg.replace(')', ', 0.18)').replace('rgb', 'rgba') : 'rgba(255,255,255,0.03)')
+                            : (isActive ? m.lightBg : m.lightBg + 'bb')
+                          const chipBord = dark
+                            ? `1px solid ${isActive ? m.border + 'cc' : 'rgba(255,255,255,0.07)'}`
+                            : `1px solid ${isActive ? m.lightBorder : m.lightBorder + '88'}`
+                          const chipTxt  = dark
+                            ? (isActive ? m.c : txt2)
+                            : (isActive ? m.lightText : m.lightText + 'bb')
 
                           return (
                             <motion.button key={m.label} className="mp-moodbtn"
@@ -439,6 +546,7 @@ export default function MoodPage() {
                               <i className={`ti ${m.icon} mp-moodbtn-ico`} aria-hidden="true"
                                 style={{ color: dark ? (isActive ? m.c : txt2) : m.lightText }} />
                               <span className="mp-moodbtn-lbl" style={{ color: chipTxt }}>{m.label}</span>
+                              {/* score dots — from moods[] local config */}
                               <div className="mp-dots">
                                 {[...Array(5)].map((_, di) => (
                                   <div key={di} className="mp-dot"
@@ -456,15 +564,16 @@ export default function MoodPage() {
                     {/* Note + submit */}
                     <div className="mp-card" style={{ background: card, border: `1px solid ${bord}` }}>
                       <p className="mp-card-lbl" style={{ color: txt1 }}>add a little note</p>
-                      <textarea className="mp-note" value={note} onChange={e => setNote(e.target.value)}
-                        placeholder="what's on your heart..."
-                        rows={3}
+                      <textarea className="mp-note"
+                        value={note} onChange={e => setNote(e.target.value)}
+                        placeholder="what's on your heart..." rows={3}
                         style={{
                           background: dark ? 'rgba(255,255,255,0.035)' : '#fdf0f3',
                           border: `1px solid ${dark ? 'rgba(212,96,122,0.15)' : '#f2b3c0'}`,
                           color: txt1,
                         }} />
-                      <button className="mp-submit" onClick={handleLog} disabled={!selected || loading}
+                      <button className="mp-submit"
+                        onClick={handleLog} disabled={!selected || loading}
                         style={{
                           background: selected
                             ? (dark
@@ -473,7 +582,10 @@ export default function MoodPage() {
                             : (dark ? 'rgba(255,255,255,0.05)' : '#f5eef0'),
                           color: selected ? '#fff' : txt3,
                         }}>
-                        {loading ? 'saving...' : success ? 'saved, lovely' : selected ? `log — ${selected.label}` : 'pick a feeling first'}
+                        {loading   ? 'saving...'
+                        : success  ? 'saved, lovely ♡'
+                        : selected ? `log — ${selected.label}`
+                        :            'pick a feeling first'}
                       </button>
                       <AnimatePresence>
                         {success && (
@@ -483,30 +595,33 @@ export default function MoodPage() {
                               ? { background: 'rgba(90,140,99,0.15)', border: '1px solid rgba(90,140,99,0.35)', color: '#a8c9ae' }
                               : { background: '#edf6ee', border: '1px solid #a8c9ae', color: '#2a5c33' }
                             }>
-                            mood bloomed into your journal
+                            mood bloomed into your journal ✿
                           </motion.div>
                         )}
                       </AnimatePresence>
                     </div>
                   </div>
 
-                  {/* Right col */}
+                  {/* Right col — preview + today log */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
 
-                    {/* Preview */}
+                    {/* Selected mood preview */}
                     <AnimatePresence>
                       {selected && (
                         <motion.div className="mp-preview"
                           initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }}
                           style={{
-                            background: dark ? `rgba(${selected.c.slice(1).match(/.{2}/g)!.map(h=>parseInt(h,16)).join(',')},0.12)` : selected.lightBg,
+                            background: dark ? selected.bg.replace('#', 'rgba(').replace(/(..)(..)(..)/, (_,r,g,b) => `${parseInt(r,16)},${parseInt(g,16)},${parseInt(b,16)},0.15)`) : selected.lightBg,
                             border: `1px solid ${dark ? selected.border : selected.lightBorder}`,
                           }}>
                           <motion.div animate={{ y: [0, -7, 0] }} transition={{ repeat: Infinity, duration: 2.4 }}>
+                            {/* icon from local moods[] config — not from DB */}
                             <i className={`ti ${selected.icon} mp-preview-ico`} aria-hidden="true"
                               style={{ color: dark ? selected.c : selected.lightText }} />
                           </motion.div>
-                          <div className="mp-preview-lbl" style={{ color: dark ? selected.c : selected.lightText }}>{selected.label}</div>
+                          <div className="mp-preview-lbl" style={{ color: dark ? selected.c : selected.lightText }}>
+                            {selected.label}
+                          </div>
                           <div className="mp-dots" style={{ justifyContent: 'center', gap: '5px' }}>
                             {[...Array(5)].map((_, i) => (
                               <div key={i} style={{ width: '8px', height: '8px', borderRadius: '50%',
@@ -515,44 +630,84 @@ export default function MoodPage() {
                                   : (dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)') }} />
                             ))}
                           </div>
-                          <p className="mp-preview-sub" style={{ color: dark ? txt1 : selected.lightText }}>score: {selected.score} / 5</p>
+                          <p className="mp-preview-sub" style={{ color: dark ? txt1 : selected.lightText }}>
+                            score: {selected.score} / 5
+                          </p>
                         </motion.div>
                       )}
                     </AnimatePresence>
 
-                    {/* Today's log */}
+                    {/* Today's log — mapped from real entries */}
                     <div className="mp-card" style={{ background: card, border: `1px solid ${bord}`, flex: 1 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
-                        <p className="mp-card-lbl" style={{ color: txt1, marginBottom: 0 }}>today's entries</p>
-                        <div className="mp-live-dot" style={{ flexShrink: 0, background: dark ? '#a8c9ae' : '#5a8c63' }} />
+                        <p className="mp-card-lbl" style={{ color: txt1, marginBottom: 0 }}>
+                          today's entries
+                        </p>
+                        <div className="mp-live-dot"
+                          style={{ flexShrink: 0, background: dark ? '#a8c9ae' : '#5a8c63' }} />
                       </div>
-                      {todayEntries.length === 0 ? (
-                        <div style={{ textAlign: 'center', padding: '28px 16px' }}>
-                          <i className="ti ti-flower" aria-hidden="true"
-                            style={{ fontSize: '32px', color: txt3, display: 'block', marginBottom: '8px' }} />
-                          <span style={{ fontSize: '13px', color: txt3, fontStyle: 'italic' }}>nothing yet, darling</span>
+
+                      {fetching ? (
+                        <div className="mp-empty">
+                          <i className="ti ti-loader mp-empty-ico" aria-hidden="true" style={{ color: txt3 }} />
+                        </div>
+                      ) : todayEntries.length === 0 ? (
+                        <div className="mp-empty">
+                          <i className="ti ti-flower mp-empty-ico" aria-hidden="true" style={{ color: txt3 }} />
+                          <span className="mp-empty-txt" style={{ color: txt3 }}>nothing yet, darling</span>
                         </div>
                       ) : (
                         <div className="mp-loglist">
                           <AnimatePresence>
-                            {todayEntries.map((e, i) => {
-                              const m = moods.find(x => x.label === e.mood)
+                            {todayEntries.map((entry, i) => {
+                              // look up styling from local config using entry.mood (text label)
+                              const m = getMoodConfig(entry)
+                              // icon: prefer local config, fallback to stored entry.emoji
+                              const iconClass = m?.icon ?? entry.emoji ?? 'ti-circle'
+                              const color     = dark ? (m?.c ?? '#d4607a') : (m?.lightText ?? '#7a1a35')
+                              const rowBg     = dark
+                                ? 'rgba(255,255,255,0.03)'
+                                : (m?.lightBg ?? '#fde8ee')
+                              const rowBord   = dark
+                                ? undefined
+                                : `1px solid ${(m?.lightBorder ?? '#f2b3c0')}66`
+
                               return (
-                                <motion.div key={e.id} className="mp-logitem"
-                                  initial={{ opacity: 0, x: 16, scale: 0.95 }} animate={{ opacity: 1, x: 0, scale: 1 }}
+                                <motion.div key={entry.id} className="mp-logitem"
+                                  initial={{ opacity: 0, x: 16, scale: 0.95 }}
+                                  animate={{ opacity: 1, x: 0, scale: 1 }}
                                   transition={{ delay: i * 0.04 }}
-                                  style={dark
-                                    ? { background: 'rgba(255,255,255,0.03)' }
-                                    : { background: m?.lightBg || '#fde8ee', border: `1px solid ${m?.lightBorder || '#f2b3c0'}66` }
-                                  }>
-                                  <i className={`ti ${m?.icon || 'ti-circle'} mp-logitem-ico`}
-                                    aria-hidden="true" style={{ color: dark ? (m?.c || '#d4607a') : (m?.lightText || '#7a1a35') }} />
+                                  style={{ background: rowBg, border: rowBord }}>
+
+                                  {/* icon — from entry.emoji (DB) or local config */}
+                                  <i className={`ti ${iconClass} mp-logitem-ico`}
+                                    aria-hidden="true" style={{ color }} />
+
                                   <div style={{ flex: 1, minWidth: 0 }}>
-                                    <div className="mp-logitem-name" style={{ color: dark ? txt1 : (m?.lightText || '#3d2a35') }}>{e.mood}</div>
-                                    {e.note && <div className="mp-logitem-note" style={{ color: txt2 }}>{e.note}</div>}
+                                    {/* mood label — from entry.mood (DB) */}
+                                    <div className="mp-logitem-name"
+                                      style={{ color: dark ? txt1 : (m?.lightText ?? '#3d2a35') }}>
+                                      {entry.mood}
+                                    </div>
+                                    {/* note — from entry.note (DB, nullable) */}
+                                    {entry.note && (
+                                      <div className="mp-logitem-note" style={{ color: txt2 }}>
+                                        {entry.note}
+                                      </div>
+                                    )}
                                   </div>
+
+                                  {/* score badge — from entry.score (DB) */}
+                                  <span className="mp-score-badge"
+                                    style={{ background: dark ? `${color}22` : `${color}18`, color }}>
+                                    {entry.score}
+                                  </span>
+
+                                  {/* time — from entry.created_at (DB) */}
                                   <div className="mp-logitem-time" style={{ color: txt2 }}>
-                                    {new Date(e.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+                                    {new Date(entry.created_at).toLocaleTimeString('en-IN', {
+                                      hour: '2-digit', minute: '2-digit',
+                                    })}
                                   </div>
                                 </motion.div>
                               )
@@ -566,48 +721,83 @@ export default function MoodPage() {
               </motion.div>
             )}
 
-            {/* ── HISTORY TAB ── */}
+            {/* ══════════════ HISTORY TAB ══════════════ */}
             {activeTab === 'history' && (
-              <motion.div key="history" initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -16 }}>
+              <motion.div key="history"
+                initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -16 }}>
                 <div className="mp-card" style={{ background: card, border: `1px solid ${bord}` }}>
-                  <p className="mp-card-lbl" style={{ color: txt1 }}>all entries</p>
-                  {entries.length === 0 ? (
-                    <div style={{ textAlign: 'center', padding: '48px' }}>
-                      <i className="ti ti-leaf" aria-hidden="true"
-                        style={{ fontSize: '40px', color: txt3, display: 'block', marginBottom: '10px' }} />
-                      <span style={{ fontSize: '14px', color: txt3, fontStyle: 'italic' }}>your journal is empty, start blooming</span>
+                  <p className="mp-card-lbl" style={{ color: txt1 }}>
+                    all entries ({entries.length})
+                  </p>
+
+                  {fetching ? (
+                    <div className="mp-empty" style={{ padding: '48px' }}>
+                      <i className="ti ti-loader mp-empty-ico" aria-hidden="true" style={{ color: txt3 }} />
+                    </div>
+                  ) : entries.length === 0 ? (
+                    <div className="mp-empty" style={{ padding: '48px' }}>
+                      <i className="ti ti-leaf mp-empty-ico" aria-hidden="true" style={{ color: txt3 }} />
+                      <span className="mp-empty-txt" style={{ color: txt3 }}>
+                        your journal is empty, start blooming
+                      </span>
                     </div>
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '9px' }}>
-                      {entries.map((e, i) => {
-                        const m = moods.find(x => x.label === e.mood)
+                      {entries.map((entry, i) => {
+                        const m         = getMoodConfig(entry)
+                        const iconClass = m?.icon ?? entry.emoji ?? 'ti-circle'
+                        const color     = dark ? (m?.c ?? '#d4607a') : (m?.lightText ?? '#7a1a35')
+
                         return (
-                          <motion.div key={e.id} className="mp-histitem"
+                          <motion.div key={entry.id} className="mp-histitem"
                             initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: i * 0.03 }}
+                            transition={{ delay: i * 0.025 }}
                             style={dark
-                              ? { background: 'rgba(255,255,255,0.025)', border: `1px solid ${m?.border || 'rgba(255,255,255,0.07)'}` }
-                              : { background: m?.lightBg || '#fde8ee', border: `1px solid ${m?.lightBorder || '#f2b3c0'}` }
+                              ? { background: 'rgba(255,255,255,0.025)', border: `1px solid ${m?.border ?? 'rgba(255,255,255,0.07)'}` }
+                              : { background: m?.lightBg ?? '#fde8ee', border: `1px solid ${m?.lightBorder ?? '#f2b3c0'}` }
                             }>
-                            <i className={`ti ${m?.icon || 'ti-circle'} mp-histitem-ico`}
-                              aria-hidden="true" style={{ color: dark ? (m?.c || '#d4607a') : (m?.lightText || '#7a1a35') }} />
+
+                            {/* icon */}
+                            <i className={`ti ${iconClass} mp-histitem-ico`}
+                              aria-hidden="true" style={{ color }} />
+
                             <div style={{ flex: 1, minWidth: 0 }}>
-                              <div style={{ fontSize: '13px', fontWeight: 600, color: dark ? txt1 : (m?.lightText || '#3d2a35') }}>{e.mood}</div>
-                              {e.note && <div style={{ fontSize: '12px', color: txt2, marginTop: '2px', fontStyle: 'italic' }}>"{e.note}"</div>}
+                              {/* mood + score */}
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <span style={{ fontSize: '13px', fontWeight: 600,
+                                  color: dark ? txt1 : (m?.lightText ?? '#3d2a35') }}>
+                                  {entry.mood}
+                                </span>
+                                {/* score dots — from entry.score */}
+                                <div className="mp-dots">
+                                  {[...Array(5)].map((_, di) => (
+                                    <div key={di} className="mp-dot"
+                                      style={{ width: '5px', height: '5px',
+                                        background: di < entry.score
+                                          ? (dark ? (m?.c ?? '#d4607a') : (m?.lightBorder ?? '#e8a0b0'))
+                                          : (dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)') }} />
+                                  ))}
+                                </div>
+                              </div>
+                              {/* note — nullable */}
+                              {entry.note && (
+                                <div className="mp-hist-note" style={{ color: txt2 }}>
+                                  "{entry.note}"
+                                </div>
+                              )}
                             </div>
+
+                            {/* date + time — from entry.created_at */}
                             <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                              <div className="mp-dots" style={{ justifyContent: 'flex-end', marginBottom: '5px' }}>
-                                {[...Array(5)].map((_, di) => (
-                                  <div key={di} className="mp-dot"
-                                    style={{ width: '5px', height: '5px', background: di < e.score
-                                      ? (dark ? (m?.c || '#d4607a') : (m?.lightBorder || '#e8a0b0'))
-                                      : (dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)') }} />
-                                ))}
+                              <div style={{ fontSize: '11px', fontWeight: 600, color, marginBottom: '2px' }}>
+                                {new Date(entry.created_at).toLocaleDateString('en-IN', {
+                                  day: 'numeric', month: 'short',
+                                })}
                               </div>
                               <div style={{ fontSize: '10px', color: txt3 }}>
-                                {new Date(e.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
-                                {' · '}
-                                {new Date(e.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+                                {new Date(entry.created_at).toLocaleTimeString('en-IN', {
+                                  hour: '2-digit', minute: '2-digit',
+                                })}
                               </div>
                             </div>
                           </motion.div>
@@ -619,25 +809,34 @@ export default function MoodPage() {
               </motion.div>
             )}
 
-            {/* ── AI TAB ── */}
+            {/* ══════════════ AI TAB ══════════════ */}
             {activeTab === 'ai' && (
-              <motion.div key="ai" initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}>
-                <div className="mp-card" style={{ background: card, border: `1px solid ${dark ? 'rgba(212,96,122,0.25)' : '#f2b3c0'}`, maxWidth: '680px' }}>
+              <motion.div key="ai"
+                initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}>
+                <div className="mp-card"
+                  style={{ background: card, border: `1px solid ${dark ? 'rgba(212,96,122,0.25)' : '#f2b3c0'}`, maxWidth: '680px' }}>
+
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
                     <div className="mp-ai-avatar"
                       style={{ background: dark ? 'rgba(212,96,122,0.15)' : '#fde8ee', border: `1px solid ${dark ? 'rgba(212,96,122,0.3)' : '#e8a0b0'}` }}>
-                      <i className="ti ti-heart" aria-hidden="true" style={{ fontSize: '20px', color: dark ? '#f2b3c0' : '#d4607a' }} />
+                      <i className="ti ti-heart" aria-hidden="true"
+                        style={{ fontSize: '20px', color: dark ? '#f2b3c0' : '#d4607a' }} />
                     </div>
                     <div>
                       <div className="mp-ai-title" style={{ color: txt1 }}>AI mood reflection</div>
-                      <div className="mp-ai-sub"   style={{ color: txt2 }}>a gentle read of your entries</div>
+                      <div className="mp-ai-sub"   style={{ color: txt2 }}>
+                        based on your {entries.length} journal {entries.length === 1 ? 'entry' : 'entries'}
+                      </div>
                     </div>
                   </div>
 
                   {aiLoading ? (
                     <div style={{ textAlign: 'center', padding: '40px' }}>
-                      <div className="mp-spin" style={{ borderColor: dark ? 'rgba(212,96,122,0.18)' : '#fde8ee', borderTopColor: dark ? '#f2b3c0' : '#d4607a' }} />
-                      <div style={{ color: txt2, fontSize: '13px', fontStyle: 'italic' }}>reading your heart...</div>
+                      <div className="mp-spin"
+                        style={{ borderColor: dark ? 'rgba(212,96,122,0.18)' : '#fde8ee', borderTopColor: dark ? '#f2b3c0' : '#d4607a' }} />
+                      <div style={{ color: txt2, fontSize: '13px', fontStyle: 'italic' }}>
+                        reading your heart...
+                      </div>
                     </div>
                   ) : aiSummary ? (
                     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
@@ -650,7 +849,10 @@ export default function MoodPage() {
                       </div>
                       <motion.button className="mp-btn-pill" whileTap={{ scale: 0.97 }}
                         onClick={handleAISummary}
-                        style={{ marginTop: '14px', background: dark ? 'rgba(212,96,122,0.15)' : '#fde8ee', border: `1px solid ${dark ? 'rgba(212,96,122,0.3)' : '#e8a0b0'}`, color: dark ? '#f2b3c0' : '#7a1a35' }}>
+                        style={{ marginTop: '14px',
+                          background: dark ? 'rgba(212,96,122,0.15)' : '#fde8ee',
+                          border: `1px solid ${dark ? 'rgba(212,96,122,0.3)' : '#e8a0b0'}`,
+                          color: dark ? '#f2b3c0' : '#7a1a35' }}>
                         <i className="ti ti-refresh" aria-hidden="true" />
                         reflect again
                       </motion.button>
@@ -658,13 +860,21 @@ export default function MoodPage() {
                   ) : (
                     <div style={{ textAlign: 'center', padding: '36px' }}>
                       <i className="ti ti-flower" aria-hidden="true"
-                        style={{ fontSize: '38px', color: dark ? '#f2b3c0' : '#d4607a', display: 'block', marginBottom: '12px', opacity: 0.6 }} />
+                        style={{ fontSize: '38px', color: dark ? '#f2b3c0' : '#d4607a',
+                          display: 'block', marginBottom: '12px', opacity: 0.6 }} />
                       <div style={{ color: txt2, fontSize: '13px', marginBottom: '18px', fontStyle: 'italic' }}>
-                        let AI gently reflect on your mood patterns
+                        let AI gently reflect on your {entries.length} mood {entries.length === 1 ? 'entry' : 'entries'}
                       </div>
                       <motion.button className="mp-btn-pill" whileTap={{ scale: 0.97 }}
-                        onClick={handleAISummary} disabled={entries.length === 0}
-                        style={{ background: dark ? 'rgba(212,96,122,0.15)' : '#fde8ee', border: `1px solid ${dark ? 'rgba(212,96,122,0.3)' : '#e8a0b0'}`, color: dark ? '#f2b3c0' : '#7a1a35', opacity: entries.length === 0 ? 0.4 : 1 }}>
+                        onClick={handleAISummary}
+                        disabled={entries.length === 0}
+                        style={{
+                          background: dark ? 'rgba(212,96,122,0.15)' : '#fde8ee',
+                          border: `1px solid ${dark ? 'rgba(212,96,122,0.3)' : '#e8a0b0'}`,
+                          color: dark ? '#f2b3c0' : '#7a1a35',
+                          opacity: entries.length === 0 ? 0.4 : 1,
+                          cursor: entries.length === 0 ? 'not-allowed' : 'pointer',
+                        }}>
                         <i className="ti ti-sparkles" aria-hidden="true" />
                         reflect on my mood
                       </motion.button>
