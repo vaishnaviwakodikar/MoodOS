@@ -455,7 +455,7 @@ export default function MoodPage() {
                 {aiLoading ? 'reading...' : 'AI reflection'}
               </motion.button>
 
-              <motion.button className="mp-btn-pill" whileTap={{ scale: 0.96 }} onClick={toggle}
+              {/* <motion.button className="mp-btn-pill" whileTap={{ scale: 0.96 }} onClick={toggle}
                 style={{
                   background: dark ? 'rgba(255,255,255,0.04)' : '#fde8ee',
                   border: `1px solid ${dark ? 'rgba(255,255,255,0.09)' : '#e8a0b0'}`,
@@ -464,7 +464,7 @@ export default function MoodPage() {
                 <i className={`ti ${dark ? 'ti-sun' : 'ti-moon'}`} aria-hidden="true"
                   style={{ color: dark ? '#f5ddb4' : '#d4607a' }} />
                 {dark ? 'light' : 'dark'}
-              </motion.button>
+              </motion.button> */}
             </div>
           </motion.div>
 
