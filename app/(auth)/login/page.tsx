@@ -411,19 +411,24 @@ export default function LoginPage() {
             }}>✦</span>
 
             {/* Brand */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
-              <div style={{
-                width: '14px', height: '14px', borderRadius: '50%', flexShrink: 0,
-                background: 'linear-gradient(135deg,#e8a8bf 0%,#c8b2ff 100%)',
-                animation: 'pulseOrb 3s ease-in-out infinite',
-              }} />
-              <span style={{
-                fontSize: '22px', fontWeight: 700, letterSpacing: '-0.03em',
-                background: 'linear-gradient(135deg,#cf8ea6 0%,#a58cff 100%)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-              }}>MoodOS</span>
-            </div>
+<div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', marginBottom: '14px' }}>
+  <img
+    src="/favicon.ico"
+    alt="MoodOS"
+    style={{
+      width: '36px', height: '36px',
+      borderRadius: '10px',
+      objectFit: 'contain',
+      flexShrink: 0,
+    }}
+  />
+  <span style={{
+    fontSize: '26px', fontWeight: 700, letterSpacing: '-0.03em',
+    background: 'linear-gradient(135deg,#cf8ea6 0%,#a58cff 100%)',
+    WebkitBackgroundClip: 'text',
+    WebkitTextFillColor: 'transparent',
+  }}>MoodOS</span>
+</div>
 
             <h1 style={{
               fontFamily: 'Cormorant Garamond, Georgia, serif',
