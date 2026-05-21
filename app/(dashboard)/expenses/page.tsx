@@ -422,10 +422,11 @@ export default function ExpensesPage() {
     if (!user) { setLoading(false); return }
     const [{ data: e }, { data: b }] = await Promise.all([
       supabase.from('expenses')
-        .select('*')
-        .eq('user_id', user.id)
-        .like('date', `${viewMonth}-%`)
-        .order('date', { ascending: false }),
+  .select('*')
+  .eq('user_id', user.id)
+  .gte('date', `${viewMonth}-01`)
+  .lte('date', `${viewMonth}-31`)
+  .order('date', { ascending: false }),
       supabase.from('expense_budgets')
         .select('*')
         .eq('user_id', user.id)
