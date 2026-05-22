@@ -18,7 +18,7 @@ const CATS = [
   { id: 'savings',       label: 'Savings',    icon: 'ti-piggy-bank',   c: '#1A5E3A', bg: '#E6F5ED', bc: '#9DD5B5', dot: '#37A866' },
   { id: 'other',         label: 'Other',      icon: 'ti-sparkles',     c: '#5A4A56', bg: '#F5F1F4', bc: '#D0C2CC', dot: '#9E8898' },
   { id: 'savings-pot', icon: 'ti-piggy-bank', label: 'Savings Pot', c: '#b8860b', bg: '#fef8e7', bc: '#f5ddb4', dot: '#e6ac00' },
-  { id: 'ledger', icon: 'ti-arrows-exchange', label: 'Lend & Borrow' },
+  { id: 'ledger', icon: 'ti-arrows-exchange', label: 'Lend & Borrow', c: '#5C6BC0', bg: '#ECEDF8', bc: '#C5CAE9', dot: '#7986CB' },
 ] as const
 
 type CatId = typeof CATS[number]['id']
