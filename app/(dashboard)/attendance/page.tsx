@@ -230,10 +230,10 @@ export default function AttendancePage() {
     setSaving(true)
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { setSaving(false); return }
-    await supabase.from('attendance').upsert(
-      { user_id: user.id, date: selDate, status: selStatus },
-      { onConflict: 'user_id,date' }
-    )
+    await (supabase.from('attendance') as any).upsert(
+  { user_id: user.id, date: selDate, status: selStatus },
+  { onConflict: 'user_id,date' }
+)
     setSaving(false); setSaved(true)
     setTimeout(() => setSaved(false), 2500)
     fetchRecords()
