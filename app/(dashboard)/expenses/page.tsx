@@ -1,3 +1,4 @@
+
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
@@ -16,6 +17,8 @@ const CATS = [
   { id: 'entertainment', label: 'Fun',        icon: 'ti-confetti',     c: '#5E2F8F', bg: '#F3EBFB', bc: '#CCAEF0', dot: '#9B5FD4' },
   { id: 'savings',       label: 'Savings',    icon: 'ti-piggy-bank',   c: '#1A5E3A', bg: '#E6F5ED', bc: '#9DD5B5', dot: '#37A866' },
   { id: 'other',         label: 'Other',      icon: 'ti-sparkles',     c: '#5A4A56', bg: '#F5F1F4', bc: '#D0C2CC', dot: '#9E8898' },
+  { id: 'savings-pot', icon: 'ti-piggy-bank', label: 'Savings Pot' },
+  { id: 'ledger', icon: 'ti-arrows-exchange', label: 'Lend & Borrow' },
 ] as const
 
 type CatId = typeof CATS[number]['id']
@@ -23,6 +26,7 @@ type CatId = typeof CATS[number]['id']
 const PAYMENT_METHODS = ['cash', 'UPI', 'card', 'net banking', 'wallet'] as const
 
 const todayIso = new Date().toISOString().slice(0, 10)
+
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -60,8 +64,13 @@ type Budget = {
   month: string
   amount: number
 }
+type LedgerEntry = {
+  id: string; user_id: string; name: string; amount: number
+  type: 'lent' | 'borrowed'; date: string; notes: string | null
+  settled: boolean; settled_date: string | null; created_at: string
+}
 
-type Tab = 'log' | 'overview' | 'budget' | 'history'
+type Tab = 'log' | 'overview' | 'budget' | 'history' | 'savings-pot' | 'ledger'
 
 // ── CSS ──────────────────────────────────────────────────────────────────────
 
@@ -91,7 +100,7 @@ const css = `
 }
 
 /* ─ Layout ─ */
-.xp-wrap { max-width: 980px; margin: 0 auto; padding: 0 clamp(20px,4vw,48px) 64px; }
+.xp-wrap { max-width: 100%; margin: 0; padding: 0 clamp(16px,3vw,40px) 64px; }
 
 /* ─ Top strip ─ */
 .xp-topstrip {
@@ -311,6 +320,19 @@ const css = `
 /* ─ Color accent bar ─ */
 .xp-accent { width: 3px; border-radius: 2px; flex-shrink: 0; align-self: stretch; }
 
+/* ─ Pot type toggle ─ */
+.xp-pot-toggle { display: flex; gap: 0; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; margin-bottom: 16px; }
+.xp-pot-toggle-btn { flex: 1; padding: 9px; font-size: 11px; font-weight: 600; border: none; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: .15s; background: var(--paper); color: var(--ink3); display: flex; align-items: center; justify-content: center; gap: 6px; }
+.xp-pot-toggle-btn.active-add { background: #E6F5ED; color: #1A5E3A; }
+.xp-pot-toggle-btn.active-withdraw { background: #FAEAEA; color: #8B2A2A; }
+
+/* ─ Pot entry ─ */
+.xp-pot-entry { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--line2); background: var(--paper); }
+.xp-pot-entry:hover { background: #fff; border-color: var(--line); }
+
+/* ─ Pot total ring ─ */
+.xp-pot-ring { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 140px; height: 140px; border-radius: 50%; border: 3px solid #9DD5B5; background: #E6F5ED; flex-shrink: 0; }
+
 @media (max-width: 640px) {
   .xp-stats { grid-template-columns: repeat(2,1fr); }
   .xp-two   { grid-template-columns: 1fr; }
@@ -411,22 +433,40 @@ export default function ExpensesPage() {
   const [savingBudget, setSavingBudget] = useState(false)
   const [savedBudget,  setSavedBudget]  = useState(false)
 
+  const [potEntries,  setPotEntries]  = useState<{ id: string; label: string; amount: number; type: 'add' | 'withdraw'; date: string }[]>([])
+  const [potAmount,   setPotAmount]   = useState('')
+  const [potLabel,    setPotLabel]    = useState('')
+  const [potType,     setPotType]     = useState<'add' | 'withdraw'>('add')
+  const [savingPot,   setSavingPot]   = useState(false)
+  const [savedPot,    setSavedPot]    = useState(false)
+
+  const [ledger,        setLedger]        = useState<LedgerEntry[]>([])
+const [ledgerName,    setLedgerName]     = useState('')
+const [ledgerAmount,  setLedgerAmount]   = useState('')
+const [ledgerType,    setLedgerType]     = useState<'lent'|'borrowed'>('lent')
+const [ledgerDate,    setLedgerDate]     = useState(todayIso)
+const [ledgerNotes,   setLedgerNotes]    = useState('')
+const [ledgerFilter,  setLedgerFilter]   = useState<'all'|'lent'|'borrowed'|'settled'>('all')
+const [savingLedger,  setSavingLedger]   = useState(false)
+const [savedLedger,   setSavedLedger]    = useState(false)
+
   useEffect(() => {
     setDateStr(new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }))
     fetchAll()
   }, [viewMonth])
 
+  
   const fetchAll = useCallback(async () => {
     setLoading(true)
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { setLoading(false); return }
     const [{ data: e }, { data: b }] = await Promise.all([
       supabase.from('expenses')
-  .select('*')
-  .eq('user_id', user.id)
-  .gte('date', `${viewMonth}-01`)
-  .lte('date', `${viewMonth}-31`)
-  .order('date', { ascending: false }),
+        .select('*')
+        .eq('user_id', user.id)
+        .gte('date', `${viewMonth}-01`)
+        .lte('date', `${viewMonth}-31`)
+        .order('date', { ascending: false }),
       supabase.from('expense_budgets')
         .select('*')
         .eq('user_id', user.id)
@@ -436,8 +476,29 @@ export default function ExpensesPage() {
     setExpenses(e || [])
     setBudget(b || null)
     if (b) setBudgetInput(String(b.amount))
-    setLoading(false)
+
+    // ── Pot fetch ──
+const { data: pot } = await supabase
+  .from('savings_pot')
+  .select('*')
+  .eq('user_id', user.id)
+  .order('date', { ascending: false })
+
+setPotEntries(pot || [])
+
+// ── Ledger fetch ──
+const { data: ledgerData } = await supabase
+  .from('ledger_entries')
+  .select('*')
+  .eq('user_id', user.id)
+  .order('date', { ascending: false })
+
+setLedger(ledgerData || [])
+
+setLoading(false)
   }, [viewMonth])
+  
+  
 
   const addExpense = async () => {
     const amt = parseFloat(amount)
@@ -461,6 +522,24 @@ export default function ExpensesPage() {
     fetchAll()
   }
 
+  // ── Pot ──
+  const addPotEntry = async () => {
+    const amt = parseFloat(potAmount)
+    if (!potLabel.trim() || !amt || amt <= 0) return
+    setSavingPot(true)
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) { setSavingPot(false); return }
+    await supabase.from('savings_pot').insert({
+      user_id: user.id, label: potLabel.trim(),
+      amount: amt, type: potType, date: todayIso,
+    })
+    setPotLabel(''); setPotAmount('')
+    setSavingPot(false); setSavedPot(true)
+    setTimeout(() => setSavedPot(false), 2500)
+    fetchAll()
+  }
+  
+
   const saveBudget = async () => {
     const amt = parseFloat(budgetInput)
     if (!amt || amt <= 0) return
@@ -475,6 +554,66 @@ export default function ExpensesPage() {
     setTimeout(() => setSavedBudget(false), 2200)
     fetchAll()
   }
+
+  /* ── Ledger ── */
+const addLedgerEntry = async () => {
+  const amt = parseFloat(ledgerAmount)
+
+  if (!ledgerName.trim() || !amt || amt <= 0) return
+
+  setSavingLedger(true)
+
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) {
+    setSavingLedger(false)
+    return
+  }
+
+  await supabase.from('ledger_entries').insert({
+    user_id: user.id,
+    name: ledgerName.trim(),
+    amount: amt,
+    type: ledgerType,
+    date: ledgerDate,
+    notes: ledgerNotes.trim() || null,
+  })
+
+  setLedgerName('')
+  setLedgerAmount('')
+  setLedgerNotes('')
+  setLedgerDate(todayIso)
+
+  setSavingLedger(false)
+  setSavedLedger(true)
+
+  setTimeout(() => setSavedLedger(false), 2500)
+
+  fetchAll()
+}
+
+const toggleSettled = async (entry: LedgerEntry) => {
+  await supabase
+    .from('ledger_entries')
+    .update({
+      settled: !entry.settled,
+      settled_date: !entry.settled ? todayIso : null,
+    })
+    .eq('id', entry.id)
+
+  fetchAll()
+}
+
+const deleteLedgerEntry = async (id: string) => {
+  await supabase
+    .from('ledger_entries')
+    .delete()
+    .eq('id', id)
+
+  fetchAll()
+}
+
+
 
   const navMonth = (dir: -1 | 1) => {
     const [y, m] = viewMonth.split('-').map(Number)
@@ -493,6 +632,13 @@ export default function ExpensesPage() {
   const budgetPct  = budgetAmt > 0 ? Math.min(100, Math.round((totalSpent / budgetAmt) * 100)) : 0
   const budgetLeft = budgetAmt - totalSpent
 
+  const activeLedger    = ledger.filter(e => !e.settled)
+const lentTotal       = activeLedger.filter(e => e.type === 'lent').reduce((a, e) => a + e.amount, 0)
+const borrowedTotal   = activeLedger.filter(e => e.type === 'borrowed').reduce((a, e) => a + e.amount, 0)
+const netPosition     = lentTotal - borrowedTotal
+const filteredLedger  = ledgerFilter === 'all' ? ledger
+  : ledgerFilter === 'settled' ? ledger.filter(e => e.settled)
+  : ledger.filter(e => e.type === ledgerFilter && !e.settled)
   const catBreakdown = CATS.map(cat => ({
     ...cat,
     total: expenses.filter(e => e.category === cat.id).reduce((a, e) => a + e.amount, 0),
@@ -509,16 +655,21 @@ export default function ExpensesPage() {
   }) : []
 
   const tabMeta: { id: Tab; icon: string; label: string }[] = [
-    { id: 'log',      icon: 'ti-plus-circle',  label: 'Log expense' },
-    { id: 'overview', icon: 'ti-chart-donut',  label: 'Overview'    },
-    { id: 'budget',   icon: 'ti-target',       label: 'Budget'      },
-    { id: 'history',  icon: 'ti-clock',        label: 'History'     },
+    { id: 'log',          icon: 'ti-plus-circle',  label: 'Log expense'  },
+    { id: 'overview',     icon: 'ti-chart-donut',  label: 'Overview'     },
+    { id: 'budget',       icon: 'ti-target',       label: 'Budget'       },
+    { id: 'history',      icon: 'ti-clock',        label: 'History'      },
+    { id: 'savings-pot',  icon: 'ti-piggy-bank',   label: 'Savings Pot'  },
+    { id: 'ledger',       icon: 'ti-arrows-exchange', label: 'Ledger'     },
   ]
 
   const statusColor = budgetPct >= 100 ? '#8B2A2A' : budgetPct >= 80 ? '#7A5C00' : '#1A5E3A'
   const statusBg    = budgetPct >= 100 ? '#FAEAEA' : budgetPct >= 80 ? '#FBF6E6' : '#E6F5ED'
   const statusBorder= budgetPct >= 100 ? '#EDBDBD' : budgetPct >= 80 ? '#E8D48A' : '#9DD5B5'
   const barColor    = budgetPct >= 100 ? '#C96060' : budgetPct >= 80 ? '#C49A00' : '#37A866'
+  const potTotal    = potEntries.reduce((a, e) => e.type === 'add' ? a + e.amount : a - e.amount, 0)
+  const potAdded    = potEntries.filter(e => e.type === 'add').reduce((a, e) => a + e.amount, 0)
+  const potWithdraw = potEntries.filter(e => e.type === 'withdraw').reduce((a, e) => a + e.amount, 0)
 
   const footerMsg =
     budgetPct >= 100 ? `Over budget by ${fmtINR(Math.abs(budgetLeft))} — reflect, reset, continue.`
@@ -987,6 +1138,290 @@ export default function ExpensesPage() {
                 </div>
               </motion.div>
             )}
+
+            {/* ── SAVINGS POT ── */}
+            {activeTab === 'savings-pot' && (
+              <motion.div key="savings-pot" className="xp-two"
+                initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: .22 }}>
+
+                {/* Left: Add form */}
+                <div className="xp-card">
+                  <p className="xp-card-title"><i className="ti ti-piggy-bank" /> Savings Pot</p>
+
+                  <div className="xp-pot-toggle">
+                    <button
+                      className={`xp-pot-toggle-btn${potType === 'add' ? ' active-add' : ''}`}
+                      onClick={() => setPotType('add')}
+                    >
+                      <i className="ti ti-arrow-down-circle" /> Deposit
+                    </button>
+                    <button
+                      className={`xp-pot-toggle-btn${potType === 'withdraw' ? ' active-withdraw' : ''}`}
+                      onClick={() => setPotType('withdraw')}
+                    >
+                      <i className="ti ti-arrow-up-circle" /> Withdraw
+                    </button>
+                  </div>
+
+                  <div className="xp-field-label"><i className="ti ti-currency-rupee" /> Amount</div>
+                  <div className="xp-amount-wrap">
+                    <span className="xp-amount-sym">₹</span>
+                    <input
+                      className="xp-amount-in"
+                      type="number" placeholder="0"
+                      value={potAmount}
+                      onChange={e => setPotAmount(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="xp-field-label"><i className="ti ti-pencil" /> Label</div>
+                  <input
+                    className="xp-input"
+                    type="text" placeholder="e.g. monthly savings, emergency fund…"
+                    value={potLabel}
+                    onChange={e => setPotLabel(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && addPotEntry()}
+                  />
+
+                  <div className="xp-field-label"><i className="ti ti-zap" /> Quick amounts</div>
+                  <div className="xp-quick">
+                    {[500, 1000, 2000, 5000, 10000].map(amt => (
+                      <button
+                        key={amt}
+                        className={`xp-chip${potAmount === String(amt) ? ' active' : ''}`}
+                        onClick={() => setPotAmount(String(amt))}
+                      >
+                        {fmtShort(amt)}
+                      </button>
+                    ))}
+                  </div>
+
+                  <button
+                    className={`xp-cta${potLabel.trim() && potAmount ? ' filled' : ''}`}
+                    style={potType === 'withdraw' ? { background: potLabel.trim() && potAmount ? '#8B2A2A' : undefined } : {}}
+                    onClick={addPotEntry}
+                    disabled={!potLabel.trim() || !potAmount || savingPot}
+                  >
+                    {savingPot ? 'Saving…' : savedPot ? 'Entry saved ✓' : potType === 'add' ? 'Deposit to pot' : 'Withdraw from pot'}
+                  </button>
+
+                  <AnimatePresence>
+                    {savedPot && (
+                      <motion.div className="xp-toast"
+                        initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                        style={potType === 'withdraw' ? { background: '#FAEAEA', borderColor: '#EDBDBD', color: '#8B2A2A' } : {}}
+                      >
+                        {potType === 'add' ? 'Deposited — your pot grows 🌱' : 'Withdrawn from pot'}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+
+                {/* Right: Pot summary + history */}
+                <div className="xp-col">
+                  {/* Total ring */}
+                  <div className="xp-card" style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
+                    <div className="xp-pot-ring">
+                      <span style={{ fontFamily: "'Playfair Display', serif", fontSize: 22, color: '#1A5E3A', letterSpacing: '-1px', lineHeight: 1 }}>{fmtShort(Math.max(0, potTotal))}</span>
+                      <span style={{ fontSize: 9, fontWeight: 600, letterSpacing: 2, color: '#37A866', textTransform: 'uppercase', marginTop: 4 }}>saved</span>
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      {[
+                        { label: 'Total deposited', value: fmtINR(potAdded),    c: '#1A5E3A', bg: '#E6F5ED', bc: '#9DD5B5' },
+                        { label: 'Total withdrawn', value: fmtINR(potWithdraw), c: '#8B2A2A', bg: '#FAEAEA', bc: '#EDBDBD' },
+                        { label: 'Net savings',     value: fmtINR(Math.max(0, potTotal)), c: '#004F7C', bg: '#E6F3FB', bc: '#A0CDE8' },
+                      ].map(row => (
+                        <div key={row.label} style={{ marginBottom: 8, padding: '7px 12px', borderRadius: 9, background: row.bg, border: `1px solid ${row.bc}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ fontSize: 10.5, fontWeight: 600, color: row.c, letterSpacing: '.3px' }}>{row.label}</span>
+                          <span style={{ fontFamily: "'Playfair Display', serif", fontSize: 15, color: row.c }}>{row.value}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Entry history */}
+                  <div className="xp-card" style={{ flex: 1 }}>
+                    <p className="xp-card-title"><i className="ti ti-clock" /> Pot history</p>
+                    {potEntries.length === 0 ? (
+                      <div className="xp-empty"><i className="ti ti-piggy-bank" />No entries yet — start saving!</div>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+                        <AnimatePresence>
+                          {potEntries.map((entry, i) => (
+                            <motion.div key={entry.id} className="xp-pot-entry"
+                              initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, x: -12 }}
+                              transition={{ delay: i * .03 }}
+                            >
+                              <div style={{ width: 34, height: 34, borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', background: entry.type === 'add' ? '#E6F5ED' : '#FAEAEA', flexShrink: 0 }}>
+                                <i className={`ti ${entry.type === 'add' ? 'ti-arrow-down-circle' : 'ti-arrow-up-circle'}`} style={{ fontSize: 15, color: entry.type === 'add' ? '#1A5E3A' : '#8B2A2A' }} />
+                              </div>
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ fontSize: 12.5, fontWeight: 500, color: 'var(--ink)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{entry.label}</div>
+                                <div style={{ fontSize: 10, color: 'var(--ink3)', marginTop: 2 }}>{new Date(entry.date + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</div>
+                              </div>
+                              <span style={{ fontFamily: "'Playfair Display', serif", fontSize: 16, color: entry.type === 'add' ? '#1A5E3A' : '#8B2A2A', fontWeight: 400, flexShrink: 0 }}>
+                                {entry.type === 'add' ? '+' : '−'}{fmtINR(entry.amount)}
+                              </span>
+                            </motion.div>
+                          ))}
+                        </AnimatePresence>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </motion.div>
+            )}
+            {activeTab === 'ledger' && (
+  <motion.div key="ledger" className="xp-two"
+    initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
+    transition={{ duration: .22 }}>
+
+    {/* Left: Add form */}
+    <div className="xp-card">
+      <p className="xp-card-title"><i className="ti ti-arrows-exchange" /> Lend & Borrow</p>
+
+      {/* Summary pills */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8, marginBottom: 16 }}>
+        {[
+          { label: 'You lent', value: fmtINR(lentTotal), c: '#004F7C', bg: '#E6F3FB', bc: '#A0CDE8' },
+          { label: 'You borrowed', value: fmtINR(borrowedTotal), c: '#7A5C00', bg: '#FBF6E6', bc: '#E8D48A' },
+          { label: 'Net', value: fmtINR(Math.abs(netPosition)), c: netPosition > 0 ? '#1A5E3A' : netPosition < 0 ? '#8B2A2A' : 'var(--ink3)', bg: netPosition > 0 ? '#E6F5ED' : netPosition < 0 ? '#FAEAEA' : 'var(--paper)', bc: netPosition > 0 ? '#9DD5B5' : netPosition < 0 ? '#EDBDBD' : 'var(--line)' },
+        ].map(s => (
+          <div key={s.label} style={{ padding: '9px 12px', borderRadius: 10, background: s.bg, border: `1px solid ${s.bc}` }}>
+            <div style={{ fontSize: 9, fontWeight: 600, letterSpacing: 1.5, textTransform: 'uppercase', color: s.c, marginBottom: 4 }}>{s.label}</div>
+            <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 16, color: s.c, letterSpacing: '-.5px' }}>{s.value}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Type toggle */}
+      <div className="xp-pot-toggle">
+        <button className={`xp-pot-toggle-btn${ledgerType === 'lent' ? ' active-add' : ''}`}
+          onClick={() => setLedgerType('lent')}
+          style={ledgerType === 'lent' ? { background: '#E6F3FB', color: '#004F7C' } : {}}>
+          <i className="ti ti-arrow-up-right" /> I lent money
+        </button>
+        <button className={`xp-pot-toggle-btn${ledgerType === 'borrowed' ? ' active-withdraw' : ''}`}
+          onClick={() => setLedgerType('borrowed')}
+          style={ledgerType === 'borrowed' ? { background: '#FBF6E6', color: '#7A5C00' } : {}}>
+          <i className="ti ti-arrow-down-left" /> I borrowed
+        </button>
+      </div>
+
+      <div className="xp-field-label"><i className="ti ti-user" /> Person / name</div>
+      <input className="xp-input" type="text" placeholder="who did you lend to / borrow from?"
+        value={ledgerName} onChange={e => setLedgerName(e.target.value)} />
+
+      <div className="xp-field-label"><i className="ti ti-currency-rupee" /> Amount</div>
+      <div className="xp-amount-wrap">
+        <span className="xp-amount-sym">₹</span>
+        <input className="xp-amount-in" type="number" placeholder="0"
+          value={ledgerAmount} onChange={e => setLedgerAmount(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && addLedgerEntry()} />
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        <div>
+          <div className="xp-field-label"><i className="ti ti-calendar" /> Date</div>
+          <input type="date" className="xp-input" style={{ marginBottom: 0 }}
+            value={ledgerDate} onChange={e => setLedgerDate(e.target.value)} />
+        </div>
+        <div>
+          <div className="xp-field-label"><i className="ti ti-notes" /> Notes</div>
+          <input className="xp-input" style={{ marginBottom: 0 }} type="text" placeholder="reason or context"
+            value={ledgerNotes} onChange={e => setLedgerNotes(e.target.value)} />
+        </div>
+      </div>
+
+      <button
+        className={`xp-cta${ledgerName.trim() && ledgerAmount ? ' filled' : ''}`}
+        style={{ marginTop: 14, ...(ledgerType === 'borrowed' && ledgerName.trim() && ledgerAmount ? { background: '#7A5C00' } : {}) }}
+        onClick={addLedgerEntry}
+        disabled={!ledgerName.trim() || !ledgerAmount || savingLedger}
+      >
+        {savingLedger ? 'Saving…' : savedLedger ? 'Entry saved ✓' : ledgerType === 'lent' ? 'Add lending entry' : 'Add borrowing entry'}
+      </button>
+
+      <AnimatePresence>
+        {savedLedger && (
+          <motion.div className="xp-toast" initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+            Logged — clarity is peace of mind 📋
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+
+    {/* Right: entries list */}
+    <div className="xp-card">
+      <div className="xp-section-meta">
+        <p className="xp-card-title" style={{ marginBottom: 0 }}><i className="ti ti-list" /> All entries</p>
+      </div>
+
+      <div className="xp-chips" style={{ marginBottom: 16 }}>
+        {(['all', 'lent', 'borrowed', 'settled'] as const).map(f => (
+          <button key={f} className={`xp-chip${ledgerFilter === f ? ' active' : ''}`}
+            onClick={() => setLedgerFilter(f)}
+            style={ledgerFilter === f && f === 'settled' ? { background: '#E6F5ED', borderColor: '#9DD5B5', color: '#1A5E3A' } : {}}>
+            {f === 'settled' ? '✓ Settled' : f.charAt(0).toUpperCase() + f.slice(1)}
+          </button>
+        ))}
+      </div>
+
+      {filteredLedger.length === 0 ? (
+        <div className="xp-empty"><i className="ti ti-arrows-exchange" />No entries here</div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+          <AnimatePresence>
+            {filteredLedger.map((entry, i) => {
+              const isLent = entry.type === 'lent'
+              const iconBg = entry.settled ? '#F5F1F4' : isLent ? '#E6F3FB' : '#FBF6E6'
+              const iconColor = entry.settled ? 'var(--ink4)' : isLent ? '#004F7C' : '#7A5C00'
+              const amtColor = entry.settled ? 'var(--ink4)' : isLent ? '#004F7C' : '#7A5C00'
+              return (
+                <motion.div key={entry.id} className="xp-pot-entry"
+                  initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, x: -12 }}
+                  transition={{ delay: i * .03 }}
+                  style={{ opacity: entry.settled ? .65 : 1 }}
+                >
+                  <div style={{ width: 34, height: 34, borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', background: iconBg, flexShrink: 0 }}>
+                    <i className={`ti ${entry.settled ? 'ti-check' : isLent ? 'ti-arrow-up-right' : 'ti-arrow-down-left'}`} style={{ fontSize: 15, color: iconColor }} />
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 12.5, fontWeight: 500, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                      {entry.name}
+                      <span style={{ fontSize: 9.5, fontWeight: 600, padding: '2px 8px', borderRadius: 999, background: iconBg, color: iconColor, border: `1px solid ${isLent ? '#A0CDE8' : '#E8D48A'}` }}>
+                        {entry.settled ? 'settled' : entry.type}
+                      </span>
+                    </div>
+                    <div style={{ fontSize: 10, color: 'var(--ink3)', marginTop: 2, display: 'flex', gap: 5 }}>
+                      <span>{new Date(entry.date + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                      {entry.notes && <><span style={{ color: 'var(--ink4)' }}>·</span><span style={{ fontStyle: 'italic', color: 'var(--ink4)' }}>{entry.notes}</span></>}
+                    </div>
+                  </div>
+                  <span style={{ fontFamily: "'Playfair Display', serif", fontSize: 16, color: amtColor, fontWeight: 400, flexShrink: 0, textDecoration: entry.settled ? 'line-through' : 'none' }}>
+                    {fmtINR(entry.amount)}
+                  </span>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                    <button onClick={() => toggleSettled(entry)} title={entry.settled ? 'Mark unsettled' : 'Mark as returned/paid'}
+                      style={{ background: 'none', border: '1px solid var(--line)', borderRadius: 6, width: 26, height: 26, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: entry.settled ? '#37A866' : 'var(--ink4)', fontSize: 12 }}>
+                      <i className={`ti ${entry.settled ? 'ti-refresh' : 'ti-check'}`} />
+                    </button>
+                    <button onClick={() => deleteLedgerEntry(entry.id)} title="Delete"
+                      style={{ background: 'none', border: '1px solid var(--line)', borderRadius: 6, width: 26, height: 26, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--ink4)', fontSize: 12 }}>
+                      <i className="ti ti-trash" />
+                    </button>
+                  </div>
+                </motion.div>
+              )
+            })}
+          </AnimatePresence>
+        </div>
+      )}
+    </div>
+  </motion.div>
+)}
+
           </AnimatePresence>
 
           {/* Footer */}
