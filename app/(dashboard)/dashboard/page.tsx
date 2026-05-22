@@ -180,13 +180,8 @@ if (attendanceRows.length > 0) {
   setAttendance(`${pct}%`)
 }
 
-  // const { data: expData } = await supabase
-  // .from('expenses')
-  // .select('amount')
-  // .eq('user_id', userId)
-  // .gte('date', `${thisMonth}-01`)
-  // .lte('date', `${thisMonth}-31`)
-   const { data: expData, error: expError } = await supabase
+ 
+  const { data: expData } = await supabase
   .from('expenses')
   .select('amount')
   .eq('user_id', userId)
@@ -194,7 +189,7 @@ if (attendanceRows.length > 0) {
   .lte('date', `${thisMonth}-31`)
 
 if (expData && expData.length > 0) {
-  const total = expData.reduce((a, e) => a + e.amount, 0)
+  const total = (expData as { amount: number }[]).reduce((a, e) => a + e.amount, 0)
   setExpenses(total >= 100000 ? `₹${(total/100000).toFixed(1)}L` : total >= 1000 ? `₹${(total/1000).toFixed(1)}k` : `₹${Math.round(total)}`)
 }
    
