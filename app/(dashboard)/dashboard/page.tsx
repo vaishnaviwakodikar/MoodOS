@@ -194,15 +194,15 @@ if (expData && expData.length > 0) {
 }
    
 
-    const { data: periodData } = await supabase
+  const { data: periodData } = await supabase
   .from('period_entries')
-  .select('start_date, end_date')
+  .select('start_date, end_date') as { data: { start_date: string; end_date: string } | null }
   .eq('user_id', userId)
   .order('start_date', { ascending: false })
   .limit(1)
   .maybeSingle()
 if (periodData) {
-  const next = new Date(periodData.start_date)
+  const next = new Date((periodData as { start_date: string; end_date: string }).start_date)
   next.setDate(next.getDate() + 28)
   const daysLeft = Math.ceil((next.getTime() - Date.now()) / 86400000)
   setPeriod(daysLeft > 0 ? `${daysLeft}d` : 'due')
