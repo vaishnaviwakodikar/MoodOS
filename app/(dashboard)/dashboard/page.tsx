@@ -156,12 +156,29 @@ if (habitsData && habitsData.length > 0) {
   setHabitSub(done === total ? 'all done! 🌿' : `${total - done} remaining`)
 }
 
-    const { data: attData } = await supabase.from('attendance').select('status').eq('user_id', userId).gte('date', `${thisMonth}-01`)
-.lte('date', `${thisMonth}-31`)
-    if (attData && attData.length > 0) {
-      const pct = Math.round((attData.filter(a => a.status === 'present').length / attData.length) * 100)
-      setAttendance(`${pct}%`)
-    }
+    type AttendanceRow = {
+  status: string
+}
+
+const { data: attData } = await supabase
+  .from('attendance')
+  .select('status')
+  .eq('user_id', userId)
+  .gte('date', `${thisMonth}-01`)
+  .lte('date', `${thisMonth}-31`)
+
+const attendanceRows = (attData || []) as AttendanceRow[]
+
+if (attendanceRows.length > 0) {
+  const pct = Math.round(
+    (
+      attendanceRows.filter(a => a.status === 'present').length /
+      attendanceRows.length
+    ) * 100
+  )
+
+  setAttendance(`${pct}%`)
+}
 
   // const { data: expData } = await supabase
   // .from('expenses')
