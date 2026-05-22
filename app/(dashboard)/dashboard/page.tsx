@@ -125,17 +125,15 @@ export default function DashboardPage() {
     const today     = new Date().toISOString().slice(0, 10)
     const thisMonth = today.slice(0, 7)
 
-    const { data: moodData } = await supabase
-  .from('mood_entries')
+    const { data: moodData } = await (supabase.from('moods') as any)
   .select('mood, emoji')
   .eq('user_id', userId)
   .gte('created_at', `${today}T00:00:00`)
   .lte('created_at', `${today}T23:59:59`)
   .order('created_at', { ascending: false })
   .limit(1)
-  .maybeSingle()
-if (moodData) setMood(moodData.mood)
-
+ .maybeSingle()
+if (moodData) setMood((moodData as any).mood)
     
 
     // replace the entire habits block with this
