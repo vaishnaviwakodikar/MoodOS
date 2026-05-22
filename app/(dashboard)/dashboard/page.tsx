@@ -194,13 +194,13 @@ if (expData && expData.length > 0) {
 }
    
 
-  const { data: periodData } = await supabase
+  const { data: periodData } = (await supabase
   .from('period_entries')
-  .select('start_date, end_date') as { data: { start_date: string; end_date: string } | null }
+  .select('start_date, end_date')
   .eq('user_id', userId)
   .order('start_date', { ascending: false })
   .limit(1)
-  .maybeSingle()
+  .maybeSingle()) as { data: { start_date: string; end_date: string } | null }
 if (periodData) {
   const next = new Date((periodData as { start_date: string; end_date: string }).start_date)
   next.setDate(next.getDate() + 28)
