@@ -467,19 +467,25 @@ export default function PeriodsPage() {
   const fetchProfile = async () => {
   const { data } = await supabase.from('cycle_profiles').select('*').single()
   if (data) {
+    const validRegularity = ['regular', 'irregular', 'very_irregular'] as const
     setCycleProfile({
-  ...data,
-  cycle_length: data.cycle_length ?? 28,
-  period_length: data.period_length ?? 5,
-  pcos_type: data.pcos_type as "pcos" | "pcod" | null,
-})
+      ...data,
+      cycle_length: data.cycle_length ?? 28,
+      period_length: data.period_length ?? 5,
+      cycle_regularity: validRegularity.includes(data.cycle_regularity)
+        ? (data.cycle_regularity as CycleProfile['cycle_regularity'])
+        : 'regular',
+      has_pcos_pcod: data.has_pcos_pcod ?? false,
+      on_birth_control: data.on_birth_control ?? false,
+      trying_to_conceive: data.trying_to_conceive ?? false,
+      pcos_type: data.pcos_type as 'pcos' | 'pcod' | null,
+    })
     localStorage.setItem('cycle_onboarded', '1')
   } else {
     const alreadyOnboarded = localStorage.getItem('cycle_onboarded')
-    if (!alreadyOnboarded) {
-      setShowOnboarding(true)
-    }
+    if (!alreadyOnboarded) setShowOnboarding(true)
   }
+}
 }
 
   const fetchEntries = async () => {
