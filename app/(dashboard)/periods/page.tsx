@@ -486,7 +486,7 @@ export default function PeriodsPage() {
     if (!alreadyOnboarded) setShowOnboarding(true)
   }
 }
-}
+
 
   const fetchEntries = async () => {
     const { data } = await supabase.from('period_entries').select('*').order('start_date', { ascending: false }).limit(12)
