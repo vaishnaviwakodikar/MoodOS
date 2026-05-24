@@ -472,7 +472,9 @@ export default function PeriodsPage() {
       ...data,
       cycle_length: data.cycle_length ?? 28,
       period_length: data.period_length ?? 5,
-      cycle_regularity: validRegularity.includes(data.cycle_regularity)
+      cycle_regularity: validRegularity.includes(data.cycle_regularity as string)
+  ? (data.cycle_regularity as CycleProfile['cycle_regularity'])
+  : 'regular',
         ? (data.cycle_regularity as CycleProfile['cycle_regularity'])
         : 'regular',
       has_pcos_pcod: data.has_pcos_pcod ?? false,
