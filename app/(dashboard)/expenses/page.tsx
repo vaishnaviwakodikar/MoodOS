@@ -1,4 +1,3 @@
-
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
@@ -17,8 +16,8 @@ const CATS = [
   { id: 'entertainment', label: 'Fun',        icon: 'ti-confetti',     c: '#5E2F8F', bg: '#F3EBFB', bc: '#CCAEF0', dot: '#9B5FD4' },
   { id: 'savings',       label: 'Savings',    icon: 'ti-piggy-bank',   c: '#1A5E3A', bg: '#E6F5ED', bc: '#9DD5B5', dot: '#37A866' },
   { id: 'other',         label: 'Other',      icon: 'ti-sparkles',     c: '#5A4A56', bg: '#F5F1F4', bc: '#D0C2CC', dot: '#9E8898' },
-  { id: 'savings-pot', icon: 'ti-piggy-bank', label: 'Savings Pot', c: '#b8860b', bg: '#fef8e7', bc: '#f5ddb4', dot: '#e6ac00' },
-  { id: 'ledger', icon: 'ti-arrows-exchange', label: 'Lend & Borrow', c: '#5C6BC0', bg: '#ECEDF8', bc: '#C5CAE9', dot: '#7986CB' },
+  { id: 'savings-pot',   icon: 'ti-piggy-bank',     label: 'Savings Pot',   c: '#b8860b', bg: '#fef8e7', bc: '#f5ddb4', dot: '#e6ac00' },
+  { id: 'ledger',        icon: 'ti-arrows-exchange', label: 'Lend & Borrow', c: '#5C6BC0', bg: '#ECEDF8', bc: '#C5CAE9', dot: '#7986CB' },
 ] as const
 
 type CatId = typeof CATS[number]['id']
@@ -26,7 +25,6 @@ type CatId = typeof CATS[number]['id']
 const PAYMENT_METHODS = ['cash', 'UPI', 'card', 'net banking', 'wallet'] as const
 
 const todayIso = new Date().toISOString().slice(0, 10)
-
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -64,6 +62,7 @@ type Budget = {
   month: string
   amount: number
 }
+
 type LedgerEntry = {
   id: string; user_id: string; name: string; amount: number
   type: 'lent' | 'borrowed'; date: string; notes: string | null
@@ -99,10 +98,8 @@ const css = `
   overflow-x: hidden;
 }
 
-/* ─ Layout ─ */
 .xp-wrap { max-width: 100%; margin: 0; padding: 0 clamp(16px,3vw,40px) 64px; }
 
-/* ─ Top strip ─ */
 .xp-topstrip {
   border-bottom: 1px solid var(--line);
   padding: 14px 0;
@@ -118,7 +115,6 @@ const css = `
 .xp-logotype em { color: var(--rose); font-style: italic; }
 .xp-topdate { font-size: 11px; letter-spacing: .5px; color: var(--ink3); }
 
-/* ─ Hero ─ */
 .xp-hero { display: grid; grid-template-columns: 1fr auto; align-items: end; gap: 32px; margin-bottom: 56px; }
 .xp-hero-eyebrow {
   font-size: 10px; letter-spacing: 3.5px; text-transform: uppercase;
@@ -141,7 +137,6 @@ const css = `
 }
 .xp-hero-sub::before { content: ''; width: 1px; height: 28px; background: var(--rose2); display: block; }
 
-/* Month widget */
 .xp-month-widget { display: flex; flex-direction: column; align-items: flex-end; gap: 10px; }
 .xp-month-inner { display: flex; align-items: center; gap: 0; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: var(--card); }
 .xp-marrow { width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; background: none; border: none; cursor: pointer; color: var(--ink3); font-size: 15px; transition: .15s; }
@@ -153,12 +148,10 @@ const css = `
   display: flex; align-items: center; gap: 6px;
 }
 
-/* ─ Rule ─ */
 .xp-rule { display: flex; align-items: center; gap: 14px; margin: 40px 0 32px; }
 .xp-rule-line { flex: 1; height: 1px; background: var(--line); }
 .xp-rule-label { font-size: 9px; letter-spacing: 3.5px; text-transform: uppercase; color: var(--ink4); white-space: nowrap; }
 
-/* ─ Stats band ─ */
 .xp-stats { display: grid; grid-template-columns: repeat(4,1fr); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 18px; overflow: hidden; margin-bottom: 48px; }
 .xp-stat { background: var(--card); padding: 22px 20px; position: relative; overflow: hidden; }
 .xp-stat::after { content: attr(data-glyph); position: absolute; bottom: -8px; right: 8px; font-size: 52px; opacity: .04; line-height: 1; color: var(--ink); font-family: 'Playfair Display', serif; pointer-events: none; }
@@ -166,7 +159,6 @@ const css = `
 .xp-stat-val { font-family: 'Playfair Display', serif; font-size: clamp(20px,2.5vw,30px); font-weight: 400; color: var(--ink); letter-spacing: -1px; line-height: 1; }
 .xp-stat-sub { font-size: 10px; color: var(--ink4); margin-top: 5px; }
 
-/* ─ Tabs ─ */
 .xp-tabs { display: flex; gap: 0; border-bottom: 1px solid var(--line); margin-bottom: 32px; overflow-x: auto; }
 .xp-tab {
   padding: 12px 22px 13px; font-size: 12px; font-weight: 600; letter-spacing: .3px;
@@ -179,16 +171,13 @@ const css = `
 .xp-tab:hover { color: var(--ink); }
 .xp-tab.active { color: var(--rose); border-bottom-color: var(--rose); }
 
-/* ─ Two-col ─ */
 .xp-two { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
 .xp-col { display: flex; flex-direction: column; gap: 20px; }
 
-/* ─ Card ─ */
 .xp-card { background: var(--card); border: 1px solid var(--line); border-radius: 20px; padding: 24px 22px; }
 .xp-card-title { font-size: 9.5px; font-weight: 600; letter-spacing: 2.5px; text-transform: uppercase; color: var(--ink3); margin-bottom: 20px; display: flex; align-items: center; gap: 8px; }
 .xp-card-title i { font-size: 13px; color: var(--rose); }
 
-/* ─ Form fields ─ */
 .xp-field-label { font-size: 9.5px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; color: var(--ink3); margin-bottom: 6px; display: flex; align-items: center; gap: 5px; }
 .xp-field-label i { font-size: 11px; color: var(--rose); }
 .xp-input {
@@ -211,7 +200,6 @@ const css = `
 .xp-amount-in:focus { border-color: rgba(201,80,112,.4); background: #fff; box-shadow: 0 0 0 4px rgba(201,80,112,.06); }
 .xp-amount-in::placeholder { color: rgba(201,80,112,.2); }
 
-/* ─ Categories ─ */
 .xp-cat-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 7px; margin-bottom: 16px; }
 .xp-cat-btn {
   display: flex; flex-direction: column; align-items: center; gap: 5px;
@@ -223,7 +211,6 @@ const css = `
 .xp-cat-btn i { font-size: 17px; }
 .xp-cat-btn span { font-size: 9.5px; font-weight: 600; letter-spacing: .3px; }
 
-/* ─ Chips ─ */
 .xp-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
 .xp-chip {
   padding: 5px 13px; border-radius: 999px;
@@ -234,7 +221,6 @@ const css = `
 .xp-chip:hover { border-color: rgba(201,80,112,.3); color: var(--rose); }
 .xp-chip.active { background: var(--rose3); border-color: rgba(201,80,112,.4); color: var(--rose); }
 
-/* ─ CTA button ─ */
 .xp-cta {
   width: 100%; padding: 13px; border-radius: 12px; border: none;
   font-family: 'Playfair Display', serif; font-size: 15px; font-style: italic;
@@ -247,14 +233,12 @@ const css = `
 .xp-cta.filled { background: var(--rose); }
 .xp-cta.filled:hover:not(:disabled) { background: #a83d5c; }
 
-/* ─ Toast ─ */
 .xp-toast {
   padding: 10px 14px; border-radius: 10px; font-size: 12px; font-style: italic;
   font-family: 'Playfair Display', serif; background: #EAF5EE;
   border: 1px solid #B7DEC9; color: #2D6A4F; text-align: center; margin-top: 10px;
 }
 
-/* ─ Expense item ─ */
 .xp-item {
   display: flex; align-items: center; gap: 12px;
   padding: 12px 13px; border-radius: 13px;
@@ -269,68 +253,52 @@ const css = `
 .xp-item-del { background: none; border: none; cursor: pointer; color: var(--ink4); font-size: 13px; padding: 4px; transition: .15s; flex-shrink: 0; border-radius: 6px; }
 .xp-item-del:hover { color: var(--rose); background: var(--rose3); }
 
-/* ─ Bar track ─ */
 .xp-bar { height: 4px; border-radius: 999px; background: rgba(26,16,24,.07); overflow: hidden; margin-top: 6px; }
 .xp-bar-fill { height: 100%; border-radius: 999px; transition: width .7s cubic-bezier(.16,1,.3,1); }
 
-/* ─ Donut ─ */
 .xp-donut-wrap { display: flex; justify-content: center; padding: 8px 0 20px; }
 
-/* ─ Budget inline ─ */
 .xp-budget-row { display: flex; gap: 8px; align-items: flex-end; margin-bottom: 18px; }
 .xp-bsave { padding: 11px 20px; border-radius: 10px; border: 1px solid var(--line); font-size: 11px; font-weight: 600; cursor: pointer; background: var(--paper); color: var(--ink2); transition: .15s; white-space: nowrap; font-family: 'DM Sans', sans-serif; }
 .xp-bsave:hover { background: var(--ink); color: #fff; border-color: var(--ink); }
 
-/* ─ Pacing row ─ */
 .xp-pace-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 13px; border-radius: 10px; background: var(--paper); border: 1px solid var(--line2); margin-bottom: 7px; }
 
-/* ─ Empty ─ */
 .xp-empty { text-align: center; padding: 36px 20px; color: var(--ink4); font-size: 13px; font-style: italic; font-family: 'Playfair Display', serif; }
 .xp-empty i { font-size: 26px; display: block; margin-bottom: 10px; opacity: .3; }
 
-/* ─ Total strip ─ */
 .xp-total-strip { margin-top: 14px; padding: 11px 15px; border-radius: 12px; background: var(--rose3); border: 1px solid rgba(201,80,112,.1); display: flex; justify-content: space-between; align-items: center; }
 
-/* ─ Spinning ─ */
 @keyframes spin { to { transform: rotate(360deg) } }
 .spin { animation: spin .9s linear infinite; display: inline-block; }
 
-/* ─ Budget progress ─ */
 .xp-progress-wrap { border-radius: 14px; padding: 14px 16px; margin-top: 14px; }
 
-/* ─ Quick amounts ─ */
 .xp-quick { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
 
-/* ─ Footer ─ */
 .xp-footer { margin-top: 40px; padding: 24px 28px; border-radius: 20px; background: var(--card); border: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; gap: 20px; }
 .xp-footer-eyebrow { font-size: 9px; letter-spacing: 3px; text-transform: uppercase; color: var(--ink4); margin-bottom: 5px; }
 .xp-footer-msg { font-family: 'Playfair Display', serif; font-style: italic; font-size: 15px; font-weight: 400; color: var(--ink2); }
 .xp-footer-icons { display: flex; gap: 8px; font-size: 18px; color: var(--rose2); flex-shrink: 0; }
 
-/* ─ Date group header ─ */
 .xp-date-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; padding: 0 2px; }
 .xp-date-label { font-size: 10.5px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: var(--ink3); }
 .xp-date-label.today { color: var(--rose); }
 .xp-date-total { font-family: 'Playfair Display', serif; font-size: 15px; color: var(--rose); }
 
-/* ─ Section header ─ */
 .xp-section-meta { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
 .xp-section-total { font-family: 'Playfair Display', serif; font-size: 19px; color: var(--rose); }
 
-/* ─ Color accent bar ─ */
 .xp-accent { width: 3px; border-radius: 2px; flex-shrink: 0; align-self: stretch; }
 
-/* ─ Pot type toggle ─ */
 .xp-pot-toggle { display: flex; gap: 0; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; margin-bottom: 16px; }
 .xp-pot-toggle-btn { flex: 1; padding: 9px; font-size: 11px; font-weight: 600; border: none; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: .15s; background: var(--paper); color: var(--ink3); display: flex; align-items: center; justify-content: center; gap: 6px; }
 .xp-pot-toggle-btn.active-add { background: #E6F5ED; color: #1A5E3A; }
 .xp-pot-toggle-btn.active-withdraw { background: #FAEAEA; color: #8B2A2A; }
 
-/* ─ Pot entry ─ */
 .xp-pot-entry { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--line2); background: var(--paper); }
 .xp-pot-entry:hover { background: #fff; border-color: var(--line); }
 
-/* ─ Pot total ring ─ */
 .xp-pot-ring { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 140px; height: 140px; border-radius: 50%; border: 3px solid #9DD5B5; background: #E6F5ED; flex-shrink: 0; }
 
 @media (max-width: 640px) {
@@ -433,74 +401,67 @@ export default function ExpensesPage() {
   const [savingBudget, setSavingBudget] = useState(false)
   const [savedBudget,  setSavedBudget]  = useState(false)
 
-  const [potEntries,  setPotEntries]  = useState<{ id: string; label: string; amount: number; type: 'add' | 'withdraw'; date: string }[]>([])
-  const [potAmount,   setPotAmount]   = useState('')
-  const [potLabel,    setPotLabel]    = useState('')
-  const [potType,     setPotType]     = useState<'add' | 'withdraw'>('add')
-  const [savingPot,   setSavingPot]   = useState(false)
-  const [savedPot,    setSavedPot]    = useState(false)
+  const [potEntries, setPotEntries] = useState<{ id: string; label: string; amount: number; type: 'add' | 'withdraw'; date: string }[]>([])
+  const [potAmount,  setPotAmount]  = useState('')
+  const [potLabel,   setPotLabel]   = useState('')
+  const [potType,    setPotType]    = useState<'add' | 'withdraw'>('add')
+  const [savingPot,  setSavingPot]  = useState(false)
+  const [savedPot,   setSavedPot]   = useState(false)
 
-  const [ledger,        setLedger]        = useState<LedgerEntry[]>([])
-const [ledgerName,    setLedgerName]     = useState('')
-const [ledgerAmount,  setLedgerAmount]   = useState('')
-const [ledgerType,    setLedgerType]     = useState<'lent'|'borrowed'>('lent')
-const [ledgerDate,    setLedgerDate]     = useState(todayIso)
-const [ledgerNotes,   setLedgerNotes]    = useState('')
-const [ledgerFilter,  setLedgerFilter]   = useState<'all'|'lent'|'borrowed'|'settled'>('all')
-const [savingLedger,  setSavingLedger]   = useState(false)
-const [savedLedger,   setSavedLedger]    = useState(false)
+  const [ledger,       setLedger]       = useState<LedgerEntry[]>([])
+  const [ledgerName,   setLedgerName]   = useState('')
+  const [ledgerAmount, setLedgerAmount] = useState('')
+  const [ledgerType,   setLedgerType]   = useState<'lent' | 'borrowed'>('lent')
+  const [ledgerDate,   setLedgerDate]   = useState(todayIso)
+  const [ledgerNotes,  setLedgerNotes]  = useState('')
+  const [ledgerFilter, setLedgerFilter] = useState<'all' | 'lent' | 'borrowed' | 'settled'>('all')
+  const [savingLedger, setSavingLedger] = useState(false)
+  const [savedLedger,  setSavedLedger]  = useState(false)
 
   useEffect(() => {
     setDateStr(new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }))
     fetchAll()
   }, [viewMonth])
 
-  
   const fetchAll = useCallback(async () => {
     setLoading(true)
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { setLoading(false); return }
-    // AFTER
-const [{ data: e }, { data: b }] = await Promise.all([
-  supabase.from('expenses')
-    .select('*')
-    .eq('user_id', user.id)
-    .gte('date', `${viewMonth}-01`)
-    .lte('date', `${viewMonth}-31`)
-    .order('date', { ascending: false }),
-  supabase.from('expense_budgets')
-    .select('*')
-    .eq('user_id', user.id)
-    .eq('month', viewMonth)
-    .single(),
-])
-setExpenses(e || [])
-const budget = b as Budget | null
-setBudget(budget)
-if (budget) setBudgetInput(String(budget.amount))
 
-    // ── Pot fetch ──
-const { data: pot } = await supabase
-  .from('savings_pot')
-  .select('*')
-  .eq('user_id', user.id)
-  .order('date', { ascending: false })
+    const [{ data: e }, { data: b }] = await Promise.all([
+      (supabase.from('expenses') as any)
+        .select('*')
+        .eq('user_id', user.id)
+        .gte('date', `${viewMonth}-01`)
+        .lte('date', `${viewMonth}-31`)
+        .order('date', { ascending: false }),
+      (supabase.from('expense_budgets') as any)
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('month', viewMonth)
+        .single(),
+    ])
 
-setPotEntries(pot || [])
+    setExpenses((e as Expense[]) || [])
+    const budgetData = b as Budget | null
+    setBudget(budgetData)
+    if (budgetData) setBudgetInput(String(budgetData.amount))
 
-// ── Ledger fetch ──
-const { data: ledgerData } = await supabase
-  .from('ledger_entries')
-  .select('*')
-  .eq('user_id', user.id)
-  .order('date', { ascending: false })
+    const { data: pot } = await (supabase.from('savings_pot') as any)
+      .select('*')
+      .eq('user_id', user.id)
+      .order('date', { ascending: false })
 
-setLedger(ledgerData || [])
+    setPotEntries(pot || [])
 
-setLoading(false)
+    const { data: ledgerData } = await (supabase.from('ledger_entries') as any)
+      .select('*')
+      .eq('user_id', user.id)
+      .order('date', { ascending: false })
+
+    setLedger((ledgerData as LedgerEntry[]) || [])
+    setLoading(false)
   }, [viewMonth])
-  
-  
 
   const addExpense = async () => {
     const amt = parseFloat(amount)
@@ -508,12 +469,17 @@ setLoading(false)
     setSaving(true)
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { setSaving(false); return }
-  
-await supabase.from('expenses').insert({
-  user_id: user.id, title: title.trim(), amount: amt,
-  category, payment_method: payMethod, date: expDate,
-  notes: expNotes.trim() || null,
-} as Parameters<ReturnType<typeof supabase.from>['insert']>[0])
+
+    await (supabase.from('expenses') as any).insert({
+      user_id: user.id,
+      title: title.trim(),
+      amount: amt,
+      category,
+      payment_method: payMethod,
+      date: expDate,
+      notes: expNotes.trim() || null,
+    })
+
     setTitle(''); setAmount(''); setExpNotes('')
     setSaving(false); setSaved(true)
     setTimeout(() => setSaved(false), 2800)
@@ -521,27 +487,30 @@ await supabase.from('expenses').insert({
   }
 
   const deleteExpense = async (id: string) => {
-    await supabase.from('expenses').delete().eq('id', id)
+    await (supabase.from('expenses') as any).delete().eq('id', id)
     fetchAll()
   }
 
-  // ── Pot ──
   const addPotEntry = async () => {
     const amt = parseFloat(potAmount)
     if (!potLabel.trim() || !amt || amt <= 0) return
     setSavingPot(true)
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { setSavingPot(false); return }
-    await supabase.from('savings_pot').insert({
-      user_id: user.id, label: potLabel.trim(),
-      amount: amt, type: potType, date: todayIso,
+
+    await (supabase.from('savings_pot') as any).insert({
+      user_id: user.id,
+      label: potLabel.trim(),
+      amount: amt,
+      type: potType,
+      date: todayIso,
     })
+
     setPotLabel(''); setPotAmount('')
     setSavingPot(false); setSavedPot(true)
     setTimeout(() => setSavedPot(false), 2500)
     fetchAll()
   }
-  
 
   const saveBudget = async () => {
     const amt = parseFloat(budgetInput)
@@ -549,74 +518,53 @@ await supabase.from('expenses').insert({
     setSavingBudget(true)
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { setSavingBudget(false); return }
-    await supabase.from('expense_budgets').upsert(
+
+    await (supabase.from('expense_budgets') as any).upsert(
       { user_id: user.id, month: viewMonth, amount: amt },
       { onConflict: 'user_id,month' }
     )
+
     setSavingBudget(false); setSavedBudget(true)
     setTimeout(() => setSavedBudget(false), 2200)
     fetchAll()
   }
 
-  /* ── Ledger ── */
-const addLedgerEntry = async () => {
-  const amt = parseFloat(ledgerAmount)
+  const addLedgerEntry = async () => {
+    const amt = parseFloat(ledgerAmount)
+    if (!ledgerName.trim() || !amt || amt <= 0) return
+    setSavingLedger(true)
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) { setSavingLedger(false); return }
 
-  if (!ledgerName.trim() || !amt || amt <= 0) return
+    await (supabase.from('ledger_entries') as any).insert({
+      user_id: user.id,
+      name: ledgerName.trim(),
+      amount: amt,
+      type: ledgerType,
+      date: ledgerDate,
+      notes: ledgerNotes.trim() || null,
+    })
 
-  setSavingLedger(true)
-
-  const { data: { user } } = await supabase.auth.getUser()
-
-  if (!user) {
-    setSavingLedger(false)
-    return
+    setLedgerName(''); setLedgerAmount(''); setLedgerNotes(''); setLedgerDate(todayIso)
+    setSavingLedger(false); setSavedLedger(true)
+    setTimeout(() => setSavedLedger(false), 2500)
+    fetchAll()
   }
 
-  await supabase.from('ledger_entries').insert({
-    user_id: user.id,
-    name: ledgerName.trim(),
-    amount: amt,
-    type: ledgerType,
-    date: ledgerDate,
-    notes: ledgerNotes.trim() || null,
-  })
+  const toggleSettled = async (entry: LedgerEntry) => {
+    await (supabase.from('ledger_entries') as any)
+      .update({
+        settled: !entry.settled,
+        settled_date: !entry.settled ? todayIso : null,
+      })
+      .eq('id', entry.id)
+    fetchAll()
+  }
 
-  setLedgerName('')
-  setLedgerAmount('')
-  setLedgerNotes('')
-  setLedgerDate(todayIso)
-
-  setSavingLedger(false)
-  setSavedLedger(true)
-
-  setTimeout(() => setSavedLedger(false), 2500)
-
-  fetchAll()
-}
-
-const toggleSettled = async (entry: LedgerEntry) => {
-  await supabase
-    .from('ledger_entries')
-    .update({
-      settled: !entry.settled,
-      settled_date: !entry.settled ? todayIso : null,
-    })
-    .eq('id', entry.id)
-
-  fetchAll()
-}
-
-const deleteLedgerEntry = async (id: string) => {
-  await supabase
-    .from('ledger_entries')
-    .delete()
-    .eq('id', id)
-
-  fetchAll()
-}
-
-
+  const deleteLedgerEntry = async (id: string) => {
+    await (supabase.from('ledger_entries') as any).delete().eq('id', id)
+    fetchAll()
+  }
 
   const navMonth = (dir: -1 | 1) => {
     const [y, m] = viewMonth.split('-').map(Number)
@@ -624,9 +572,9 @@ const deleteLedgerEntry = async (id: string) => {
     setViewMonth(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`)
   }
 
-  const monthLabel = new Date(viewMonth + '-01').toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })
+  const monthLabel     = new Date(viewMonth + '-01').toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })
   const isCurrentMonth = viewMonth === todayIso.slice(0, 7)
-  const budgetAmt = budget?.amount ?? 0
+  const budgetAmt      = budget?.amount ?? 0
 
   const totalSpent = expenses.reduce((a, e) => a + e.amount, 0)
   const todaySpent = expenses.filter(e => e.date === todayIso).reduce((a, e) => a + e.amount, 0)
@@ -635,13 +583,14 @@ const deleteLedgerEntry = async (id: string) => {
   const budgetPct  = budgetAmt > 0 ? Math.min(100, Math.round((totalSpent / budgetAmt) * 100)) : 0
   const budgetLeft = budgetAmt - totalSpent
 
-  const activeLedger    = ledger.filter(e => !e.settled)
-const lentTotal       = activeLedger.filter(e => e.type === 'lent').reduce((a, e) => a + e.amount, 0)
-const borrowedTotal   = activeLedger.filter(e => e.type === 'borrowed').reduce((a, e) => a + e.amount, 0)
-const netPosition     = lentTotal - borrowedTotal
-const filteredLedger  = ledgerFilter === 'all' ? ledger
-  : ledgerFilter === 'settled' ? ledger.filter(e => e.settled)
-  : ledger.filter(e => e.type === ledgerFilter && !e.settled)
+  const activeLedger   = ledger.filter(e => !e.settled)
+  const lentTotal      = activeLedger.filter(e => e.type === 'lent').reduce((a, e) => a + e.amount, 0)
+  const borrowedTotal  = activeLedger.filter(e => e.type === 'borrowed').reduce((a, e) => a + e.amount, 0)
+  const netPosition    = lentTotal - borrowedTotal
+  const filteredLedger = ledgerFilter === 'all'      ? ledger
+    : ledgerFilter === 'settled' ? ledger.filter(e => e.settled)
+    : ledger.filter(e => e.type === ledgerFilter && !e.settled)
+
   const catBreakdown = CATS.map(cat => ({
     ...cat,
     total: expenses.filter(e => e.category === cat.id).reduce((a, e) => a + e.amount, 0),
@@ -658,21 +607,21 @@ const filteredLedger  = ledgerFilter === 'all' ? ledger
   }) : []
 
   const tabMeta: { id: Tab; icon: string; label: string }[] = [
-    { id: 'log',          icon: 'ti-plus-circle',  label: 'Log expense'  },
-    { id: 'overview',     icon: 'ti-chart-donut',  label: 'Overview'     },
-    { id: 'budget',       icon: 'ti-target',       label: 'Budget'       },
-    { id: 'history',      icon: 'ti-clock',        label: 'History'      },
-    { id: 'savings-pot',  icon: 'ti-piggy-bank',   label: 'Savings Pot'  },
-    { id: 'ledger',       icon: 'ti-arrows-exchange', label: 'Ledger'     },
+    { id: 'log',         icon: 'ti-plus-circle',    label: 'Log expense' },
+    { id: 'overview',    icon: 'ti-chart-donut',    label: 'Overview'    },
+    { id: 'budget',      icon: 'ti-target',         label: 'Budget'      },
+    { id: 'history',     icon: 'ti-clock',          label: 'History'     },
+    { id: 'savings-pot', icon: 'ti-piggy-bank',     label: 'Savings Pot' },
+    { id: 'ledger',      icon: 'ti-arrows-exchange', label: 'Ledger'     },
   ]
 
-  const statusColor = budgetPct >= 100 ? '#8B2A2A' : budgetPct >= 80 ? '#7A5C00' : '#1A5E3A'
-  const statusBg    = budgetPct >= 100 ? '#FAEAEA' : budgetPct >= 80 ? '#FBF6E6' : '#E6F5ED'
-  const statusBorder= budgetPct >= 100 ? '#EDBDBD' : budgetPct >= 80 ? '#E8D48A' : '#9DD5B5'
-  const barColor    = budgetPct >= 100 ? '#C96060' : budgetPct >= 80 ? '#C49A00' : '#37A866'
-  const potTotal    = potEntries.reduce((a, e) => e.type === 'add' ? a + e.amount : a - e.amount, 0)
-  const potAdded    = potEntries.filter(e => e.type === 'add').reduce((a, e) => a + e.amount, 0)
-  const potWithdraw = potEntries.filter(e => e.type === 'withdraw').reduce((a, e) => a + e.amount, 0)
+  const statusColor  = budgetPct >= 100 ? '#8B2A2A' : budgetPct >= 80 ? '#7A5C00' : '#1A5E3A'
+  const statusBg     = budgetPct >= 100 ? '#FAEAEA' : budgetPct >= 80 ? '#FBF6E6' : '#E6F5ED'
+  const statusBorder = budgetPct >= 100 ? '#EDBDBD' : budgetPct >= 80 ? '#E8D48A' : '#9DD5B5'
+  const barColor     = budgetPct >= 100 ? '#C96060' : budgetPct >= 80 ? '#C49A00' : '#37A866'
+  const potTotal     = potEntries.reduce((a, e) => e.type === 'add' ? a + e.amount : a - e.amount, 0)
+  const potAdded     = potEntries.filter(e => e.type === 'add').reduce((a, e) => a + e.amount, 0)
+  const potWithdraw  = potEntries.filter(e => e.type === 'withdraw').reduce((a, e) => a + e.amount, 0)
 
   const footerMsg =
     budgetPct >= 100 ? `Over budget by ${fmtINR(Math.abs(budgetLeft))} — reflect, reset, continue.`
@@ -684,8 +633,8 @@ const filteredLedger  = ledgerFilter === 'all' ? ledger
     <>
       <style>{css}</style>
       <div className="xp">
-        {/* Top strip */}
         <div className="xp-wrap">
+          {/* Top strip */}
           <motion.div
             className="xp-topstrip"
             initial={{ opacity: 0, y: -8 }}
@@ -714,7 +663,6 @@ const filteredLedger  = ledgerFilter === 'all' ? ledger
               <h1 className="xp-h1">your<br /><em>money,</em><br />your story</h1>
               <p className="xp-hero-sub">spend with intention, grow with clarity</p>
             </div>
-
             <div className="xp-month-widget">
               <div className="xp-month-inner">
                 <button className="xp-marrow" onClick={() => navMonth(-1)}>
@@ -739,10 +687,10 @@ const filteredLedger  = ledgerFilter === 'all' ? ledger
           {/* Stats band */}
           <div className="xp-stats">
             {[
-              { label: 'spent this month', value: fmtShort(totalSpent),  glyph: '₹',  sub: `${expenses.length} transactions` },
-              { label: 'spent today',      value: fmtShort(todaySpent),  glyph: '◦',  sub: expenses.filter(e => e.date === todayIso).length + ' items today' },
-              { label: 'budget left',      value: budgetAmt > 0 ? fmtShort(Math.abs(budgetLeft)) : '—',  glyph: '%',  sub: budgetAmt > 0 ? (budgetLeft < 0 ? 'over budget' : 'remaining') : 'no budget set' },
-              { label: 'avg per day',      value: fmtShort(avgPerDay),   glyph: '∑',  sub: `across ${uniqueDays} days` },
+              { label: 'spent this month', value: fmtShort(totalSpent), glyph: '₹', sub: `${expenses.length} transactions` },
+              { label: 'spent today',      value: fmtShort(todaySpent), glyph: '◦', sub: expenses.filter(e => e.date === todayIso).length + ' items today' },
+              { label: 'budget left',      value: budgetAmt > 0 ? fmtShort(Math.abs(budgetLeft)) : '—', glyph: '%', sub: budgetAmt > 0 ? (budgetLeft < 0 ? 'over budget' : 'remaining') : 'no budget set' },
+              { label: 'avg per day',      value: fmtShort(avgPerDay),  glyph: '∑', sub: `across ${uniqueDays} days` },
             ].map((s, i) => (
               <motion.div
                 key={s.label}
@@ -784,42 +732,27 @@ const filteredLedger  = ledgerFilter === 'all' ? ledger
                 initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
                 transition={{ duration: .22 }}>
 
-                {/* Form */}
                 <div className="xp-card">
                   <p className="xp-card-title"><i className="ti ti-plus-circle" /> Add expense</p>
 
                   <div className="xp-field-label"><i className="ti ti-currency-rupee" /> Amount</div>
                   <div className="xp-amount-wrap">
                     <span className="xp-amount-sym">₹</span>
-                    <input
-                      className="xp-amount-in"
-                      type="number"
-                      placeholder="0"
-                      value={amount}
-                      onChange={e => setAmount(e.target.value)}
-                      onKeyDown={e => e.key === 'Enter' && addExpense()}
-                    />
+                    <input className="xp-amount-in" type="number" placeholder="0"
+                      value={amount} onChange={e => setAmount(e.target.value)}
+                      onKeyDown={e => e.key === 'Enter' && addExpense()} />
                   </div>
 
                   <div className="xp-field-label"><i className="ti ti-pencil" /> Description</div>
-                  <input
-                    className="xp-input"
-                    type="text"
-                    placeholder="what did you spend on?"
-                    value={title}
-                    onChange={e => setTitle(e.target.value)}
-                    onKeyDown={e => e.key === 'Enter' && addExpense()}
-                  />
+                  <input className="xp-input" type="text" placeholder="what did you spend on?"
+                    value={title} onChange={e => setTitle(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && addExpense()} />
 
                   <div className="xp-field-label"><i className="ti ti-tag" /> Category</div>
                   <div className="xp-cat-grid">
                     {CATS.map(c => (
-                      <button
-                        key={c.id}
-                        className="xp-cat-btn"
-                        onClick={() => setCategory(c.id)}
-                        style={category === c.id ? { background: c.bg, borderColor: c.bc } : {}}
-                      >
+                      <button key={c.id} className="xp-cat-btn" onClick={() => setCategory(c.id)}
+                        style={category === c.id ? { background: c.bg, borderColor: c.bc } : {}}>
                         <i className={`ti ${c.icon}`} style={{ color: category === c.id ? c.c : 'var(--ink3)' }} />
                         <span style={{ color: category === c.id ? c.c : 'var(--ink3)' }}>{c.label}</span>
                       </button>
@@ -829,32 +762,25 @@ const filteredLedger  = ledgerFilter === 'all' ? ledger
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                     <div>
                       <div className="xp-field-label"><i className="ti ti-calendar" /> Date</div>
-                      <input type="date" className="xp-input" style={{ marginBottom: 0 }} value={expDate} onChange={e => setExpDate(e.target.value)} />
+                      <input type="date" className="xp-input" style={{ marginBottom: 0 }}
+                        value={expDate} onChange={e => setExpDate(e.target.value)} />
                     </div>
                     <div>
                       <div className="xp-field-label"><i className="ti ti-wallet" /> Paid via</div>
                       <div className="xp-chips" style={{ marginBottom: 0 }}>
                         {PAYMENT_METHODS.map(pm => (
-                          <button
-                            key={pm}
-                            className={`xp-chip${payMethod === pm ? ' active' : ''}`}
-                            onClick={() => setPayMethod(pm)}
-                          >
-                            {pm}
-                          </button>
+                          <button key={pm} className={`xp-chip${payMethod === pm ? ' active' : ''}`}
+                            onClick={() => setPayMethod(pm)}>{pm}</button>
                         ))}
                       </div>
                     </div>
                   </div>
 
-                  <div className="xp-field-label" style={{ marginTop: 12 }}><i className="ti ti-notes" /> Notes <span style={{ fontWeight: 400, fontSize: 9, color: 'var(--ink4)' }}>(optional)</span></div>
-                  <input
-                    className="xp-input"
-                    type="text"
-                    placeholder="any notes?"
-                    value={expNotes}
-                    onChange={e => setExpNotes(e.target.value)}
-                  />
+                  <div className="xp-field-label" style={{ marginTop: 12 }}>
+                    <i className="ti ti-notes" /> Notes <span style={{ fontWeight: 400, fontSize: 9, color: 'var(--ink4)' }}>(optional)</span>
+                  </div>
+                  <input className="xp-input" type="text" placeholder="any notes?"
+                    value={expNotes} onChange={e => setExpNotes(e.target.value)} />
 
                   <button
                     className={`xp-cta${title.trim() && amount ? ' filled' : ''}`}
@@ -866,19 +792,14 @@ const filteredLedger  = ledgerFilter === 'all' ? ledger
 
                   <AnimatePresence>
                     {saved && (
-                      <motion.div
-                        className="xp-toast"
-                        initial={{ opacity: 0, y: 5 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0 }}
-                      >
+                      <motion.div className="xp-toast"
+                        initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
                         Expense logged — every rupee accounted for 🌿
                       </motion.div>
                     )}
                   </AnimatePresence>
                 </div>
 
-                {/* Today */}
                 <div className="xp-card">
                   <p className="xp-card-title"><i className="ti ti-calendar-check" /> Today's expenses</p>
                   {loading ? (
@@ -921,19 +842,13 @@ const filteredLedger  = ledgerFilter === 'all' ? ledger
                       <div className="xp-donut-wrap">
                         <svg width="124" height="124" viewBox="0 0 124 124" role="img" aria-label="Spending breakdown donut chart">
                           {donutSegs.map((seg, i) => (
-                            <motion.circle
-                              key={seg.id}
-                              cx="62" cy="62" r="50"
-                              fill="none"
-                              stroke={seg.c}
-                              strokeWidth="16"
+                            <motion.circle key={seg.id} cx="62" cy="62" r="50"
+                              fill="none" stroke={seg.c} strokeWidth="16"
                               strokeDasharray={`${seg.dash} ${CIRC - seg.dash}`}
                               strokeDashoffset={-seg.offset}
                               transform="rotate(-90 62 62)"
-                              initial={{ opacity: 0 }}
-                              animate={{ opacity: 1 }}
-                              transition={{ delay: i * .06 }}
-                            />
+                              initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                              transition={{ delay: i * .06 }} />
                           ))}
                           <text x="62" y="58" textAnchor="middle" fontFamily="'Playfair Display', serif" fontSize="14" fontWeight="400" fill="var(--ink)" letterSpacing="-0.5">{fmtShort(totalSpent)}</text>
                           <text x="62" y="71" textAnchor="middle" fontFamily="'DM Sans', sans-serif" fontSize="8" fontWeight="600" fill="var(--ink3)" letterSpacing="2">TOTAL</text>
@@ -1004,14 +919,9 @@ const filteredLedger  = ledgerFilter === 'all' ? ledger
                   <div className="xp-budget-row">
                     <div className="xp-amount-wrap" style={{ flex: 1, marginBottom: 0 }}>
                       <span className="xp-amount-sym">₹</span>
-                      <input
-                        className="xp-amount-in"
-                        type="number"
-                        placeholder="0"
-                        style={{ fontSize: 24 }}
-                        value={budgetInput}
-                        onChange={e => setBudgetInput(e.target.value)}
-                      />
+                      <input className="xp-amount-in" type="number" placeholder="0"
+                        style={{ fontSize: 24 }} value={budgetInput}
+                        onChange={e => setBudgetInput(e.target.value)} />
                     </div>
                     <button className="xp-bsave" onClick={saveBudget} disabled={savingBudget}>
                       {savingBudget ? <i className="ti ti-loader-2 spin" /> : savedBudget ? 'Saved ✓' : 'Save'}
@@ -1019,12 +929,9 @@ const filteredLedger  = ledgerFilter === 'all' ? ledger
                   </div>
 
                   {budgetAmt > 0 && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 6 }}
-                      animate={{ opacity: 1, y: 0 }}
+                    <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
                       className="xp-progress-wrap"
-                      style={{ background: statusBg, border: `1px solid ${statusBorder}` }}
-                    >
+                      style={{ background: statusBg, border: `1px solid ${statusBorder}` }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8 }}>
                         <span style={{ fontSize: 11.5, fontWeight: 600, color: statusColor }}>
                           {budgetPct >= 100 ? '⚠ Over budget' : `${100 - budgetPct}% remaining`}
@@ -1038,12 +945,10 @@ const filteredLedger  = ledgerFilter === 'all' ? ledger
                   <div className="xp-field-label" style={{ marginTop: 20 }}><i className="ti ti-zap" /> Quick presets</div>
                   <div className="xp-quick">
                     {[5000, 10000, 15000, 20000, 30000, 50000].map(amt => (
-                      <button
-                        key={amt}
+                      <button key={amt}
                         className={`xp-chip${budgetInput === String(amt) ? ' active' : ''}`}
                         onClick={() => setBudgetInput(String(amt))}
-                        style={budgetInput === String(amt) ? { background: '#E6F5ED', borderColor: '#9DD5B5', color: '#1A5E3A' } : {}}
-                      >
+                        style={budgetInput === String(amt) ? { background: '#E6F5ED', borderColor: '#9DD5B5', color: '#1A5E3A' } : {}}>
                         {fmtShort(amt)}
                       </button>
                     ))}
@@ -1059,10 +964,10 @@ const filteredLedger  = ledgerFilter === 'all' ? ledger
                       const dayOfMonth  = isCurrentMonth ? new Date().getDate() : daysInMonth
                       const projected   = dayOfMonth > 0 ? (totalSpent / dayOfMonth) * daysInMonth : 0
                       return [
-                        { label: 'Days tracked',    value: `${uniqueDays} / ${daysInMonth}`,   c: '#4A3F8F' },
-                        { label: 'Avg per day',     value: fmtINR(avgPerDay),                  c: '#7A5C00' },
-                        { label: 'Projected total', value: fmtINR(projected),                  c: projected > budgetAmt && budgetAmt > 0 ? '#8B2A2A' : '#1A5E3A' },
-                        { label: 'Transactions',    value: String(expenses.length),             c: '#8B3A62' },
+                        { label: 'Days tracked',    value: `${uniqueDays} / ${daysInMonth}`, c: '#4A3F8F' },
+                        { label: 'Avg per day',     value: fmtINR(avgPerDay),                c: '#7A5C00' },
+                        { label: 'Projected total', value: fmtINR(projected),                c: projected > budgetAmt && budgetAmt > 0 ? '#8B2A2A' : '#1A5E3A' },
+                        { label: 'Transactions',    value: String(expenses.length),          c: '#8B3A62' },
                       ].map(row => (
                         <div key={row.label} className="xp-pace-row">
                           <span style={{ fontSize: 12, color: 'var(--ink3)', fontWeight: 500 }}>{row.label}</span>
@@ -1117,13 +1022,9 @@ const filteredLedger  = ledgerFilter === 'all' ? ledger
                     const grouped: Record<string, Expense[]> = {}
                     expenses.forEach(e => { if (!grouped[e.date]) grouped[e.date] = []; grouped[e.date].push(e) })
                     return Object.entries(grouped).map(([date, exps], gi) => (
-                      <motion.div
-                        key={date}
-                        initial={{ opacity: 0, y: 6 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: gi * .04 }}
-                        style={{ marginBottom: 24 }}
-                      >
+                      <motion.div key={date}
+                        initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: gi * .04 }} style={{ marginBottom: 24 }}>
                         <div className="xp-date-header">
                           <span className={`xp-date-label${date === todayIso ? ' today' : ''}`}>
                             {date === todayIso ? 'Today' : new Date(date + 'T00:00:00').toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' })}
@@ -1148,21 +1049,16 @@ const filteredLedger  = ledgerFilter === 'all' ? ledger
                 initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
                 transition={{ duration: .22 }}>
 
-                {/* Left: Add form */}
                 <div className="xp-card">
                   <p className="xp-card-title"><i className="ti ti-piggy-bank" /> Savings Pot</p>
 
                   <div className="xp-pot-toggle">
-                    <button
-                      className={`xp-pot-toggle-btn${potType === 'add' ? ' active-add' : ''}`}
-                      onClick={() => setPotType('add')}
-                    >
+                    <button className={`xp-pot-toggle-btn${potType === 'add' ? ' active-add' : ''}`}
+                      onClick={() => setPotType('add')}>
                       <i className="ti ti-arrow-down-circle" /> Deposit
                     </button>
-                    <button
-                      className={`xp-pot-toggle-btn${potType === 'withdraw' ? ' active-withdraw' : ''}`}
-                      onClick={() => setPotType('withdraw')}
-                    >
+                    <button className={`xp-pot-toggle-btn${potType === 'withdraw' ? ' active-withdraw' : ''}`}
+                      onClick={() => setPotType('withdraw')}>
                       <i className="ti ti-arrow-up-circle" /> Withdraw
                     </button>
                   </div>
@@ -1170,33 +1066,20 @@ const filteredLedger  = ledgerFilter === 'all' ? ledger
                   <div className="xp-field-label"><i className="ti ti-currency-rupee" /> Amount</div>
                   <div className="xp-amount-wrap">
                     <span className="xp-amount-sym">₹</span>
-                    <input
-                      className="xp-amount-in"
-                      type="number" placeholder="0"
-                      value={potAmount}
-                      onChange={e => setPotAmount(e.target.value)}
-                    />
+                    <input className="xp-amount-in" type="number" placeholder="0"
+                      value={potAmount} onChange={e => setPotAmount(e.target.value)} />
                   </div>
 
                   <div className="xp-field-label"><i className="ti ti-pencil" /> Label</div>
-                  <input
-                    className="xp-input"
-                    type="text" placeholder="e.g. monthly savings, emergency fund…"
-                    value={potLabel}
-                    onChange={e => setPotLabel(e.target.value)}
-                    onKeyDown={e => e.key === 'Enter' && addPotEntry()}
-                  />
+                  <input className="xp-input" type="text" placeholder="e.g. monthly savings, emergency fund…"
+                    value={potLabel} onChange={e => setPotLabel(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && addPotEntry()} />
 
                   <div className="xp-field-label"><i className="ti ti-zap" /> Quick amounts</div>
                   <div className="xp-quick">
                     {[500, 1000, 2000, 5000, 10000].map(amt => (
-                      <button
-                        key={amt}
-                        className={`xp-chip${potAmount === String(amt) ? ' active' : ''}`}
-                        onClick={() => setPotAmount(String(amt))}
-                      >
-                        {fmtShort(amt)}
-                      </button>
+                      <button key={amt} className={`xp-chip${potAmount === String(amt) ? ' active' : ''}`}
+                        onClick={() => setPotAmount(String(amt))}>{fmtShort(amt)}</button>
                     ))}
                   </div>
 
@@ -1213,17 +1096,14 @@ const filteredLedger  = ledgerFilter === 'all' ? ledger
                     {savedPot && (
                       <motion.div className="xp-toast"
                         initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-                        style={potType === 'withdraw' ? { background: '#FAEAEA', borderColor: '#EDBDBD', color: '#8B2A2A' } : {}}
-                      >
+                        style={potType === 'withdraw' ? { background: '#FAEAEA', borderColor: '#EDBDBD', color: '#8B2A2A' } : {}}>
                         {potType === 'add' ? 'Deposited — your pot grows 🌱' : 'Withdrawn from pot'}
                       </motion.div>
                     )}
                   </AnimatePresence>
                 </div>
 
-                {/* Right: Pot summary + history */}
                 <div className="xp-col">
-                  {/* Total ring */}
                   <div className="xp-card" style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
                     <div className="xp-pot-ring">
                       <span style={{ fontFamily: "'Playfair Display', serif", fontSize: 22, color: '#1A5E3A', letterSpacing: '-1px', lineHeight: 1 }}>{fmtShort(Math.max(0, potTotal))}</span>
@@ -1243,7 +1123,6 @@ const filteredLedger  = ledgerFilter === 'all' ? ledger
                     </div>
                   </div>
 
-                  {/* Entry history */}
                   <div className="xp-card" style={{ flex: 1 }}>
                     <p className="xp-card-title"><i className="ti ti-clock" /> Pot history</p>
                     {potEntries.length === 0 ? (
@@ -1254,8 +1133,7 @@ const filteredLedger  = ledgerFilter === 'all' ? ledger
                           {potEntries.map((entry, i) => (
                             <motion.div key={entry.id} className="xp-pot-entry"
                               initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, x: -12 }}
-                              transition={{ delay: i * .03 }}
-                            >
+                              transition={{ delay: i * .03 }}>
                               <div style={{ width: 34, height: 34, borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', background: entry.type === 'add' ? '#E6F5ED' : '#FAEAEA', flexShrink: 0 }}>
                                 <i className={`ti ${entry.type === 'add' ? 'ti-arrow-down-circle' : 'ti-arrow-up-circle'}`} style={{ fontSize: 15, color: entry.type === 'add' ? '#1A5E3A' : '#8B2A2A' }} />
                               </div>
@@ -1275,165 +1153,160 @@ const filteredLedger  = ledgerFilter === 'all' ? ledger
                 </div>
               </motion.div>
             )}
+
+            {/* ── LEDGER ── */}
             {activeTab === 'ledger' && (
-  <motion.div key="ledger" className="xp-two"
-    initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
-    transition={{ duration: .22 }}>
+              <motion.div key="ledger" className="xp-two"
+                initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: .22 }}>
 
-    {/* Left: Add form */}
-    <div className="xp-card">
-      <p className="xp-card-title"><i className="ti ti-arrows-exchange" /> Lend & Borrow</p>
+                <div className="xp-card">
+                  <p className="xp-card-title"><i className="ti ti-arrows-exchange" /> Lend & Borrow</p>
 
-      {/* Summary pills */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8, marginBottom: 16 }}>
-        {[
-          { label: 'You lent', value: fmtINR(lentTotal), c: '#004F7C', bg: '#E6F3FB', bc: '#A0CDE8' },
-          { label: 'You borrowed', value: fmtINR(borrowedTotal), c: '#7A5C00', bg: '#FBF6E6', bc: '#E8D48A' },
-          { label: 'Net', value: fmtINR(Math.abs(netPosition)), c: netPosition > 0 ? '#1A5E3A' : netPosition < 0 ? '#8B2A2A' : 'var(--ink3)', bg: netPosition > 0 ? '#E6F5ED' : netPosition < 0 ? '#FAEAEA' : 'var(--paper)', bc: netPosition > 0 ? '#9DD5B5' : netPosition < 0 ? '#EDBDBD' : 'var(--line)' },
-        ].map(s => (
-          <div key={s.label} style={{ padding: '9px 12px', borderRadius: 10, background: s.bg, border: `1px solid ${s.bc}` }}>
-            <div style={{ fontSize: 9, fontWeight: 600, letterSpacing: 1.5, textTransform: 'uppercase', color: s.c, marginBottom: 4 }}>{s.label}</div>
-            <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 16, color: s.c, letterSpacing: '-.5px' }}>{s.value}</div>
-          </div>
-        ))}
-      </div>
-
-      {/* Type toggle */}
-      <div className="xp-pot-toggle">
-        <button className={`xp-pot-toggle-btn${ledgerType === 'lent' ? ' active-add' : ''}`}
-          onClick={() => setLedgerType('lent')}
-          style={ledgerType === 'lent' ? { background: '#E6F3FB', color: '#004F7C' } : {}}>
-          <i className="ti ti-arrow-up-right" /> I lent money
-        </button>
-        <button className={`xp-pot-toggle-btn${ledgerType === 'borrowed' ? ' active-withdraw' : ''}`}
-          onClick={() => setLedgerType('borrowed')}
-          style={ledgerType === 'borrowed' ? { background: '#FBF6E6', color: '#7A5C00' } : {}}>
-          <i className="ti ti-arrow-down-left" /> I borrowed
-        </button>
-      </div>
-
-      <div className="xp-field-label"><i className="ti ti-user" /> Person / name</div>
-      <input className="xp-input" type="text" placeholder="who did you lend to / borrow from?"
-        value={ledgerName} onChange={e => setLedgerName(e.target.value)} />
-
-      <div className="xp-field-label"><i className="ti ti-currency-rupee" /> Amount</div>
-      <div className="xp-amount-wrap">
-        <span className="xp-amount-sym">₹</span>
-        <input className="xp-amount-in" type="number" placeholder="0"
-          value={ledgerAmount} onChange={e => setLedgerAmount(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && addLedgerEntry()} />
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-        <div>
-          <div className="xp-field-label"><i className="ti ti-calendar" /> Date</div>
-          <input type="date" className="xp-input" style={{ marginBottom: 0 }}
-            value={ledgerDate} onChange={e => setLedgerDate(e.target.value)} />
-        </div>
-        <div>
-          <div className="xp-field-label"><i className="ti ti-notes" /> Notes</div>
-          <input className="xp-input" style={{ marginBottom: 0 }} type="text" placeholder="reason or context"
-            value={ledgerNotes} onChange={e => setLedgerNotes(e.target.value)} />
-        </div>
-      </div>
-
-      <button
-        className={`xp-cta${ledgerName.trim() && ledgerAmount ? ' filled' : ''}`}
-        style={{ marginTop: 14, ...(ledgerType === 'borrowed' && ledgerName.trim() && ledgerAmount ? { background: '#7A5C00' } : {}) }}
-        onClick={addLedgerEntry}
-        disabled={!ledgerName.trim() || !ledgerAmount || savingLedger}
-      >
-        {savingLedger ? 'Saving…' : savedLedger ? 'Entry saved ✓' : ledgerType === 'lent' ? 'Add lending entry' : 'Add borrowing entry'}
-      </button>
-
-      <AnimatePresence>
-        {savedLedger && (
-          <motion.div className="xp-toast" initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-            Logged — clarity is peace of mind 📋
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-
-    {/* Right: entries list */}
-    <div className="xp-card">
-      <div className="xp-section-meta">
-        <p className="xp-card-title" style={{ marginBottom: 0 }}><i className="ti ti-list" /> All entries</p>
-      </div>
-
-      <div className="xp-chips" style={{ marginBottom: 16 }}>
-        {(['all', 'lent', 'borrowed', 'settled'] as const).map(f => (
-          <button key={f} className={`xp-chip${ledgerFilter === f ? ' active' : ''}`}
-            onClick={() => setLedgerFilter(f)}
-            style={ledgerFilter === f && f === 'settled' ? { background: '#E6F5ED', borderColor: '#9DD5B5', color: '#1A5E3A' } : {}}>
-            {f === 'settled' ? '✓ Settled' : f.charAt(0).toUpperCase() + f.slice(1)}
-          </button>
-        ))}
-      </div>
-
-      {filteredLedger.length === 0 ? (
-        <div className="xp-empty"><i className="ti ti-arrows-exchange" />No entries here</div>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-          <AnimatePresence>
-            {filteredLedger.map((entry, i) => {
-              const isLent = entry.type === 'lent'
-              const iconBg = entry.settled ? '#F5F1F4' : isLent ? '#E6F3FB' : '#FBF6E6'
-              const iconColor = entry.settled ? 'var(--ink4)' : isLent ? '#004F7C' : '#7A5C00'
-              const amtColor = entry.settled ? 'var(--ink4)' : isLent ? '#004F7C' : '#7A5C00'
-              return (
-                <motion.div key={entry.id} className="xp-pot-entry"
-                  initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, x: -12 }}
-                  transition={{ delay: i * .03 }}
-                  style={{ opacity: entry.settled ? .65 : 1 }}
-                >
-                  <div style={{ width: 34, height: 34, borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', background: iconBg, flexShrink: 0 }}>
-                    <i className={`ti ${entry.settled ? 'ti-check' : isLent ? 'ti-arrow-up-right' : 'ti-arrow-down-left'}`} style={{ fontSize: 15, color: iconColor }} />
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8, marginBottom: 16 }}>
+                    {[
+                      { label: 'You lent',    value: fmtINR(lentTotal),     c: '#004F7C', bg: '#E6F3FB', bc: '#A0CDE8' },
+                      { label: 'You borrowed',value: fmtINR(borrowedTotal),  c: '#7A5C00', bg: '#FBF6E6', bc: '#E8D48A' },
+                      { label: 'Net',         value: fmtINR(Math.abs(netPosition)), c: netPosition > 0 ? '#1A5E3A' : netPosition < 0 ? '#8B2A2A' : 'var(--ink3)', bg: netPosition > 0 ? '#E6F5ED' : netPosition < 0 ? '#FAEAEA' : 'var(--paper)', bc: netPosition > 0 ? '#9DD5B5' : netPosition < 0 ? '#EDBDBD' : 'var(--line)' },
+                    ].map(s => (
+                      <div key={s.label} style={{ padding: '9px 12px', borderRadius: 10, background: s.bg, border: `1px solid ${s.bc}` }}>
+                        <div style={{ fontSize: 9, fontWeight: 600, letterSpacing: 1.5, textTransform: 'uppercase', color: s.c, marginBottom: 4 }}>{s.label}</div>
+                        <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 16, color: s.c, letterSpacing: '-.5px' }}>{s.value}</div>
+                      </div>
+                    ))}
                   </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 12.5, fontWeight: 500, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                      {entry.name}
-                      <span style={{ fontSize: 9.5, fontWeight: 600, padding: '2px 8px', borderRadius: 999, background: iconBg, color: iconColor, border: `1px solid ${isLent ? '#A0CDE8' : '#E8D48A'}` }}>
-                        {entry.settled ? 'settled' : entry.type}
-                      </span>
-                    </div>
-                    <div style={{ fontSize: 10, color: 'var(--ink3)', marginTop: 2, display: 'flex', gap: 5 }}>
-                      <span>{new Date(entry.date + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
-                      {entry.notes && <><span style={{ color: 'var(--ink4)' }}>·</span><span style={{ fontStyle: 'italic', color: 'var(--ink4)' }}>{entry.notes}</span></>}
-                    </div>
-                  </div>
-                  <span style={{ fontFamily: "'Playfair Display', serif", fontSize: 16, color: amtColor, fontWeight: 400, flexShrink: 0, textDecoration: entry.settled ? 'line-through' : 'none' }}>
-                    {fmtINR(entry.amount)}
-                  </span>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                    <button onClick={() => toggleSettled(entry)} title={entry.settled ? 'Mark unsettled' : 'Mark as returned/paid'}
-                      style={{ background: 'none', border: '1px solid var(--line)', borderRadius: 6, width: 26, height: 26, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: entry.settled ? '#37A866' : 'var(--ink4)', fontSize: 12 }}>
-                      <i className={`ti ${entry.settled ? 'ti-refresh' : 'ti-check'}`} />
+
+                  <div className="xp-pot-toggle">
+                    <button className={`xp-pot-toggle-btn${ledgerType === 'lent' ? ' active-add' : ''}`}
+                      onClick={() => setLedgerType('lent')}
+                      style={ledgerType === 'lent' ? { background: '#E6F3FB', color: '#004F7C' } : {}}>
+                      <i className="ti ti-arrow-up-right" /> I lent money
                     </button>
-                    <button onClick={() => deleteLedgerEntry(entry.id)} title="Delete"
-                      style={{ background: 'none', border: '1px solid var(--line)', borderRadius: 6, width: 26, height: 26, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--ink4)', fontSize: 12 }}>
-                      <i className="ti ti-trash" />
+                    <button className={`xp-pot-toggle-btn${ledgerType === 'borrowed' ? ' active-withdraw' : ''}`}
+                      onClick={() => setLedgerType('borrowed')}
+                      style={ledgerType === 'borrowed' ? { background: '#FBF6E6', color: '#7A5C00' } : {}}>
+                      <i className="ti ti-arrow-down-left" /> I borrowed
                     </button>
                   </div>
-                </motion.div>
-              )
-            })}
-          </AnimatePresence>
-        </div>
-      )}
-    </div>
-  </motion.div>
-)}
+
+                  <div className="xp-field-label"><i className="ti ti-user" /> Person / name</div>
+                  <input className="xp-input" type="text" placeholder="who did you lend to / borrow from?"
+                    value={ledgerName} onChange={e => setLedgerName(e.target.value)} />
+
+                  <div className="xp-field-label"><i className="ti ti-currency-rupee" /> Amount</div>
+                  <div className="xp-amount-wrap">
+                    <span className="xp-amount-sym">₹</span>
+                    <input className="xp-amount-in" type="number" placeholder="0"
+                      value={ledgerAmount} onChange={e => setLedgerAmount(e.target.value)}
+                      onKeyDown={e => e.key === 'Enter' && addLedgerEntry()} />
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                    <div>
+                      <div className="xp-field-label"><i className="ti ti-calendar" /> Date</div>
+                      <input type="date" className="xp-input" style={{ marginBottom: 0 }}
+                        value={ledgerDate} onChange={e => setLedgerDate(e.target.value)} />
+                    </div>
+                    <div>
+                      <div className="xp-field-label"><i className="ti ti-notes" /> Notes</div>
+                      <input className="xp-input" style={{ marginBottom: 0 }} type="text" placeholder="reason or context"
+                        value={ledgerNotes} onChange={e => setLedgerNotes(e.target.value)} />
+                    </div>
+                  </div>
+
+                  <button
+                    className={`xp-cta${ledgerName.trim() && ledgerAmount ? ' filled' : ''}`}
+                    style={{ marginTop: 14, ...(ledgerType === 'borrowed' && ledgerName.trim() && ledgerAmount ? { background: '#7A5C00' } : {}) }}
+                    onClick={addLedgerEntry}
+                    disabled={!ledgerName.trim() || !ledgerAmount || savingLedger}
+                  >
+                    {savingLedger ? 'Saving…' : savedLedger ? 'Entry saved ✓' : ledgerType === 'lent' ? 'Add lending entry' : 'Add borrowing entry'}
+                  </button>
+
+                  <AnimatePresence>
+                    {savedLedger && (
+                      <motion.div className="xp-toast"
+                        initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                        Logged — clarity is peace of mind 📋
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+
+                <div className="xp-card">
+                  <div className="xp-section-meta">
+                    <p className="xp-card-title" style={{ marginBottom: 0 }}><i className="ti ti-list" /> All entries</p>
+                  </div>
+
+                  <div className="xp-chips" style={{ marginBottom: 16 }}>
+                    {(['all', 'lent', 'borrowed', 'settled'] as const).map(f => (
+                      <button key={f} className={`xp-chip${ledgerFilter === f ? ' active' : ''}`}
+                        onClick={() => setLedgerFilter(f)}
+                        style={ledgerFilter === f && f === 'settled' ? { background: '#E6F5ED', borderColor: '#9DD5B5', color: '#1A5E3A' } : {}}>
+                        {f === 'settled' ? '✓ Settled' : f.charAt(0).toUpperCase() + f.slice(1)}
+                      </button>
+                    ))}
+                  </div>
+
+                  {filteredLedger.length === 0 ? (
+                    <div className="xp-empty"><i className="ti ti-arrows-exchange" />No entries here</div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+                      <AnimatePresence>
+                        {filteredLedger.map((entry, i) => {
+                          const isLent    = entry.type === 'lent'
+                          const iconBg    = entry.settled ? '#F5F1F4' : isLent ? '#E6F3FB' : '#FBF6E6'
+                          const iconColor = entry.settled ? 'var(--ink4)' : isLent ? '#004F7C' : '#7A5C00'
+                          const amtColor  = entry.settled ? 'var(--ink4)' : isLent ? '#004F7C' : '#7A5C00'
+                          return (
+                            <motion.div key={entry.id} className="xp-pot-entry"
+                              initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, x: -12 }}
+                              transition={{ delay: i * .03 }}
+                              style={{ opacity: entry.settled ? .65 : 1 }}>
+                              <div style={{ width: 34, height: 34, borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', background: iconBg, flexShrink: 0 }}>
+                                <i className={`ti ${entry.settled ? 'ti-check' : isLent ? 'ti-arrow-up-right' : 'ti-arrow-down-left'}`} style={{ fontSize: 15, color: iconColor }} />
+                              </div>
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ fontSize: 12.5, fontWeight: 500, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                                  {entry.name}
+                                  <span style={{ fontSize: 9.5, fontWeight: 600, padding: '2px 8px', borderRadius: 999, background: iconBg, color: iconColor, border: `1px solid ${isLent ? '#A0CDE8' : '#E8D48A'}` }}>
+                                    {entry.settled ? 'settled' : entry.type}
+                                  </span>
+                                </div>
+                                <div style={{ fontSize: 10, color: 'var(--ink3)', marginTop: 2, display: 'flex', gap: 5 }}>
+                                  <span>{new Date(entry.date + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                                  {entry.notes && <><span style={{ color: 'var(--ink4)' }}>·</span><span style={{ fontStyle: 'italic', color: 'var(--ink4)' }}>{entry.notes}</span></>}
+                                </div>
+                              </div>
+                              <span style={{ fontFamily: "'Playfair Display', serif", fontSize: 16, color: amtColor, fontWeight: 400, flexShrink: 0, textDecoration: entry.settled ? 'line-through' : 'none' }}>
+                                {fmtINR(entry.amount)}
+                              </span>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                                <button onClick={() => toggleSettled(entry)}
+                                  title={entry.settled ? 'Mark unsettled' : 'Mark as returned/paid'}
+                                  style={{ background: 'none', border: '1px solid var(--line)', borderRadius: 6, width: 26, height: 26, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: entry.settled ? '#37A866' : 'var(--ink4)', fontSize: 12 }}>
+                                  <i className={`ti ${entry.settled ? 'ti-refresh' : 'ti-check'}`} />
+                                </button>
+                                <button onClick={() => deleteLedgerEntry(entry.id)} title="Delete"
+                                  style={{ background: 'none', border: '1px solid var(--line)', borderRadius: 6, width: 26, height: 26, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--ink4)', fontSize: 12 }}>
+                                  <i className="ti ti-trash" />
+                                </button>
+                              </div>
+                            </motion.div>
+                          )
+                        })}
+                      </AnimatePresence>
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            )}
 
           </AnimatePresence>
 
           {/* Footer */}
-          <motion.div
-            className="xp-footer"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: .5 }}
-          >
+          <motion.div className="xp-footer"
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: .5 }}>
             <div>
               <p className="xp-footer-eyebrow">money intention</p>
               <p className="xp-footer-msg">{footerMsg}</p>
