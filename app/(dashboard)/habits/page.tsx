@@ -3,9 +3,9 @@
 import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { createClient } from '@/lib/supabase'
- import type { RealtimeChannel } from '@supabase/supabase-js'
+import type { RealtimeChannel } from '@supabase/supabase-js'
 
-// ── categories — tinted with the dashboard palette ──────────────────────────
+// ── categories ───────────────────────────────────────────────────────────────
 const CATEGORIES = [
   { id: 'health',    label: 'Health',    icon: 'ti-heart-pulse', c: '#d4607a', dotC: '#e8a0b0', bg: '#fff9fb', border: 'rgba(212,96,122,0.15)'  },
   { id: 'study',     label: 'Study',     icon: 'ti-book',        c: '#b8860b', dotC: '#f5ddb4', bg: '#fffdf5', border: 'rgba(245,221,180,0.4)'  },
@@ -30,7 +30,7 @@ function getWeekDates() {
 }
 const todayIso = new Date().toISOString().slice(0, 10)
 
-// ── CSS — mirrors sg- dashboard exactly, extends with habit-specific rules ───
+// ── CSS ──────────────────────────────────────────────────────────────────────
 const css = `
   @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;1,9..144,300;1,9..144,400&family=DM+Sans:wght@300;400;500&display=swap');
   @import url('https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css');
@@ -62,7 +62,6 @@ const css = `
     width: 100%;
   }
 
-  /* ── header ── */
   .sg-header {
     display: flex; align-items: flex-start; justify-content: space-between;
     margin-bottom: 24px; gap: 16px; flex-wrap: wrap;
@@ -101,7 +100,6 @@ const css = `
     55%       { transform: scale(1.1); }
   }
 
-  /* ── clock ── */
   .sg-clock-card {
     background: var(--lavender); border: 1px solid rgba(201,184,232,0.5);
     border-radius: 18px; padding: 14px 18px; text-align: right; flex-shrink: 0;
@@ -112,7 +110,6 @@ const css = `
   }
   .sg-clock-sub { font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: var(--ink3); margin-top: 4px; }
 
-  /* ── divider ── */
   .sg-divider {
     display: flex; align-items: center; gap: 10px; margin-bottom: 16px;
   }
@@ -120,7 +117,6 @@ const css = `
   .sg-divider-label  { font-size: 9px; font-weight: 500; letter-spacing: 3px; text-transform: uppercase; color: var(--ink3); white-space: nowrap; }
   .sg-divider-flower { font-size: 11px; color: var(--blush2); }
 
-  /* ── stat cards ── */
   .sg-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; margin-bottom: 16px; }
 
   .sg-card {
@@ -148,9 +144,7 @@ const css = `
   .sg-card-sub  { font-size: 11px; color: var(--ink3); }
   .sg-card-ico  { position: absolute; top: 14px; right: 14px; font-size: 16px; opacity: 0.22; }
 
-  /* ── tabs — styled like sg-act but horizontal pills ── */
   .sg-tabs { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
-
   .sg-tab {
     display: inline-flex; align-items: center; gap: 7px;
     padding: 8px 18px; border-radius: 999px;
@@ -161,25 +155,19 @@ const css = `
   }
   .sg-tab:hover  { background: var(--petal); border-color: rgba(212,96,122,0.25); color: var(--rose); }
   .sg-tab:active { transform: scale(0.97); }
-  .sg-tab.active {
-    background: var(--petal); border-color: rgba(212,96,122,0.3); color: var(--rose);
-  }
+  .sg-tab.active { background: var(--petal); border-color: rgba(212,96,122,0.3); color: var(--rose); }
   .sg-tab i { font-size: 13px; }
 
-  /* ── content card shell — same as sg-act card feel ── */
   .sg-content-card {
     background: var(--card); border: 1px solid rgba(212,96,122,0.1);
     border-radius: 20px; padding: clamp(18px,2.5vw,24px);
   }
-
   .sg-content-lbl {
     font-size: 9px; font-weight: 500; letter-spacing: 2.5px; text-transform: uppercase;
     color: var(--ink3); margin-bottom: 14px;
   }
 
-  /* ── habit list ── */
   .hlist { display: flex; flex-direction: column; gap: 9px; }
-
   .hitem {
     display: flex; align-items: center; gap: 11px;
     border-radius: 14px; padding: 12px 14px;
@@ -202,11 +190,9 @@ const css = `
   .hitem-ico  { font-size: 15px; flex-shrink: 0; }
   .hitem-name { font-size: 13px; font-weight: 500; color: var(--ink); }
   .hitem-meta { font-size: 10px; color: var(--ink3); margin-top: 2px; }
-
   .hitem-streak { display: flex; align-items: center; gap: 3px; font-size: 11px; font-weight: 500; color: #b8860b; flex-shrink: 0; }
   .hitem-streak i { font-size: 11px; }
 
-  /* week dots */
   .week-strip { display: flex; gap: 4px; flex-shrink: 0; }
   .wday { display: flex; flex-direction: column; align-items: center; gap: 3px; }
   .wday-lbl { font-size: 8px; font-weight: 500; color: var(--ink3); }
@@ -214,7 +200,6 @@ const css = `
   .wday-dot.logged  { background: var(--rose); }
   .wday-dot.today   { outline: 2px solid var(--rose); outline-offset: 1px; }
 
-  /* archive btn */
   .arch-btn {
     background: none; border: none; cursor: pointer; flex-shrink: 0;
     color: var(--ink3); font-size: 13px; padding: 4px;
@@ -222,18 +207,14 @@ const css = `
   }
   .arch-btn:hover { color: var(--rose); }
 
-  /* ── progress ring ── */
   .ring-wrap { display: flex; flex-direction: column; align-items: center; margin-bottom: 14px; }
 
-  /* ── category bars ── */
   .cat-bar-row   { display: flex; flex-direction: column; gap: 10px; }
   .cat-bar-label { display: flex; align-items: center; gap: 7px; margin-bottom: 4px; }
   .cat-bar-track { height: 3px; border-radius: 999px; background: rgba(212,96,122,0.1); overflow: hidden; }
   .cat-bar-fill  { height: 100%; border-radius: 999px; }
 
-  /* ── add form ── */
   .hp-form { display: flex; flex-direction: column; gap: 16px; }
-
   .hp-input {
     width: 100%; border-radius: 12px; padding: 11px 14px;
     font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 400;
@@ -250,7 +231,6 @@ const css = `
     color: var(--ink3); margin-bottom: 10px;
   }
 
-  /* category grid */
   .cat-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 7px; }
   .cat-btn {
     display: flex; flex-direction: column; align-items: center; gap: 5px;
@@ -264,7 +244,6 @@ const css = `
   .cat-btn i   { font-size: 16px; }
   .cat-btn-lbl { font-size: 9px; font-weight: 500; letter-spacing: 0.3px; }
 
-  /* frequency */
   .freq-row { display: flex; gap: 7px; flex-wrap: wrap; }
   .freq-btn {
     padding: 6px 14px; border-radius: 999px; cursor: pointer;
@@ -276,7 +255,6 @@ const css = `
   .freq-btn:hover  { background: var(--petal); color: var(--rose); border-color: rgba(212,96,122,0.3); }
   .freq-btn.active { background: var(--petal); color: var(--rose); border-color: rgba(212,96,122,0.3); }
 
-  /* submit */
   .hp-submit {
     display: inline-flex; align-items: center; gap: 8px;
     padding: 11px 22px; border-radius: 999px;
@@ -289,7 +267,6 @@ const css = `
   .hp-submit:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
   .hp-submit i { font-size: 13px; }
 
-  /* toast */
   .sg-toast {
     padding: 9px 14px; border-radius: 12px; font-size: 11px; font-weight: 400;
     font-family: 'Fraunces', serif; font-style: italic;
@@ -297,16 +274,13 @@ const css = `
     color: #5a8c63; text-align: center;
   }
 
-  /* empty */
   .empty { text-align: center; padding: 40px 20px; }
   .empty i { font-size: 28px; display: block; margin-bottom: 10px; color: var(--blush2); opacity: 0.5; }
   .empty-txt { font-size: 13px; color: var(--ink3); font-family: 'Fraunces', serif; font-style: italic; }
 
-  /* spinner */
   @keyframes spin { to { transform: rotate(360deg); } }
   .spinning { animation: spin 0.9s linear infinite; }
 
-  /* footer — same as dashboard */
   .sg-footer {
     background: linear-gradient(135deg, var(--petal) 0%, var(--lavender) 100%);
     border: 1px solid rgba(212,96,122,0.14);
@@ -325,7 +299,6 @@ const css = `
   .sg-footer-right { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
   .sg-footer-ico   { font-size: 20px; color: var(--blush2); }
 
-  /* archive item */
   .arch-item {
     display: flex; align-items: center; gap: 11px; padding: 12px 14px;
     border-radius: 14px; background: rgba(253,247,240,0.5);
@@ -343,7 +316,6 @@ const css = `
   }
   .arch-action:hover { transform: scale(1.06); }
 
-  /* ── responsive ── */
   @media (max-width: 768px) {
     .sg { padding: 72px 20px 88px; }
     .sg-header { flex-direction: column; }
@@ -359,10 +331,7 @@ const css = `
   }
 `
 
-export default function HabitsPage() {
-  const supabase = createClient()
-
-  type Habit = {
+type Habit = {
   id: string
   name: string
   category: string
@@ -375,8 +344,11 @@ type HabitLog = {
   date: string
 }
 
-const [habits, setHabits] = useState<Habit[]>([])
-const [logs, setLogs] = useState<HabitLog[]>([])
+export default function HabitsPage() {
+  const supabase = createClient()
+
+  const [habits,    setHabits]    = useState<Habit[]>([])
+  const [logs,      setLogs]      = useState<HabitLog[]>([])
   const [loading,   setLoading]   = useState(true)
   const [activeTab, setActiveTab] = useState('today')
   const [date,      setDate]      = useState('')
@@ -387,9 +359,7 @@ const [logs, setLogs] = useState<HabitLog[]>([])
   const [saving, setSaving] = useState(false)
   const [saved,  setSaved]  = useState(false)
 
-
-
-const channelRef = useRef<RealtimeChannel | null>(null)
+  const channelRef = useRef<RealtimeChannel | null>(null)
   const week = getWeekDates()
 
   useEffect(() => {
@@ -397,8 +367,8 @@ const channelRef = useRef<RealtimeChannel | null>(null)
     fetchAll()
     channelRef.current = supabase
       .channel('habits-rt')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'habits' },    fetchAll)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'habit_logs' },fetchAll)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'habits' },     fetchAll)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'habit_logs' }, fetchAll)
       .subscribe()
     return () => { if (channelRef.current) supabase.removeChannel(channelRef.current) }
   }, [])
@@ -407,10 +377,12 @@ const channelRef = useRef<RealtimeChannel | null>(null)
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
     const [{ data: h }, { data: l }] = await Promise.all([
-      supabase.from('habits').select('*').eq('user_id', user.id).order('created_at'),
-      supabase.from('habit_logs').select('habit_id,date').eq('user_id', user.id),
+      (supabase.from('habits') as any).select('*').eq('user_id', user.id).order('created_at'),
+      (supabase.from('habit_logs') as any).select('habit_id,date').eq('user_id', user.id),
     ])
-    setHabits(h || []); setLogs(l || []); setLoading(false)
+    setHabits((h as Habit[]) || [])
+    setLogs((l as HabitLog[]) || [])
+    setLoading(false)
   }
 
   const toggleLog = async (habitId: string) => {
@@ -418,10 +390,14 @@ const channelRef = useRef<RealtimeChannel | null>(null)
     if (!user) return
     const done = isLogged(habitId, todayIso)
     if (done) {
-      await supabase.from('habit_logs').delete()
-        .eq('habit_id', habitId).eq('date', todayIso).eq('user_id', user.id)
+      await (supabase.from('habit_logs') as any)
+        .delete()
+        .eq('habit_id', habitId)
+        .eq('date', todayIso)
+        .eq('user_id', user.id)
     } else {
-      await supabase.from('habit_logs').insert({ habit_id: habitId, date: todayIso, user_id: user.id })
+      await (supabase.from('habit_logs') as any)
+        .insert({ habit_id: habitId, date: todayIso, user_id: user.id })
     }
     fetchAll()
   }
@@ -431,7 +407,7 @@ const channelRef = useRef<RealtimeChannel | null>(null)
     setSaving(true)
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
-    await supabase.from('habits').insert({
+    await (supabase.from('habits') as any).insert({
       user_id: user.id, name: name.trim(), category: catId, frequency: freq, archived: false,
     })
     setName(''); setSaved(true)
@@ -440,13 +416,16 @@ const channelRef = useRef<RealtimeChannel | null>(null)
   }
 
   const archiveHabit = async (id: string) => {
-    await supabase.from('habits').update({ archived: true }).eq('id', id); fetchAll()
+    await (supabase.from('habits') as any).update({ archived: true }).eq('id', id)
+    fetchAll()
   }
   const restoreHabit = async (id: string) => {
-    await supabase.from('habits').update({ archived: false }).eq('id', id); fetchAll()
+    await (supabase.from('habits') as any).update({ archived: false }).eq('id', id)
+    fetchAll()
   }
-  const deleteHabit  = async (id: string) => {
-    await supabase.from('habits').delete().eq('id', id); fetchAll()
+  const deleteHabit = async (id: string) => {
+    await (supabase.from('habits') as any).delete().eq('id', id)
+    fetchAll()
   }
 
   const isLogged = (hid: string, date: string) => logs.some(l => l.habit_id === hid && l.date === date)
@@ -466,21 +445,20 @@ const channelRef = useRef<RealtimeChannel | null>(null)
   const pct          = totalToday ? Math.round((todayDone / totalToday) * 100) : 0
   const bestStreak   = activeHabits.reduce((b, h) => Math.max(b, streakOf(h.id)), 0)
 
-  // ring
   const R = 40, CX = 48, CY = 48, CIRC = 2 * Math.PI * R
   const dash = (CIRC * pct) / 100
 
   const statCards = [
-    { label: 'done today',  value: `${todayDone}/${totalToday}`, sub: 'habits today',      c: '#d4607a', dotC: '#e8a0b0', bg: '#fff9fb', border: 'rgba(212,96,122,0.12)', icon: 'ti-checks' },
-    { label: 'completion',  value: `${pct}%`,                    sub: 'of daily habits',   c: '#5a8c63', dotC: '#a8c9ae', bg: '#f8fcf8', border: 'rgba(168,201,174,0.3)', icon: 'ti-chart-pie' },
-    { label: 'best streak', value: `${bestStreak}d`,             sub: 'consecutive days',  c: '#b8860b', dotC: '#f5ddb4', bg: '#fffdf5', border: 'rgba(245,221,180,0.4)', icon: 'ti-flame' },
-    { label: 'total logs',  value: String(logs.length),          sub: 'all time',          c: '#9b7ec8', dotC: '#c9b8e8', bg: '#fdf8ff', border: 'rgba(201,184,232,0.3)', icon: 'ti-database' },
+    { label: 'done today',  value: `${todayDone}/${totalToday}`, sub: 'habits today',     c: '#d4607a', dotC: '#e8a0b0', bg: '#fff9fb', border: 'rgba(212,96,122,0.12)', icon: 'ti-checks'    },
+    { label: 'completion',  value: `${pct}%`,                    sub: 'of daily habits',  c: '#5a8c63', dotC: '#a8c9ae', bg: '#f8fcf8', border: 'rgba(168,201,174,0.3)', icon: 'ti-chart-pie'  },
+    { label: 'best streak', value: `${bestStreak}d`,             sub: 'consecutive days', c: '#b8860b', dotC: '#f5ddb4', bg: '#fffdf5', border: 'rgba(245,221,180,0.4)', icon: 'ti-flame'      },
+    { label: 'total logs',  value: String(logs.length),          sub: 'all time',         c: '#9b7ec8', dotC: '#c9b8e8', bg: '#fdf8ff', border: 'rgba(201,184,232,0.3)', icon: 'ti-database'   },
   ]
 
   const tabs = [
     { key: 'today',   label: "today's habits", icon: 'ti-list-check' },
-    { key: 'add',     label: 'add a habit',     icon: 'ti-plus' },
-    { key: 'archive', label: 'archive',          icon: 'ti-archive' },
+    { key: 'add',     label: 'add a habit',    icon: 'ti-plus'       },
+    { key: 'archive', label: 'archive',         icon: 'ti-archive'    },
   ]
 
   return (
@@ -488,7 +466,6 @@ const channelRef = useRef<RealtimeChannel | null>(null)
       <style>{css}</style>
       <div className="sg">
 
-        {/* ── Header — identical structure to dashboard ── */}
         <motion.header className="sg-header"
           initial={{ opacity: 0, y: -14 }} animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.44 }}>
@@ -511,18 +488,12 @@ const channelRef = useRef<RealtimeChannel | null>(null)
           <LiveTime />
         </motion.header>
 
-        {/* ── Divider ── */}
         <Divider label="your day at a glance" />
 
-        {/* ── Stat cards — same .sg-card pattern ── */}
         <div className="sg-grid">
           {statCards.map((s, i) => (
             <motion.div key={s.label} className="sg-card"
-              style={{
-  background: s.bg,
-  border: `1px solid ${s.border}`,
-  ['--dot-c' as any]: s.dotC,
-}}
+              style={{ background: s.bg, border: `1px solid ${s.border}`, ['--dot-c' as any]: s.dotC }}
               initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.05 * i, duration: 0.36 }}>
               <i className={`ti ${s.icon} sg-card-ico`} style={{ color: s.c }} aria-hidden="true" />
@@ -536,7 +507,6 @@ const channelRef = useRef<RealtimeChannel | null>(null)
           ))}
         </div>
 
-        {/* ── Tabs divider + tabs ── */}
         <Divider label="manage habits" />
 
         <motion.div className="sg-tabs"
@@ -552,7 +522,6 @@ const channelRef = useRef<RealtimeChannel | null>(null)
           ))}
         </motion.div>
 
-        {/* ── Tab panels ── */}
         <AnimatePresence mode="wait">
 
           {/* TODAY */}
@@ -561,7 +530,6 @@ const channelRef = useRef<RealtimeChannel | null>(null)
               initial={{ opacity: 0, x: -14 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 14 }}>
               <div className="main-split" style={{ display: 'grid', gridTemplateColumns: '1fr 240px', gap: '14px', alignItems: 'start' }}>
 
-                {/* Habit list */}
                 <div className="sg-content-card">
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
                     <p className="sg-content-lbl" style={{ marginBottom: 0 }}>
@@ -597,7 +565,6 @@ const channelRef = useRef<RealtimeChannel | null>(null)
                               initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
                               exit={{ opacity: 0, x: -16 }} transition={{ delay: i * 0.04 }}>
 
-                              {/* checkbox */}
                               <button className="hitem-check" onClick={() => toggleLog(h.id)}
                                 style={{
                                   background: done ? c.c : 'rgba(212,96,122,0.08)',
@@ -624,7 +591,6 @@ const channelRef = useRef<RealtimeChannel | null>(null)
                                 </div>
                               )}
 
-                              {/* week dots */}
                               <div className="week-strip">
                                 {week.map(w => {
                                   const logged  = isLogged(h.id, w.iso)
@@ -650,10 +616,7 @@ const channelRef = useRef<RealtimeChannel | null>(null)
                   )}
                 </div>
 
-                {/* Right side — ring + category bars */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-
-                  {/* Progress ring */}
                   <div className="sg-content-card" style={{ textAlign: 'center' }}>
                     <p className="sg-content-lbl">today's bloom</p>
                     <div className="ring-wrap">
@@ -693,7 +656,6 @@ const channelRef = useRef<RealtimeChannel | null>(null)
                     )}
                   </div>
 
-                  {/* Category breakdown */}
                   <div className="sg-content-card">
                     <p className="sg-content-lbl">by garden</p>
                     <div className="cat-bar-row">
@@ -727,7 +689,6 @@ const channelRef = useRef<RealtimeChannel | null>(null)
                 </div>
               </div>
 
-              {/* Footer */}
               <motion.div className="sg-footer"
                 initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.65 }}>
                 <div>
@@ -739,8 +700,8 @@ const channelRef = useRef<RealtimeChannel | null>(null)
                   </p>
                 </div>
                 <div className="sg-footer-right">
-                  <i className="ti ti-heart   sg-footer-ico" aria-hidden="true" />
-                  <i className="ti ti-flower  sg-footer-ico" aria-hidden="true" />
+                  <i className="ti ti-heart  sg-footer-ico" aria-hidden="true" />
+                  <i className="ti ti-flower sg-footer-ico" aria-hidden="true" />
                 </div>
               </motion.div>
             </motion.div>
@@ -785,11 +746,8 @@ const channelRef = useRef<RealtimeChannel | null>(null)
                     <p className="form-lbl">frequency</p>
                     <div className="freq-row">
                       {FREQ.map(f => (
-                        <button key={f}
-                          className={`freq-btn${freq === f ? ' active' : ''}`}
-                          onClick={() => setFreq(f)}>
-                          {f}
-                        </button>
+                        <button key={f} className={`freq-btn${freq === f ? ' active' : ''}`}
+                          onClick={() => setFreq(f)}>{f}</button>
                       ))}
                     </div>
                   </div>
@@ -867,7 +825,6 @@ const channelRef = useRef<RealtimeChannel | null>(null)
   )
 }
 
-// ── Divider — exact copy from dashboard ─────────────────────────────────────
 function Divider({ label }: { label: string }) {
   return (
     <div className="sg-divider">
@@ -880,7 +837,6 @@ function Divider({ label }: { label: string }) {
   )
 }
 
-// ── LiveTime — exact copy from dashboard ─────────────────────────────────────
 function LiveTime() {
   const [time, setTime] = useState('')
   useEffect(() => {
