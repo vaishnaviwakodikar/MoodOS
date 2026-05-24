@@ -471,7 +471,7 @@ export default function PeriodsPage() {
       ...data,
       cycle_length: data.cycle_length ?? 28,
       period_length: data.period_length ?? 5,
-      cycle_regularity: data.cycle_regularity ?? 'regular',
+      cycle_regularity: (data.cycle_regularity ?? 'regular') as 'regular' | 'irregular' | 'very_irregular',
       has_pcos_pcod: data.has_pcos_pcod ?? false,
       on_birth_control: data.on_birth_control ?? false,
       trying_to_conceive: data.trying_to_conceive ?? false,
