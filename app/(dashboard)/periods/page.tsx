@@ -39,7 +39,7 @@ type SexLog = {
   id: string
   user_id: string
   date: string
-  protected: boolean
+ protected: boolean | null
   notes: string | null
   created_at: string
 }
