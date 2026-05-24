@@ -25,10 +25,10 @@ export async function updateStreak() {
   if (streak.last_active === today) return // already updated today
 
   const newCurrent = streak.last_active === yesterday
-    ? streak.current + 1  // continued streak
-    : 1                   // streak broken, reset
+    ? (streak.current ?? 0) + 1  // continued streak
+    : 1                           // streak broken, reset
 
-  const newLongest = Math.max(newCurrent, streak.longest)
+  const newLongest = Math.max(newCurrent, streak.longest ?? 0)
 
   await supabase.from('streaks').upsert({
     user_id: user.id,
