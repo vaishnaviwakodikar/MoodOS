@@ -243,7 +243,7 @@ type StudySession = {
   duration_mins: number
   date: string
   notes: string | null
-  created_at: string
+  created_at: string | null
 }
 
 type Note = {
