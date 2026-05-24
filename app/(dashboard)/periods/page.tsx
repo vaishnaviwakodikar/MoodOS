@@ -473,8 +473,6 @@ export default function PeriodsPage() {
       cycle_length: data.cycle_length ?? 28,
       period_length: data.period_length ?? 5,
       cycle_regularity: validRegularity.includes(data.cycle_regularity as string)
-  ? (data.cycle_regularity as CycleProfile['cycle_regularity'])
-  : 'regular',
         ? (data.cycle_regularity as CycleProfile['cycle_regularity'])
         : 'regular',
       has_pcos_pcod: data.has_pcos_pcod ?? false,
@@ -482,12 +480,6 @@ export default function PeriodsPage() {
       trying_to_conceive: data.trying_to_conceive ?? false,
       pcos_type: data.pcos_type as 'pcos' | 'pcod' | null,
     })
-    localStorage.setItem('cycle_onboarded', '1')
-  } else {
-    const alreadyOnboarded = localStorage.getItem('cycle_onboarded')
-    if (!alreadyOnboarded) setShowOnboarding(true)
-  }
-}
 
 
   const fetchEntries = async () => {
