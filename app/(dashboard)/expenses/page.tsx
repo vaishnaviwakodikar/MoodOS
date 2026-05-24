@@ -460,22 +460,24 @@ const [savedLedger,   setSavedLedger]    = useState(false)
     setLoading(true)
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { setLoading(false); return }
-    const [{ data: e }, { data: b }] = await Promise.all([
-      supabase.from('expenses')
-        .select('*')
-        .eq('user_id', user.id)
-        .gte('date', `${viewMonth}-01`)
-        .lte('date', `${viewMonth}-31`)
-        .order('date', { ascending: false }),
-      supabase.from('expense_budgets')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('month', viewMonth)
-        .single(),
-    ])
-    setExpenses(e || [])
-    setBudget(b || null)
-    if (b) setBudgetInput(String(b.amount))
+    // AFTER
+const [{ data: e }, { data: b }] = await Promise.all([
+  supabase.from('expenses')
+    .select('*')
+    .eq('user_id', user.id)
+    .gte('date', `${viewMonth}-01`)
+    .lte('date', `${viewMonth}-31`)
+    .order('date', { ascending: false }),
+  supabase.from('expense_budgets')
+    .select('*')
+    .eq('user_id', user.id)
+    .eq('month', viewMonth)
+    .single(),
+])
+setExpenses(e || [])
+const budget = b as Budget | null
+setBudget(budget)
+if (budget) setBudgetInput(String(budget.amount))
 
     // ── Pot fetch ──
 const { data: pot } = await supabase
