@@ -495,7 +495,7 @@ export default function PeriodsPage() {
   const handleOnboardingComplete = async (profile: CycleProfile) => {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
-    await supabase.from('cycle_profiles').upsert({ ...profile, user_id: user.id })
+    await (supabase as any).from('cycle_profiles').upsert({ ...profile, user_id: user.id })
     setCycleProfile(profile)
     localStorage.setItem('cycle_onboarded', '1')
     setShowOnboarding(false)

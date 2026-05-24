@@ -219,7 +219,7 @@ export default function AttendancePage() {
       .gte('date', `${monthStr}-01`)
       .lte('date', `${monthStr}-31`)
       .order('date', { ascending: false })
-    setRecords(data || [])
+    setRecords((data || []).map(r => ({ ...r, status: (r.status ?? 'present') as Status, created_at: r.created_at ?? '' })))
     setLoading(false)
   }, [monthStr])
 
