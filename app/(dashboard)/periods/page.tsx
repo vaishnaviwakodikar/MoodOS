@@ -501,7 +501,7 @@ export default function PeriodsPage() {
 
   const fetchPainLogs = async () => {
     const { data } = await supabase.from('pain_logs').select('*').order('date', { ascending: false }).limit(30)
-    if (data) setPainLogs(data)
+    if (data) setPainLogs(data as PainLog[])
   }
 
   const handleOnboardingComplete = async (profile: CycleProfile) => {
