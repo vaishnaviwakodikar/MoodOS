@@ -351,12 +351,12 @@ export default function MoodPage() {
     if (!user) { setLoading(false); return }
 
     const { error } = await supabase.from('mood_entries').insert({
-      user_id:    user.id,
-      mood:       selected.label,   // text  e.g. 'Amazing'
-      emoji:      selected.icon,    // text  e.g. 'ti-star'
-      score:      selected.score,   // int4  e.g. 5
-      note:       note.trim() || null, // text | null
-    })
+  user_id:    user.id,
+  mood:       selected.label,
+  emoji:      selected.icon,
+  score:      selected.score,
+  note:       note.trim() || null,
+} as any)
 
     if (error) {
       console.error('mood insert error:', error)
