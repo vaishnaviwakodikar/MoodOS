@@ -41,7 +41,7 @@ type SexLog = {
   date: string
  protected: boolean | null
   notes: string | null
-  created_at: string
+  created_at: string | null
 }
 
 type PainLog = {
