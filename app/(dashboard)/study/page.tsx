@@ -233,7 +233,7 @@ type Task = {
   status: string
   due_date: string | null
   notes: string | null
-  created_at: string
+  created_at: string | null  // ← add | null
 }
 
 type StudySession = {
