@@ -508,11 +508,12 @@ setLoading(false)
     setSaving(true)
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { setSaving(false); return }
-    await supabase.from('expenses').insert({
-      user_id: user.id, title: title.trim(), amount: amt,
-      category, payment_method: payMethod, date: expDate,
-      notes: expNotes.trim() || null,
-    })
+  
+await supabase.from('expenses').insert({
+  user_id: user.id, title: title.trim(), amount: amt,
+  category, payment_method: payMethod, date: expDate,
+  notes: expNotes.trim() || null,
+} as Parameters<ReturnType<typeof supabase.from>['insert']>[0])
     setTitle(''); setAmount(''); setExpNotes('')
     setSaving(false); setSaved(true)
     setTimeout(() => setSaved(false), 2800)
