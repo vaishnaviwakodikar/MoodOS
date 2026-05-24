@@ -252,7 +252,7 @@ type Note = {
   title: string
   body: string
   subject: string
-  created_at: string
+  created_at: string | null
 }
 
 // ── Main page ────────────────────────────────────────────────────────────────
