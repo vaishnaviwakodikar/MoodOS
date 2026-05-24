@@ -491,7 +491,7 @@ export default function PeriodsPage() {
 
   const fetchEntries = async () => {
     const { data } = await supabase.from('period_entries').select('*').order('start_date', { ascending: false }).limit(12)
-    if (data) setEntries(data)
+    if (data) setEntries(data as Entry[])
   }
 
   const fetchSexLogs = async () => {
