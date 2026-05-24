@@ -930,7 +930,7 @@ export default function StudyPage() {
                               <div className="st-note-body">{note.body}</div>
                               <div className="st-note-meta">
                                 <span style={{ color: subj.c, fontWeight: 600 }}>{subj.label}</span>
-                                <span>{new Date(note.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</span>
+                                <span>{new Date(note.created_at ?? '').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</span>
                               </div>
                             </div>
                             <button className="st-del-btn" onClick={() => deleteNote(note.id)}>
