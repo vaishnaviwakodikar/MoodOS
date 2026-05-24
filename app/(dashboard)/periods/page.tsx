@@ -464,23 +464,25 @@ export default function PeriodsPage() {
     fetchPainLogs()
   }, [])
 
+  // ── FIX: closed if(data){} block properly so siblings aren't nested inside ──
   const fetchProfile = async () => {
-  const { data } = await supabase.from('cycle_profiles').select('*').single()
-  if (data) {
-    const validRegularity = ['regular', 'irregular', 'very_irregular'] as const
-    setCycleProfile({
-      ...data,
-      cycle_length: data.cycle_length ?? 28,
-      period_length: data.period_length ?? 5,
-      cycle_regularity: validRegularity.includes(data.cycle_regularity as string)
-        ? (data.cycle_regularity as CycleProfile['cycle_regularity'])
-        : 'regular',
-      has_pcos_pcod: data.has_pcos_pcod ?? false,
-      on_birth_control: data.on_birth_control ?? false,
-      trying_to_conceive: data.trying_to_conceive ?? false,
-      pcos_type: data.pcos_type as 'pcos' | 'pcod' | null,
-    })
-
+    const { data } = await supabase.from('cycle_profiles').select('*').single()
+    if (data) {
+      const validRegularity = ['regular', 'irregular', 'very_irregular'] as const
+      setCycleProfile({
+        ...data,
+        cycle_length: data.cycle_length ?? 28,
+        period_length: data.period_length ?? 5,
+        cycle_regularity: validRegularity.includes(data.cycle_regularity as string)
+          ? (data.cycle_regularity as CycleProfile['cycle_regularity'])
+          : 'regular',
+        has_pcos_pcod: data.has_pcos_pcod ?? false,
+        on_birth_control: data.on_birth_control ?? false,
+        trying_to_conceive: data.trying_to_conceive ?? false,
+        pcos_type: data.pcos_type as 'pcos' | 'pcod' | null,
+      })
+    } // ← this closing brace was missing in the original
+  }
 
   const fetchEntries = async () => {
     const { data } = await supabase.from('period_entries').select('*').order('start_date', { ascending: false }).limit(12)
