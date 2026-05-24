@@ -465,17 +465,25 @@ export default function PeriodsPage() {
   }, [])
 
   const fetchProfile = async () => {
-    const { data } = await supabase.from('cycle_profiles').select('*').single()
-    if (data) {
-      setCycleProfile(data)
-      localStorage.setItem('cycle_onboarded', '1')
-    } else {
-      const alreadyOnboarded = localStorage.getItem('cycle_onboarded')
-      if (!alreadyOnboarded) {
-        setShowOnboarding(true)
-      }
+  const { data } = await supabase.from('cycle_profiles').select('*').single()
+  if (data) {
+    setCycleProfile({
+      ...data,
+      cycle_length: data.cycle_length ?? 28,
+      period_length: data.period_length ?? 5,
+      cycle_regularity: data.cycle_regularity ?? 'regular',
+      has_pcos_pcod: data.has_pcos_pcod ?? false,
+      on_birth_control: data.on_birth_control ?? false,
+      trying_to_conceive: data.trying_to_conceive ?? false,
+    })
+    localStorage.setItem('cycle_onboarded', '1')
+  } else {
+    const alreadyOnboarded = localStorage.getItem('cycle_onboarded')
+    if (!alreadyOnboarded) {
+      setShowOnboarding(true)
     }
   }
+}
 
   const fetchEntries = async () => {
     const { data } = await supabase.from('period_entries').select('*').order('start_date', { ascending: false }).limit(12)
