@@ -125,8 +125,9 @@ export default function DashboardPage() {
   const today     = new Date().toISOString().slice(0, 10)
   const thisMonth = today.slice(0, 7)
 
-  // ── mood ──────────────────────────────────────────────────────────────────
-  const { data: moodData } = await (supabase.from('moods') as any)
+   // ── mood ──────────────────────────────────────────
+  const { data: moodData } = await supabase
+    .from('mood_entries')
     .select('mood, emoji')
     .eq('user_id', userId)
     .gte('created_at', `${today}T00:00:00`)
@@ -134,7 +135,7 @@ export default function DashboardPage() {
     .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle()
-  if (moodData) setMood((moodData as any).emoji ?? (moodData as any).mood)
+  if (moodData) setMood(moodData.emoji ?? moodData.mood)
 
   // ── habits ────────────────────────────────────────────────────────────────
   const { data: habitsData } = await supabase
@@ -258,7 +259,7 @@ if (attendanceRows.length > 0) {
 }
 
   const metrics = [
-    { label: 'mood today',  value: mood,       sub: mood === '—' ? 'not logged yet' : 'logged today',   c: '#d4607a', bg: '#fff9fb', border: 'rgba(212,96,122,0.1)',    dotC: '#e8a0b0', icon: 'ti-mood-smile'     },
+    { label: 'mood today', value: mood, sub: mood === '—' ? 'not logged yet' : 'logged today',   c: '#d4607a', bg: '#fff9fb', border: 'rgba(212,96,122,0.1)',    dotC: '#e8a0b0', icon: 'ti-mood-smile'     },
     { label: 'habits',      value: habits,     sub: habitSub,                                            c: '#9b7ec8', bg: '#fdf8ff', border: 'rgba(201,184,232,0.25)', dotC: '#c9b8e8', icon: 'ti-checks'         },
     { label: 'study time',  value: studyTime,  sub: "today's session",                                   c: '#b8860b', bg: '#fffdf5', border: 'rgba(245,221,180,0.35)', dotC: '#f5ddb4', icon: 'ti-clock-hour-4'   },
     { label: 'attendance',  value: attendance, sub: "this month's record",                               c: '#5a8c63', bg: '#f8fcf8', border: 'rgba(168,201,174,0.3)',  dotC: '#a8c9ae', icon: 'ti-calendar-stats' },
@@ -305,10 +306,14 @@ if (attendanceRows.length > 0) {
               initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.05 * i, duration: 0.36 }}>
               <i className={`ti ${m.icon} sg-card-ico`} aria-hidden="true" style={{ color: m.c }} />
-              <p className="sg-card-lbl"><span className="sg-card-lbl-dot" style={{ background: m.dotC }} />{m.label}</p>
-              <p className="sg-card-val" style={{ color: m.c }}>{m.value}</p>
-              <p className="sg-card-sub">{m.sub}</p>
-            </motion.div>
+  <p className="sg-card-lbl"><span className="sg-card-lbl-dot" style={{ background: m.dotC }} />{m.label}</p>
+  {m.label === 'mood today' && mood !== '—'
+    ? <i className={`ti ${mood} sg-card-val`} aria-hidden="true" style={{ color: m.c, fontSize: 28 }} />
+    : <p className="sg-card-val" style={{ color: m.c }}>{m.value}</p>
+  }
+  <p className="sg-card-sub">{m.sub}</p>
+</motion.div>
+
           ))}
         </div>
 
