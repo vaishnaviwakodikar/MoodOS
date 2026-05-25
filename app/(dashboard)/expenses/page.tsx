@@ -71,6 +71,8 @@ type LedgerEntry = {
 
 type Tab = 'log' | 'overview' | 'budget' | 'history' | 'savings-pot' | 'ledger'
 
+type PotEntry = { id: string; label: string; amount: number; type: 'add' | 'withdraw'; date: string }
+
 // ── CSS ──────────────────────────────────────────────────────────────────────
 
 const css = `
@@ -239,6 +241,38 @@ const css = `
   border: 1px solid #B7DEC9; color: #2D6A4F; text-align: center; margin-top: 10px;
 }
 
+/* Inline edit overlay */
+.xp-edit-overlay {
+  position: fixed; inset: 0; z-index: 200;
+  background: rgba(26,16,24,.45); backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center; padding: 20px;
+}
+.xp-edit-modal {
+  background: var(--card); border-radius: 22px;
+  border: 1px solid var(--line); padding: 28px 26px;
+  width: 100%; max-width: 480px; max-height: 90vh; overflow-y: auto;
+  box-shadow: 0 24px 64px rgba(26,16,24,.18);
+}
+.xp-edit-modal-title {
+  font-family: 'Playfair Display', serif; font-size: 18px; font-weight: 400;
+  color: var(--ink); margin-bottom: 22px; display: flex; align-items: center; gap: 10px;
+}
+.xp-edit-modal-title em { color: var(--rose); font-style: italic; }
+.xp-edit-actions { display: flex; gap: 8px; margin-top: 16px; }
+.xp-edit-cancel {
+  flex: 1; padding: 11px; border-radius: 10px; border: 1px solid var(--line);
+  font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500;
+  cursor: pointer; background: var(--paper); color: var(--ink2); transition: .15s;
+}
+.xp-edit-cancel:hover { background: var(--paper2); }
+.xp-edit-save {
+  flex: 2; padding: 11px; border-radius: 10px; border: none;
+  font-family: 'Playfair Display', serif; font-size: 14px; font-style: italic;
+  cursor: pointer; background: var(--rose); color: #fff; transition: .15s;
+}
+.xp-edit-save:hover:not(:disabled) { background: #a83d5c; }
+.xp-edit-save:disabled { opacity: .35; cursor: not-allowed; }
+
 .xp-item {
   display: flex; align-items: center; gap: 12px;
   padding: 12px 13px; border-radius: 13px;
@@ -250,8 +284,9 @@ const css = `
   width: 38px; height: 38px; border-radius: 10px;
   display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0;
 }
-.xp-item-del { background: none; border: none; cursor: pointer; color: var(--ink4); font-size: 13px; padding: 4px; transition: .15s; flex-shrink: 0; border-radius: 6px; }
-.xp-item-del:hover { color: var(--rose); background: var(--rose3); }
+.xp-item-act { background: none; border: none; cursor: pointer; color: var(--ink4); font-size: 13px; padding: 4px; transition: .15s; flex-shrink: 0; border-radius: 6px; }
+.xp-item-act:hover { color: var(--rose); background: var(--rose3); }
+.xp-item-act.edit:hover { color: #004F7C; background: #E6F3FB; }
 
 .xp-bar { height: 4px; border-radius: 999px; background: rgba(26,16,24,.07); overflow: hidden; margin-top: 6px; }
 .xp-bar-fill { height: 100%; border-radius: 999px; transition: width .7s cubic-bezier(.16,1,.3,1); }
@@ -301,11 +336,14 @@ const css = `
 
 .xp-pot-ring { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 140px; height: 140px; border-radius: 50%; border: 3px solid #9DD5B5; background: #E6F5ED; flex-shrink: 0; }
 
+.xp-item-acts { display: flex; flex-direction: column; gap: 3px; flex-shrink: 0; }
+
 @media (max-width: 640px) {
   .xp-stats { grid-template-columns: repeat(2,1fr); }
   .xp-two   { grid-template-columns: 1fr; }
   .xp-hero  { grid-template-columns: 1fr; }
   .xp-month-widget { align-items: flex-start; }
+  .xp-edit-modal { padding: 20px 16px; }
 }
 `
 
@@ -335,7 +373,238 @@ function Bar({ pct, color, h = 4 }: { pct: number; color: string; h?: number }) 
   )
 }
 
-function ExpenseItem({ exp, onDelete, showDelete = true }: { exp: Expense; onDelete?: (id: string) => void; showDelete?: boolean }) {
+// ── Edit Modals ───────────────────────────────────────────────────────────────
+
+type EditExpenseModalProps = {
+  exp: Expense
+  onSave: (updated: Partial<Expense>) => Promise<void>
+  onClose: () => void
+}
+
+function EditExpenseModal({ exp, onSave, onClose }: EditExpenseModalProps) {
+  const [title,     setTitle]     = useState(exp.title)
+  const [amount,    setAmount]    = useState(String(exp.amount))
+  const [category,  setCategory]  = useState<CatId>(exp.category as CatId)
+  const [payMethod, setPayMethod] = useState(exp.payment_method)
+  const [date,      setDate]      = useState(exp.date)
+  const [notes,     setNotes]     = useState(exp.notes ?? '')
+  const [saving,    setSaving]    = useState(false)
+
+  const handleSave = async () => {
+    const amt = parseFloat(amount)
+    if (!title.trim() || !amt || amt <= 0) return
+    setSaving(true)
+    await onSave({ title: title.trim(), amount: amt, category, payment_method: payMethod, date, notes: notes.trim() || null })
+    setSaving(false)
+  }
+
+  return (
+    <motion.div className="xp-edit-overlay"
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      onClick={e => e.target === e.currentTarget && onClose()}>
+      <motion.div className="xp-edit-modal"
+        initial={{ opacity: 0, scale: .96, y: 12 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: .96, y: 12 }}
+        transition={{ duration: .2 }}>
+        <p className="xp-edit-modal-title"><i className="ti ti-pencil" style={{ color: 'var(--rose)', fontSize: 16 }} /> Edit <em>expense</em></p>
+
+        <div className="xp-field-label"><i className="ti ti-currency-rupee" /> Amount</div>
+        <div className="xp-amount-wrap">
+          <span className="xp-amount-sym">₹</span>
+          <input className="xp-amount-in" type="number" value={amount} onChange={e => setAmount(e.target.value)} style={{ fontSize: 24 }} />
+        </div>
+
+        <div className="xp-field-label"><i className="ti ti-pencil" /> Description</div>
+        <input className="xp-input" type="text" value={title} onChange={e => setTitle(e.target.value)} />
+
+        <div className="xp-field-label"><i className="ti ti-tag" /> Category</div>
+        <div className="xp-cat-grid" style={{ marginBottom: 16 }}>
+          {CATS.map(c => (
+            <button key={c.id} className="xp-cat-btn" onClick={() => setCategory(c.id)}
+              style={category === c.id ? { background: c.bg, borderColor: c.bc } : {}}>
+              <i className={`ti ${c.icon}`} style={{ color: category === c.id ? c.c : 'var(--ink3)' }} />
+              <span style={{ color: category === c.id ? c.c : 'var(--ink3)' }}>{c.label}</span>
+            </button>
+          ))}
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <div>
+            <div className="xp-field-label"><i className="ti ti-calendar" /> Date</div>
+            <input type="date" className="xp-input" style={{ marginBottom: 0 }} value={date} onChange={e => setDate(e.target.value)} />
+          </div>
+          <div>
+            <div className="xp-field-label"><i className="ti ti-wallet" /> Paid via</div>
+            <div className="xp-chips" style={{ marginBottom: 0 }}>
+              {PAYMENT_METHODS.map(pm => (
+                <button key={pm} className={`xp-chip${payMethod === pm ? ' active' : ''}`} onClick={() => setPayMethod(pm)}>{pm}</button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="xp-field-label" style={{ marginTop: 12 }}><i className="ti ti-notes" /> Notes</div>
+        <input className="xp-input" type="text" value={notes} onChange={e => setNotes(e.target.value)} placeholder="any notes?" />
+
+        <div className="xp-edit-actions">
+          <button className="xp-edit-cancel" onClick={onClose}>Cancel</button>
+          <button className="xp-edit-save" onClick={handleSave} disabled={saving || !title.trim() || !amount}>
+            {saving ? 'Saving…' : 'Save changes'}
+          </button>
+        </div>
+      </motion.div>
+    </motion.div>
+  )
+}
+
+type EditPotModalProps = {
+  entry: PotEntry
+  onSave: (id: string, updated: Partial<PotEntry>) => Promise<void>
+  onClose: () => void
+}
+
+function EditPotModal({ entry, onSave, onClose }: EditPotModalProps) {
+  const [label,   setLabel]   = useState(entry.label)
+  const [amount,  setAmount]  = useState(String(entry.amount))
+  const [type,    setType]    = useState<'add' | 'withdraw'>(entry.type)
+  const [date,    setDate]    = useState(entry.date)
+  const [saving,  setSaving]  = useState(false)
+
+  const handleSave = async () => {
+    const amt = parseFloat(amount)
+    if (!label.trim() || !amt || amt <= 0) return
+    setSaving(true)
+    await onSave(entry.id, { label: label.trim(), amount: amt, type, date })
+    setSaving(false)
+  }
+
+  return (
+    <motion.div className="xp-edit-overlay"
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      onClick={e => e.target === e.currentTarget && onClose()}>
+      <motion.div className="xp-edit-modal"
+        initial={{ opacity: 0, scale: .96, y: 12 }} animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: .96, y: 12 }} transition={{ duration: .2 }}>
+        <p className="xp-edit-modal-title"><i className="ti ti-piggy-bank" style={{ color: 'var(--rose)', fontSize: 16 }} /> Edit <em>pot entry</em></p>
+
+        <div className="xp-pot-toggle" style={{ marginBottom: 16 }}>
+          <button className={`xp-pot-toggle-btn${type === 'add' ? ' active-add' : ''}`} onClick={() => setType('add')}>
+            <i className="ti ti-arrow-down-circle" /> Deposit
+          </button>
+          <button className={`xp-pot-toggle-btn${type === 'withdraw' ? ' active-withdraw' : ''}`} onClick={() => setType('withdraw')}>
+            <i className="ti ti-arrow-up-circle" /> Withdraw
+          </button>
+        </div>
+
+        <div className="xp-field-label"><i className="ti ti-currency-rupee" /> Amount</div>
+        <div className="xp-amount-wrap">
+          <span className="xp-amount-sym">₹</span>
+          <input className="xp-amount-in" type="number" value={amount} onChange={e => setAmount(e.target.value)} style={{ fontSize: 24 }} />
+        </div>
+
+        <div className="xp-field-label"><i className="ti ti-pencil" /> Label</div>
+        <input className="xp-input" type="text" value={label} onChange={e => setLabel(e.target.value)} />
+
+        <div className="xp-field-label"><i className="ti ti-calendar" /> Date</div>
+        <input type="date" className="xp-input" value={date} onChange={e => setDate(e.target.value)} />
+
+        <div className="xp-edit-actions">
+          <button className="xp-edit-cancel" onClick={onClose}>Cancel</button>
+          <button className="xp-edit-save" onClick={handleSave} disabled={saving || !label.trim() || !amount}>
+            {saving ? 'Saving…' : 'Save changes'}
+          </button>
+        </div>
+      </motion.div>
+    </motion.div>
+  )
+}
+
+type EditLedgerModalProps = {
+  entry: LedgerEntry
+  onSave: (id: string, updated: Partial<LedgerEntry>) => Promise<void>
+  onClose: () => void
+}
+
+function EditLedgerModal({ entry, onSave, onClose }: EditLedgerModalProps) {
+  const [name,   setName]   = useState(entry.name)
+  const [amount, setAmount] = useState(String(entry.amount))
+  const [type,   setType]   = useState<'lent' | 'borrowed'>(entry.type)
+  const [date,   setDate]   = useState(entry.date)
+  const [notes,  setNotes]  = useState(entry.notes ?? '')
+  const [saving, setSaving] = useState(false)
+
+  const handleSave = async () => {
+    const amt = parseFloat(amount)
+    if (!name.trim() || !amt || amt <= 0) return
+    setSaving(true)
+    await onSave(entry.id, { name: name.trim(), amount: amt, type, date, notes: notes.trim() || null })
+    setSaving(false)
+  }
+
+  return (
+    <motion.div className="xp-edit-overlay"
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      onClick={e => e.target === e.currentTarget && onClose()}>
+      <motion.div className="xp-edit-modal"
+        initial={{ opacity: 0, scale: .96, y: 12 }} animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: .96, y: 12 }} transition={{ duration: .2 }}>
+        <p className="xp-edit-modal-title"><i className="ti ti-arrows-exchange" style={{ color: 'var(--rose)', fontSize: 16 }} /> Edit <em>ledger entry</em></p>
+
+        <div className="xp-pot-toggle" style={{ marginBottom: 16 }}>
+          <button className={`xp-pot-toggle-btn${type === 'lent' ? ' active-add' : ''}`}
+            onClick={() => setType('lent')}
+            style={type === 'lent' ? { background: '#E6F3FB', color: '#004F7C' } : {}}>
+            <i className="ti ti-arrow-up-right" /> I lent money
+          </button>
+          <button className={`xp-pot-toggle-btn${type === 'borrowed' ? ' active-withdraw' : ''}`}
+            onClick={() => setType('borrowed')}
+            style={type === 'borrowed' ? { background: '#FBF6E6', color: '#7A5C00' } : {}}>
+            <i className="ti ti-arrow-down-left" /> I borrowed
+          </button>
+        </div>
+
+        <div className="xp-field-label"><i className="ti ti-user" /> Person / name</div>
+        <input className="xp-input" type="text" value={name} onChange={e => setName(e.target.value)} />
+
+        <div className="xp-field-label"><i className="ti ti-currency-rupee" /> Amount</div>
+        <div className="xp-amount-wrap">
+          <span className="xp-amount-sym">₹</span>
+          <input className="xp-amount-in" type="number" value={amount} onChange={e => setAmount(e.target.value)} style={{ fontSize: 24 }} />
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <div>
+            <div className="xp-field-label"><i className="ti ti-calendar" /> Date</div>
+            <input type="date" className="xp-input" style={{ marginBottom: 0 }} value={date} onChange={e => setDate(e.target.value)} />
+          </div>
+          <div>
+            <div className="xp-field-label"><i className="ti ti-notes" /> Notes</div>
+            <input className="xp-input" style={{ marginBottom: 0 }} type="text" value={notes} onChange={e => setNotes(e.target.value)} placeholder="reason or context" />
+          </div>
+        </div>
+
+        <div className="xp-edit-actions">
+          <button className="xp-edit-cancel" onClick={onClose}>Cancel</button>
+          <button className="xp-edit-save" onClick={handleSave} disabled={saving || !name.trim() || !amount}>
+            {saving ? 'Saving…' : 'Save changes'}
+          </button>
+        </div>
+      </motion.div>
+    </motion.div>
+  )
+}
+
+// ── Expense Item ──────────────────────────────────────────────────────────────
+
+function ExpenseItem({
+  exp, onDelete, onEdit, showDelete = true
+}: {
+  exp: Expense
+  onDelete?: (id: string) => void
+  onEdit?: (exp: Expense) => void
+  showDelete?: boolean
+}) {
   const cat = getCat(exp.category)
   return (
     <motion.div
@@ -363,10 +632,19 @@ function ExpenseItem({ exp, onDelete, showDelete = true }: { exp: Expense; onDel
       <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 17, fontWeight: 400, color: cat.c, flexShrink: 0, letterSpacing: '-.5px' }}>
         {fmtINR(exp.amount)}
       </div>
-      {showDelete && onDelete && (
-        <button className="xp-item-del" onClick={() => onDelete(exp.id)} aria-label="Delete expense">
-          <i className="ti ti-trash" />
-        </button>
+      {showDelete && (onEdit || onDelete) && (
+        <div className="xp-item-acts">
+          {onEdit && (
+            <button className="xp-item-act edit" onClick={() => onEdit(exp)} aria-label="Edit expense">
+              <i className="ti ti-pencil" />
+            </button>
+          )}
+          {onDelete && (
+            <button className="xp-item-act" onClick={() => onDelete(exp.id)} aria-label="Delete expense">
+              <i className="ti ti-trash" />
+            </button>
+          )}
+        </div>
       )}
     </motion.div>
   )
@@ -388,6 +666,7 @@ export default function ExpensesPage() {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
   })
 
+  // Log form
   const [title,     setTitle]     = useState('')
   const [amount,    setAmount]    = useState('')
   const [category,  setCategory]  = useState<CatId>('food')
@@ -397,17 +676,20 @@ export default function ExpensesPage() {
   const [saving,    setSaving]    = useState(false)
   const [saved,     setSaved]     = useState(false)
 
+  // Budget
   const [budgetInput,  setBudgetInput]  = useState('')
   const [savingBudget, setSavingBudget] = useState(false)
   const [savedBudget,  setSavedBudget]  = useState(false)
 
-  const [potEntries, setPotEntries] = useState<{ id: string; label: string; amount: number; type: 'add' | 'withdraw'; date: string }[]>([])
+  // Pot
+  const [potEntries, setPotEntries] = useState<PotEntry[]>([])
   const [potAmount,  setPotAmount]  = useState('')
   const [potLabel,   setPotLabel]   = useState('')
   const [potType,    setPotType]    = useState<'add' | 'withdraw'>('add')
   const [savingPot,  setSavingPot]  = useState(false)
   const [savedPot,   setSavedPot]   = useState(false)
 
+  // Ledger
   const [ledger,       setLedger]       = useState<LedgerEntry[]>([])
   const [ledgerName,   setLedgerName]   = useState('')
   const [ledgerAmount, setLedgerAmount] = useState('')
@@ -417,6 +699,11 @@ export default function ExpensesPage() {
   const [ledgerFilter, setLedgerFilter] = useState<'all' | 'lent' | 'borrowed' | 'settled'>('all')
   const [savingLedger, setSavingLedger] = useState(false)
   const [savedLedger,  setSavedLedger]  = useState(false)
+
+  // Edit modals
+  const [editingExpense, setEditingExpense] = useState<Expense | null>(null)
+  const [editingPot,     setEditingPot]     = useState<PotEntry | null>(null)
+  const [editingLedger,  setEditingLedger]  = useState<LedgerEntry | null>(null)
 
   useEffect(() => {
     setDateStr(new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }))
@@ -448,17 +735,11 @@ export default function ExpensesPage() {
     if (budgetData) setBudgetInput(String(budgetData.amount))
 
     const { data: pot } = await (supabase.from('savings_pot') as any)
-      .select('*')
-      .eq('user_id', user.id)
-      .order('date', { ascending: false })
-
+      .select('*').eq('user_id', user.id).order('date', { ascending: false })
     setPotEntries(pot || [])
 
     const { data: ledgerData } = await (supabase.from('ledger_entries') as any)
-      .select('*')
-      .eq('user_id', user.id)
-      .order('date', { ascending: false })
-
+      .select('*').eq('user_id', user.id).order('date', { ascending: false })
     setLedger((ledgerData as LedgerEntry[]) || [])
     setLoading(false)
   }, [viewMonth])
@@ -469,17 +750,10 @@ export default function ExpensesPage() {
     setSaving(true)
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { setSaving(false); return }
-
     await (supabase.from('expenses') as any).insert({
-      user_id: user.id,
-      title: title.trim(),
-      amount: amt,
-      category,
-      payment_method: payMethod,
-      date: expDate,
-      notes: expNotes.trim() || null,
+      user_id: user.id, title: title.trim(), amount: amt,
+      category, payment_method: payMethod, date: expDate, notes: expNotes.trim() || null,
     })
-
     setTitle(''); setAmount(''); setExpNotes('')
     setSaving(false); setSaved(true)
     setTimeout(() => setSaved(false), 2800)
@@ -491,24 +765,35 @@ export default function ExpensesPage() {
     fetchAll()
   }
 
+  const updateExpense = async (id: string, updated: Partial<Expense>) => {
+    await (supabase.from('expenses') as any).update(updated).eq('id', id)
+    setEditingExpense(null)
+    fetchAll()
+  }
+
   const addPotEntry = async () => {
     const amt = parseFloat(potAmount)
     if (!potLabel.trim() || !amt || amt <= 0) return
     setSavingPot(true)
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { setSavingPot(false); return }
-
     await (supabase.from('savings_pot') as any).insert({
-      user_id: user.id,
-      label: potLabel.trim(),
-      amount: amt,
-      type: potType,
-      date: todayIso,
+      user_id: user.id, label: potLabel.trim(), amount: amt, type: potType, date: todayIso,
     })
-
     setPotLabel(''); setPotAmount('')
     setSavingPot(false); setSavedPot(true)
     setTimeout(() => setSavedPot(false), 2500)
+    fetchAll()
+  }
+
+  const updatePotEntry = async (id: string, updated: Partial<PotEntry>) => {
+    await (supabase.from('savings_pot') as any).update(updated).eq('id', id)
+    setEditingPot(null)
+    fetchAll()
+  }
+
+  const deletePotEntry = async (id: string) => {
+    await (supabase.from('savings_pot') as any).delete().eq('id', id)
     fetchAll()
   }
 
@@ -518,12 +803,10 @@ export default function ExpensesPage() {
     setSavingBudget(true)
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { setSavingBudget(false); return }
-
     await (supabase.from('expense_budgets') as any).upsert(
       { user_id: user.id, month: viewMonth, amount: amt },
       { onConflict: 'user_id,month' }
     )
-
     setSavingBudget(false); setSavedBudget(true)
     setTimeout(() => setSavedBudget(false), 2200)
     fetchAll()
@@ -535,28 +818,25 @@ export default function ExpensesPage() {
     setSavingLedger(true)
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { setSavingLedger(false); return }
-
     await (supabase.from('ledger_entries') as any).insert({
-      user_id: user.id,
-      name: ledgerName.trim(),
-      amount: amt,
-      type: ledgerType,
-      date: ledgerDate,
-      notes: ledgerNotes.trim() || null,
+      user_id: user.id, name: ledgerName.trim(), amount: amt,
+      type: ledgerType, date: ledgerDate, notes: ledgerNotes.trim() || null,
     })
-
     setLedgerName(''); setLedgerAmount(''); setLedgerNotes(''); setLedgerDate(todayIso)
     setSavingLedger(false); setSavedLedger(true)
     setTimeout(() => setSavedLedger(false), 2500)
     fetchAll()
   }
 
+  const updateLedgerEntry = async (id: string, updated: Partial<LedgerEntry>) => {
+    await (supabase.from('ledger_entries') as any).update(updated).eq('id', id)
+    setEditingLedger(null)
+    fetchAll()
+  }
+
   const toggleSettled = async (entry: LedgerEntry) => {
     await (supabase.from('ledger_entries') as any)
-      .update({
-        settled: !entry.settled,
-        settled_date: !entry.settled ? todayIso : null,
-      })
+      .update({ settled: !entry.settled, settled_date: !entry.settled ? todayIso : null })
       .eq('id', entry.id)
     fetchAll()
   }
@@ -587,7 +867,7 @@ export default function ExpensesPage() {
   const lentTotal      = activeLedger.filter(e => e.type === 'lent').reduce((a, e) => a + e.amount, 0)
   const borrowedTotal  = activeLedger.filter(e => e.type === 'borrowed').reduce((a, e) => a + e.amount, 0)
   const netPosition    = lentTotal - borrowedTotal
-  const filteredLedger = ledgerFilter === 'all'      ? ledger
+  const filteredLedger = ledgerFilter === 'all' ? ledger
     : ledgerFilter === 'settled' ? ledger.filter(e => e.settled)
     : ledger.filter(e => e.type === ledgerFilter && !e.settled)
 
@@ -607,12 +887,12 @@ export default function ExpensesPage() {
   }) : []
 
   const tabMeta: { id: Tab; icon: string; label: string }[] = [
-    { id: 'log',         icon: 'ti-plus-circle',    label: 'Log expense' },
-    { id: 'overview',    icon: 'ti-chart-donut',    label: 'Overview'    },
-    { id: 'budget',      icon: 'ti-target',         label: 'Budget'      },
-    { id: 'history',     icon: 'ti-clock',          label: 'History'     },
-    { id: 'savings-pot', icon: 'ti-piggy-bank',     label: 'Savings Pot' },
-    { id: 'ledger',      icon: 'ti-arrows-exchange', label: 'Ledger'     },
+    { id: 'log',         icon: 'ti-plus-circle',     label: 'Log expense' },
+    { id: 'overview',    icon: 'ti-chart-donut',     label: 'Overview'    },
+    { id: 'budget',      icon: 'ti-target',          label: 'Budget'      },
+    { id: 'history',     icon: 'ti-clock',           label: 'History'     },
+    { id: 'savings-pot', icon: 'ti-piggy-bank',      label: 'Savings Pot' },
+    { id: 'ledger',      icon: 'ti-arrows-exchange', label: 'Ledger'      },
   ]
 
   const statusColor  = budgetPct >= 100 ? '#8B2A2A' : budgetPct >= 80 ? '#7A5C00' : '#1A5E3A'
@@ -634,30 +914,22 @@ export default function ExpensesPage() {
       <style>{css}</style>
       <div className="xp">
         <div className="xp-wrap">
-          {/* Top strip */}
-          <motion.div
-            className="xp-topstrip"
-            initial={{ opacity: 0, y: -8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: .35 }}
-          >
+
+          {/* ── Top strip ── */}
+          <motion.div className="xp-topstrip"
+            initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: .35 }}>
             <div className="xp-topstrip-left">
               <span className="xp-logotype">Paisa <em>Journal</em></span>
               <span className="xp-topdate">{dateStr}</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 18, color: 'var(--rose2)' }}>
-              <i className="ti ti-leaf" />
-              <i className="ti ti-coin" />
+              <i className="ti ti-leaf" /><i className="ti ti-coin" />
             </div>
           </motion.div>
 
-          {/* Hero */}
-          <motion.div
-            className="xp-hero"
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: .45, delay: .05 }}
-          >
+          {/* ── Hero ── */}
+          <motion.div className="xp-hero"
+            initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: .45, delay: .05 }}>
             <div>
               <p className="xp-hero-eyebrow">personal finance tracker</p>
               <h1 className="xp-h1">your<br /><em>money,</em><br />your story</h1>
@@ -665,13 +937,9 @@ export default function ExpensesPage() {
             </div>
             <div className="xp-month-widget">
               <div className="xp-month-inner">
-                <button className="xp-marrow" onClick={() => navMonth(-1)}>
-                  <i className="ti ti-chevron-left" />
-                </button>
+                <button className="xp-marrow" onClick={() => navMonth(-1)}><i className="ti ti-chevron-left" /></button>
                 <span className="xp-mlabel">{monthLabel}</span>
-                <button className="xp-marrow" onClick={() => navMonth(1)} disabled={isCurrentMonth}>
-                  <i className="ti ti-chevron-right" />
-                </button>
+                <button className="xp-marrow" onClick={() => navMonth(1)} disabled={isCurrentMonth}><i className="ti ti-chevron-right" /></button>
               </div>
               {budgetAmt > 0 && (
                 <span className="xp-budget-badge" style={{ background: statusBg, border: `1px solid ${statusBorder}`, color: statusColor }}>
@@ -684,23 +952,17 @@ export default function ExpensesPage() {
 
           <Rule label="this month at a glance" />
 
-          {/* Stats band */}
+          {/* ── Stats ── */}
           <div className="xp-stats">
             {[
-              { label: 'spent this month', value: fmtShort(totalSpent), glyph: '₹', sub: `${expenses.length} transactions` },
-              { label: 'spent today',      value: fmtShort(todaySpent), glyph: '◦', sub: expenses.filter(e => e.date === todayIso).length + ' items today' },
+              { label: 'spent this month', value: fmtShort(totalSpent),  glyph: '₹', sub: `${expenses.length} transactions` },
+              { label: 'spent today',      value: fmtShort(todaySpent),  glyph: '◦', sub: expenses.filter(e => e.date === todayIso).length + ' items today' },
               { label: 'budget left',      value: budgetAmt > 0 ? fmtShort(Math.abs(budgetLeft)) : '—', glyph: '%', sub: budgetAmt > 0 ? (budgetLeft < 0 ? 'over budget' : 'remaining') : 'no budget set' },
-              { label: 'avg per day',      value: fmtShort(avgPerDay),  glyph: '∑', sub: `across ${uniqueDays} days` },
+              { label: 'avg per day',      value: fmtShort(avgPerDay),   glyph: '∑', sub: `across ${uniqueDays} days` },
             ].map((s, i) => (
-              <motion.div
-                key={s.label}
-                className="xp-stat"
-                data-glyph={s.glyph}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: .08 * i + .1 }}
-                whileHover={{ background: 'var(--rose3)' }}
-              >
+              <motion.div key={s.label} className="xp-stat" data-glyph={s.glyph}
+                initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: .08 * i + .1 }} whileHover={{ background: 'var(--rose3)' }}>
                 <div className="xp-stat-lbl">{s.label}</div>
                 <div className="xp-stat-val" style={i === 2 && budgetLeft < 0 && budgetAmt > 0 ? { color: '#8B2A2A' } : {}}>{s.value}</div>
                 <div className="xp-stat-sub">{s.sub}</div>
@@ -710,16 +972,11 @@ export default function ExpensesPage() {
 
           <Rule label="manage expenses" />
 
-          {/* Tabs */}
+          {/* ── Tabs ── */}
           <div className="xp-tabs">
             {tabMeta.map(t => (
-              <button
-                key={t.id}
-                className={`xp-tab${activeTab === t.id ? ' active' : ''}`}
-                onClick={() => setActiveTab(t.id)}
-              >
-                <i className={`ti ${t.icon}`} />
-                {t.label}
+              <button key={t.id} className={`xp-tab${activeTab === t.id ? ' active' : ''}`} onClick={() => setActiveTab(t.id)}>
+                <i className={`ti ${t.icon}`} />{t.label}
               </button>
             ))}
           </div>
@@ -729,8 +986,7 @@ export default function ExpensesPage() {
             {/* ── LOG ── */}
             {activeTab === 'log' && (
               <motion.div key="log" className="xp-two"
-                initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
-                transition={{ duration: .22 }}>
+                initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: .22 }}>
 
                 <div className="xp-card">
                   <p className="xp-card-title"><i className="ti ti-plus-circle" /> Add expense</p>
@@ -782,11 +1038,8 @@ export default function ExpensesPage() {
                   <input className="xp-input" type="text" placeholder="any notes?"
                     value={expNotes} onChange={e => setExpNotes(e.target.value)} />
 
-                  <button
-                    className={`xp-cta${title.trim() && amount ? ' filled' : ''}`}
-                    onClick={addExpense}
-                    disabled={!title.trim() || !amount || saving}
-                  >
+                  <button className={`xp-cta${title.trim() && amount ? ' filled' : ''}`}
+                    onClick={addExpense} disabled={!title.trim() || !amount || saving}>
                     {saving ? 'Saving…' : saved ? 'Expense logged ✓' : 'Log this expense'}
                   </button>
 
@@ -813,7 +1066,9 @@ export default function ExpensesPage() {
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
                         <AnimatePresence>
                           {expenses.filter(e => e.date === todayIso).map(exp => (
-                            <ExpenseItem key={exp.id} exp={exp} onDelete={deleteExpense} />
+                            <ExpenseItem key={exp.id} exp={exp}
+                              onDelete={deleteExpense}
+                              onEdit={setEditingExpense} />
                           ))}
                         </AnimatePresence>
                       </div>
@@ -830,8 +1085,7 @@ export default function ExpensesPage() {
             {/* ── OVERVIEW ── */}
             {activeTab === 'overview' && (
               <motion.div key="overview" className="xp-two"
-                initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
-                transition={{ duration: .22 }}>
+                initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: .22 }}>
 
                 <div className="xp-card">
                   <p className="xp-card-title"><i className="ti ti-chart-donut" /> Spending by category</p>
@@ -840,7 +1094,7 @@ export default function ExpensesPage() {
                   ) : (
                     <>
                       <div className="xp-donut-wrap">
-                        <svg width="124" height="124" viewBox="0 0 124 124" role="img" aria-label="Spending breakdown donut chart">
+                        <svg width="124" height="124" viewBox="0 0 124 124">
                           {donutSegs.map((seg, i) => (
                             <motion.circle key={seg.id} cx="62" cy="62" r="50"
                               fill="none" stroke={seg.c} strokeWidth="16"
@@ -850,7 +1104,7 @@ export default function ExpensesPage() {
                               initial={{ opacity: 0 }} animate={{ opacity: 1 }}
                               transition={{ delay: i * .06 }} />
                           ))}
-                          <text x="62" y="58" textAnchor="middle" fontFamily="'Playfair Display', serif" fontSize="14" fontWeight="400" fill="var(--ink)" letterSpacing="-0.5">{fmtShort(totalSpent)}</text>
+                          <text x="62" y="58" textAnchor="middle" fontFamily="'Playfair Display', serif" fontSize="14" fill="var(--ink)" letterSpacing="-0.5">{fmtShort(totalSpent)}</text>
                           <text x="62" y="71" textAnchor="middle" fontFamily="'DM Sans', sans-serif" fontSize="8" fontWeight="600" fill="var(--ink3)" letterSpacing="2">TOTAL</text>
                         </svg>
                       </div>
@@ -894,7 +1148,8 @@ export default function ExpensesPage() {
                     ) : (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
                         {[...expenses].sort((a, b) => b.amount - a.amount).slice(0, 5).map(exp => (
-                          <ExpenseItem key={exp.id} exp={exp} showDelete={false} />
+                          <ExpenseItem key={exp.id} exp={exp}
+                            onEdit={setEditingExpense} onDelete={deleteExpense} showDelete />
                         ))}
                       </div>
                     )}
@@ -906,8 +1161,7 @@ export default function ExpensesPage() {
             {/* ── BUDGET ── */}
             {activeTab === 'budget' && (
               <motion.div key="budget" className="xp-two"
-                initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
-                transition={{ duration: .22 }}>
+                initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: .22 }}>
 
                 <div className="xp-card">
                   <p className="xp-card-title"><i className="ti ti-target" /> Monthly budget</p>
@@ -1001,13 +1255,11 @@ export default function ExpensesPage() {
             {/* ── HISTORY ── */}
             {activeTab === 'history' && (
               <motion.div key="history"
-                initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
-                transition={{ duration: .22 }}>
+                initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: .22 }}>
                 <div className="xp-card">
                   <div className="xp-section-meta">
                     <p className="xp-card-title" style={{ marginBottom: 0 }}>
-                      <i className="ti ti-clock" />
-                      {expenses.length} expense{expenses.length !== 1 ? 's' : ''} in {monthLabel}
+                      <i className="ti ti-clock" />{expenses.length} expense{expenses.length !== 1 ? 's' : ''} in {monthLabel}
                     </p>
                     <span className="xp-section-total">{fmtINR(totalSpent)}</span>
                   </div>
@@ -1033,7 +1285,11 @@ export default function ExpensesPage() {
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
                           <AnimatePresence>
-                            {exps.map(exp => <ExpenseItem key={exp.id} exp={exp} onDelete={deleteExpense} />)}
+                            {exps.map(exp => (
+                              <ExpenseItem key={exp.id} exp={exp}
+                                onDelete={deleteExpense}
+                                onEdit={setEditingExpense} />
+                            ))}
                           </AnimatePresence>
                         </div>
                       </motion.div>
@@ -1046,19 +1302,16 @@ export default function ExpensesPage() {
             {/* ── SAVINGS POT ── */}
             {activeTab === 'savings-pot' && (
               <motion.div key="savings-pot" className="xp-two"
-                initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
-                transition={{ duration: .22 }}>
+                initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: .22 }}>
 
                 <div className="xp-card">
                   <p className="xp-card-title"><i className="ti ti-piggy-bank" /> Savings Pot</p>
 
                   <div className="xp-pot-toggle">
-                    <button className={`xp-pot-toggle-btn${potType === 'add' ? ' active-add' : ''}`}
-                      onClick={() => setPotType('add')}>
+                    <button className={`xp-pot-toggle-btn${potType === 'add' ? ' active-add' : ''}`} onClick={() => setPotType('add')}>
                       <i className="ti ti-arrow-down-circle" /> Deposit
                     </button>
-                    <button className={`xp-pot-toggle-btn${potType === 'withdraw' ? ' active-withdraw' : ''}`}
-                      onClick={() => setPotType('withdraw')}>
+                    <button className={`xp-pot-toggle-btn${potType === 'withdraw' ? ' active-withdraw' : ''}`} onClick={() => setPotType('withdraw')}>
                       <i className="ti ti-arrow-up-circle" /> Withdraw
                     </button>
                   </div>
@@ -1086,9 +1339,7 @@ export default function ExpensesPage() {
                   <button
                     className={`xp-cta${potLabel.trim() && potAmount ? ' filled' : ''}`}
                     style={potType === 'withdraw' ? { background: potLabel.trim() && potAmount ? '#8B2A2A' : undefined } : {}}
-                    onClick={addPotEntry}
-                    disabled={!potLabel.trim() || !potAmount || savingPot}
-                  >
+                    onClick={addPotEntry} disabled={!potLabel.trim() || !potAmount || savingPot}>
                     {savingPot ? 'Saving…' : savedPot ? 'Entry saved ✓' : potType === 'add' ? 'Deposit to pot' : 'Withdraw from pot'}
                   </button>
 
@@ -1144,6 +1395,14 @@ export default function ExpensesPage() {
                               <span style={{ fontFamily: "'Playfair Display', serif", fontSize: 16, color: entry.type === 'add' ? '#1A5E3A' : '#8B2A2A', fontWeight: 400, flexShrink: 0 }}>
                                 {entry.type === 'add' ? '+' : '−'}{fmtINR(entry.amount)}
                               </span>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                                <button className="xp-item-act edit" onClick={() => setEditingPot(entry)} title="Edit entry">
+                                  <i className="ti ti-pencil" />
+                                </button>
+                                <button className="xp-item-act" onClick={() => deletePotEntry(entry.id)} title="Delete entry">
+                                  <i className="ti ti-trash" />
+                                </button>
+                              </div>
                             </motion.div>
                           ))}
                         </AnimatePresence>
@@ -1157,17 +1416,16 @@ export default function ExpensesPage() {
             {/* ── LEDGER ── */}
             {activeTab === 'ledger' && (
               <motion.div key="ledger" className="xp-two"
-                initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
-                transition={{ duration: .22 }}>
+                initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: .22 }}>
 
                 <div className="xp-card">
                   <p className="xp-card-title"><i className="ti ti-arrows-exchange" /> Lend & Borrow</p>
 
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8, marginBottom: 16 }}>
                     {[
-                      { label: 'You lent',    value: fmtINR(lentTotal),     c: '#004F7C', bg: '#E6F3FB', bc: '#A0CDE8' },
-                      { label: 'You borrowed',value: fmtINR(borrowedTotal),  c: '#7A5C00', bg: '#FBF6E6', bc: '#E8D48A' },
-                      { label: 'Net',         value: fmtINR(Math.abs(netPosition)), c: netPosition > 0 ? '#1A5E3A' : netPosition < 0 ? '#8B2A2A' : 'var(--ink3)', bg: netPosition > 0 ? '#E6F5ED' : netPosition < 0 ? '#FAEAEA' : 'var(--paper)', bc: netPosition > 0 ? '#9DD5B5' : netPosition < 0 ? '#EDBDBD' : 'var(--line)' },
+                      { label: 'You lent',     value: fmtINR(lentTotal),     c: '#004F7C', bg: '#E6F3FB', bc: '#A0CDE8' },
+                      { label: 'You borrowed', value: fmtINR(borrowedTotal), c: '#7A5C00', bg: '#FBF6E6', bc: '#E8D48A' },
+                      { label: 'Net',          value: fmtINR(Math.abs(netPosition)), c: netPosition > 0 ? '#1A5E3A' : netPosition < 0 ? '#8B2A2A' : 'var(--ink3)', bg: netPosition > 0 ? '#E6F5ED' : netPosition < 0 ? '#FAEAEA' : 'var(--paper)', bc: netPosition > 0 ? '#9DD5B5' : netPosition < 0 ? '#EDBDBD' : 'var(--line)' },
                     ].map(s => (
                       <div key={s.label} style={{ padding: '9px 12px', borderRadius: 10, background: s.bg, border: `1px solid ${s.bc}` }}>
                         <div style={{ fontSize: 9, fontWeight: 600, letterSpacing: 1.5, textTransform: 'uppercase', color: s.c, marginBottom: 4 }}>{s.label}</div>
@@ -1217,9 +1475,7 @@ export default function ExpensesPage() {
                   <button
                     className={`xp-cta${ledgerName.trim() && ledgerAmount ? ' filled' : ''}`}
                     style={{ marginTop: 14, ...(ledgerType === 'borrowed' && ledgerName.trim() && ledgerAmount ? { background: '#7A5C00' } : {}) }}
-                    onClick={addLedgerEntry}
-                    disabled={!ledgerName.trim() || !ledgerAmount || savingLedger}
-                  >
+                    onClick={addLedgerEntry} disabled={!ledgerName.trim() || !ledgerAmount || savingLedger}>
                     {savingLedger ? 'Saving…' : savedLedger ? 'Entry saved ✓' : ledgerType === 'lent' ? 'Add lending entry' : 'Add borrowing entry'}
                   </button>
 
@@ -1282,10 +1538,13 @@ export default function ExpensesPage() {
                                 {fmtINR(entry.amount)}
                               </span>
                               <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                                <button onClick={() => toggleSettled(entry)}
-                                  title={entry.settled ? 'Mark unsettled' : 'Mark as returned/paid'}
+                                <button onClick={() => toggleSettled(entry)} title={entry.settled ? 'Mark unsettled' : 'Mark as returned/paid'}
                                   style={{ background: 'none', border: '1px solid var(--line)', borderRadius: 6, width: 26, height: 26, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: entry.settled ? '#37A866' : 'var(--ink4)', fontSize: 12 }}>
                                   <i className={`ti ${entry.settled ? 'ti-refresh' : 'ti-check'}`} />
+                                </button>
+                                <button onClick={() => setEditingLedger(entry)} title="Edit entry"
+                                  style={{ background: 'none', border: '1px solid var(--line)', borderRadius: 6, width: 26, height: 26, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#004F7C', fontSize: 12 }}>
+                                  <i className="ti ti-pencil" />
                                 </button>
                                 <button onClick={() => deleteLedgerEntry(entry.id)} title="Delete"
                                   style={{ background: 'none', border: '1px solid var(--line)', borderRadius: 6, width: 26, height: 26, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--ink4)', fontSize: 12 }}>
@@ -1312,12 +1571,36 @@ export default function ExpensesPage() {
               <p className="xp-footer-msg">{footerMsg}</p>
             </div>
             <div className="xp-footer-icons">
-              <i className="ti ti-leaf" />
-              <i className="ti ti-coin" />
+              <i className="ti ti-leaf" /><i className="ti ti-coin" />
             </div>
           </motion.div>
         </div>
       </div>
+
+      {/* ── Edit Modals ── */}
+      <AnimatePresence>
+        {editingExpense && (
+          <EditExpenseModal
+            exp={editingExpense}
+            onSave={async (updated) => { await updateExpense(editingExpense.id, updated) }}
+            onClose={() => setEditingExpense(null)}
+          />
+        )}
+        {editingPot && (
+          <EditPotModal
+            entry={editingPot}
+            onSave={updatePotEntry}
+            onClose={() => setEditingPot(null)}
+          />
+        )}
+        {editingLedger && (
+          <EditLedgerModal
+            entry={editingLedger}
+            onSave={updateLedgerEntry}
+            onClose={() => setEditingLedger(null)}
+          />
+        )}
+      </AnimatePresence>
     </>
   )
 }
