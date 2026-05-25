@@ -97,7 +97,7 @@ export default function DashboardPage() {
   const [mood,       setMood]       = useState('—')
   const [habits,     setHabits]     = useState('0 / 0')
   const [habitSub,   setHabitSub]   = useState('none added yet')
-  const [studyTime,  setStudyTime]  = useState('0h')
+  const [studyTime,  setStudyTime]  = useState('0min')
   const [attendance, setAttendance] = useState('—%')
   const [expenses,   setExpenses]   = useState('₹0')
   const [streak,     setStreak]     = useState('0')
@@ -122,44 +122,42 @@ export default function DashboardPage() {
   }, [])
 
   async function fetchMetrics(userId: string) {
-    const today     = new Date().toISOString().slice(0, 10)
-    const thisMonth = today.slice(0, 7)
+  const today     = new Date().toISOString().slice(0, 10)
+  const thisMonth = today.slice(0, 7)
 
-    const { data: moodData } = await (supabase.from('moods') as any)
-  .select('mood, emoji')
-  .eq('user_id', userId)
-  .gte('created_at', `${today}T00:00:00`)
-  .lte('created_at', `${today}T23:59:59`)
-  .order('created_at', { ascending: false })
-  .limit(1)
- .maybeSingle()
-if (moodData) setMood((moodData as any).mood)
-    
+  // ── mood ──────────────────────────────────────────────────────────────────
+  const { data: moodData } = await (supabase.from('moods') as any)
+    .select('mood, emoji')
+    .eq('user_id', userId)
+    .gte('created_at', `${today}T00:00:00`)
+    .lte('created_at', `${today}T23:59:59`)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  if (moodData) setMood((moodData as any).emoji ?? (moodData as any).mood)
 
-    // replace the entire habits block with this
-const { data: habitsData } = await supabase
-  .from('habits')
-  .select('id')
-  .eq('user_id', userId)
-  .eq('archived', false)
+  // ── habits ────────────────────────────────────────────────────────────────
+  const { data: habitsData } = await supabase
+    .from('habits')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('archived', false)
 
-const { data: logsData } = await supabase
-  .from('habit_logs')
-  .select('habit_id')
-  .eq('user_id', userId)
-  .eq('date', today)
+  const { data: logsData } = await supabase
+    .from('habit_logs')
+    .select('habit_id')
+    .eq('user_id', userId)
+    .eq('date', today)
 
-if (habitsData && habitsData.length > 0) {
-  const total = habitsData.length
-  const done  = logsData?.length ?? 0
-  setHabits(`${done} / ${total}`)
-  setHabitSub(done === total ? 'all done! 🌿' : `${total - done} remaining`)
-}
+  if (habitsData && habitsData.length > 0) {
+    const total = habitsData.length
+    const done  = logsData?.length ?? 0
+    setHabits(`${done} / ${total}`)
+    setHabitSub(done === total ? 'all done! 🌿' : `${total - done} remaining`)
+  }
 
-    type AttendanceRow = {
-  status: string
-}
-
+// ── attendance ────────────────────────────────────────────────────────────
+type AttendanceRow = { status: string }
 const { data: attData } = await supabase
   .from('attendance')
   .select('status')
@@ -168,47 +166,96 @@ const { data: attData } = await supabase
   .lte('date', `${thisMonth}-31`)
 
 const attendanceRows = (attData || []) as AttendanceRow[]
-
 if (attendanceRows.length > 0) {
-  const pct = Math.round(
-    (
-      attendanceRows.filter(a => a.status === 'present').length /
-      attendanceRows.length
-    ) * 100
-  )
-
+  const present  = attendanceRows.filter(a => a.status === 'present').length
+  const absent   = attendanceRows.filter(a => a.status === 'absent').length
+  const workDays = present + absent   // holidays excluded, matching attendance page
+  const pct      = workDays > 0 ? Math.round((present / workDays) * 100) : 0
   setAttendance(`${pct}%`)
 }
 
- 
-  const { data: expData } = await supabase
-  .from('expenses')
-  .select('amount')
-  .eq('user_id', userId)
-  .gte('date', `${thisMonth}-01`)
-  .lte('date', `${thisMonth}-31`)
+  // ── study ─────────────────────────────────────────────────────────────────
+  const { data: studyData } = await supabase
+    .from('study_sessions')
+    .select('duration_mins')
+    .eq('user_id', userId)
+    .eq('date', today)
 
-if (expData && expData.length > 0) {
-  const total = (expData as { amount: number }[]).reduce((a, e) => a + e.amount, 0)
-  setExpenses(total >= 100000 ? `₹${(total/100000).toFixed(1)}L` : total >= 1000 ? `₹${(total/1000).toFixed(1)}k` : `₹${Math.round(total)}`)
-}
-   
-
-  const { data: periodData } = (await supabase
-  .from('period_entries')
-  .select('start_date, end_date')
-  .eq('user_id', userId)
-  .order('start_date', { ascending: false })
-  .limit(1)
-  .maybeSingle()) as { data: { start_date: string; end_date: string } | null }
-if (periodData) {
-  const next = new Date((periodData as { start_date: string; end_date: string }).start_date)
-  next.setDate(next.getDate() + 28)
-  const daysLeft = Math.ceil((next.getTime() - Date.now()) / 86400000)
-  setPeriod(daysLeft > 0 ? `${daysLeft}d` : 'due')
-  setPeriodSub(daysLeft > 0 ? `next in ${daysLeft} days` : 'period due today')
-}
+  if (studyData && studyData.length > 0) {
+    const total = (studyData as { duration_mins: number }[]).reduce((a, s) => a + s.duration_mins, 0)
+    const h = Math.floor(total / 60)
+    const m = total % 60
+    setStudyTime(h > 0 ? (m > 0 ? `${h}h ${m}m` : `${h}h`) : `${m}m`)
   }
+
+  // ── expenses ──────────────────────────────────────────────────────────────
+  const { data: expData } = await supabase
+    .from('expenses')
+    .select('amount')
+    .eq('user_id', userId)
+    .gte('date', `${thisMonth}-01`)
+    .lte('date', `${thisMonth}-31`)
+
+  if (expData && expData.length > 0) {
+    const total = (expData as { amount: number }[]).reduce((a, e) => a + e.amount, 0)
+    setExpenses(
+      total >= 100000 ? `₹${(total / 100000).toFixed(1)}L` :
+      total >= 1000   ? `₹${(total / 1000).toFixed(1)}k` :
+                        `₹${Math.round(total)}`
+    )
+  }
+
+  // ── streak (NEW) ──────────────────────────────────────────────────────────
+  // Fetch last 90 days of habit logs, then count consecutive days backwards
+  // where at least 1 habit was logged
+  const ninetyDaysAgo = new Date()
+  ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90)
+  const since = ninetyDaysAgo.toISOString().slice(0, 10)
+
+  const { data: streakLogs } = await supabase
+    .from('habit_logs')
+    .select('date')
+    .eq('user_id', userId)
+    .gte('date', since)
+    .lte('date', today)
+
+  if (streakLogs && streakLogs.length > 0) {
+    // Unique dates that have at least one log
+    const loggedDates = new Set(streakLogs.map((l: { date: string }) => l.date))
+
+    let count = 0
+    const cursor = new Date()
+    // If today isn't logged yet, start counting from yesterday
+    // so the streak doesn't break just because today isn't done
+    if (!loggedDates.has(today)) cursor.setDate(cursor.getDate() - 1)
+
+    while (true) {
+      const dateStr = cursor.toISOString().slice(0, 10)
+      if (!loggedDates.has(dateStr)) break
+      count++
+      cursor.setDate(cursor.getDate() - 1)
+    }
+
+    setStreak(String(count))
+  }
+
+  // ── periods ───────────────────────────────────────────────────────────────
+  const { data: periodData } = (await supabase
+    .from('period_entries')
+    .select('start_date, end_date')
+    .eq('user_id', userId)
+    .order('start_date', { ascending: false })
+    .limit(1)
+    .maybeSingle()) as { data: { start_date: string; end_date: string } | null }
+
+  if (periodData) {
+    const next = new Date(periodData.start_date)
+    next.setDate(next.getDate() + 28)
+    const daysLeft = Math.ceil((next.getTime() - Date.now()) / 86400000)
+    setPeriod(daysLeft > 0 ? `${daysLeft}d` : 'due')
+    setPeriodSub(daysLeft > 0 ? `next in ${daysLeft} days` : 'period due today')
+  }
+}
 
   const metrics = [
     { label: 'mood today',  value: mood,       sub: mood === '—' ? 'not logged yet' : 'logged today',   c: '#d4607a', bg: '#fff9fb', border: 'rgba(212,96,122,0.1)',    dotC: '#e8a0b0', icon: 'ti-mood-smile'     },
