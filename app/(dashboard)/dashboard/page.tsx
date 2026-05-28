@@ -241,22 +241,40 @@ if (attendanceRows.length > 0) {
   }
 
   // ── periods ───────────────────────────────────────────────────────────────
-  const { data: periodData } = (await supabase
+// ── periods ───────────────────────────────────────────────────────────────
+  const { data: periodEntries } = await supabase
     .from('period_entries')
     .select('start_date, end_date')
     .eq('user_id', userId)
     .order('start_date', { ascending: false })
-    .limit(1)
-    .maybeSingle()) as { data: { start_date: string; end_date: string } | null }
+    .limit(2)
 
-  if (periodData) {
-    const next = new Date(periodData.start_date)
-    next.setDate(next.getDate() + 28)
-    const daysLeft = Math.ceil((next.getTime() - Date.now()) / 86400000)
-    setPeriod(daysLeft > 0 ? `${daysLeft}d` : 'due')
-    setPeriodSub(daysLeft > 0 ? `next in ${daysLeft} days` : 'period due today')
+  if (periodEntries && periodEntries.length > 0) {
+    const latest = periodEntries[0]
+
+    let cycleLength = 28
+    if (periodEntries.length >= 2) {
+      const d1 = new Date(periodEntries[0].start_date).getTime()
+      const d2 = new Date(periodEntries[1].start_date).getTime()
+      cycleLength = Math.round((d1 - d2) / 86400000)
+    }
+
+    const now = new Date()
+    const start = new Date(latest.start_date)
+    const end = latest.end_date ? new Date(latest.end_date) : null
+
+    if (end && now >= start && now <= end) {
+      setPeriod('🩸')
+      setPeriodSub('currently on your period')
+    } else {
+      const next = new Date(latest.start_date)
+      next.setDate(next.getDate() + cycleLength)
+      const daysLeft = Math.ceil((next.getTime() - now.getTime()) / 86400000)
+      setPeriod(daysLeft > 0 ? `${daysLeft}d` : 'due')
+      setPeriodSub(daysLeft > 0 ? `next in ${daysLeft} days` : 'period due today')
+    }
   }
-}
+  }
 
   const metrics = [
     { label: 'mood today', value: mood, sub: mood === '—' ? 'not logged yet' : 'logged today',   c: '#d4607a', bg: '#fff9fb', border: 'rgba(212,96,122,0.1)',    dotC: '#e8a0b0', icon: 'ti-mood-smile'     },
