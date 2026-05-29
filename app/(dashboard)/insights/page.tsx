@@ -533,7 +533,7 @@ const css = `
 const fadeUp = (delay = 0) => ({
   initial: { opacity: 0, y: 16 },
   animate: { opacity: 1, y: 0 },
-  transition: { delay, duration: 0.42, ease: [0.22, 0.68, 0, 1.2] },
+  transition: { delay, duration: 0.42, ease: [0.22, 0.68, 0, 1.2] as [number, number, number, number] },
 })
 
 // ── component ────────────────────────────────────────────────────────────────
