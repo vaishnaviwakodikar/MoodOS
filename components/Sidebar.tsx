@@ -13,6 +13,7 @@ const navItems = [
   { label: 'Attendance', href: '/attendance',  icon: 'ti-calendar-check',   accent: '#9b7ec8' },
   { label: 'Insights',   href: '/insights',    icon: 'ti-chart-bar',        accent: '#5a8c63' },
   { label: 'Periods Tracker', href: '/periods', icon: 'ti-calendar-heart', accent: '#5a8c63' },
+  { label: 'Memories',   href: '/memories',    icon: 'ti-camera',           accent: '#b8860b' },
   { label: 'Profile', href: '/profile', icon: 'ti-user-circle', accent: '#d4607a' },
 ]
 
@@ -261,7 +262,7 @@ export default function Sidebar({ user }: { user: any }) {
 
   const handleSignOut = async () => {
     await supabase.auth.signOut()
-    router.push('/login')
+    router.push('/')
     router.refresh()
   }
 
