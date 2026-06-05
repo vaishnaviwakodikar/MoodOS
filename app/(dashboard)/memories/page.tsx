@@ -1,440 +1,404 @@
-'use client'
-import { useState, useEffect, useRef, useCallback } from "react";
+"use client";
 
-const MOODS = [
-  { label: "☀️ happy", value: "happy" },
-  { label: "🌸 soft", value: "soft" },
-  { label: "🌧️ melancholic", value: "melancholic" },
-  { label: "⚡ excited", value: "excited" },
-  { label: "🌙 tired", value: "tired" },
-  { label: "🦋 grateful", value: "grateful" },
-];
+import { useState } from "react";
+import { createClient } from "@/lib/supabase";
 
-const REVEAL_OPTS = [
-  { label: "1", sub: "year", value: 1 },
-  { label: "2", sub: "years", value: 2 },
-  { label: "3", sub: "years", value: 3 },
-  { label: "5", sub: "years", value: 5 },
-];
+const supabase = createClient();
 
-
-
-const SAMPLE_CARDS = [
-  {
-    id: 1,
-    emoji: "🌸",
-    bg: "linear-gradient(135deg,#fde8f0,#f4c2d0)",
-    date: "May 28, 2024",
-    cap: "Golden hour from the hostel terrace",
-    mood: "grateful",
-    unlockStr: "May 28, 2025",
-  },
-  {
-    id: 2,
-    emoji: "✨",
-    bg: "linear-gradient(135deg,#eef0fb,#d0c8f0)",
-    date: "May 15, 2024",
-    cap: "Library corner, my favourite spot",
-    mood: "soft",
-    unlockStr: "May 15, 2026",
-  },
-  {
-    id: 3,
-    emoji: "🌿",
-    bg: "linear-gradient(135deg,#eef8f4,#b0dcc8)",
-    date: "Apr 30, 2024",
-    cap: "Maa's garden after rain",
-    mood: "happy",
-    unlockStr: "Apr 30, 2025",
-  },
-];
-
-const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-
-function pad(n) { return String(n).padStart(2, "0"); }
-
-function formatDate(d) {
-  return `${MONTHS[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
-}
-
-function Toast({ message, visible }) {
-  return (
-    <div style={{
-      position: "fixed", bottom: 24, right: 24,
-      background: "#3a2a2a", color: "white",
-      padding: "12px 20px", borderRadius: 14,
-      fontSize: 13, zIndex: 999,
-      opacity: visible ? 1 : 0,
-      transform: visible ? "translateY(0)" : "translateY(10px)",
-      transition: "all .3s", pointerEvents: "none",
-    }}>
-      {message}
-    </div>
-  );
-}
-
-export default function MoodosDailyPhoto() {
-  const [clock, setClock] = useState("");
-  const [selMood, setSelMood] = useState("");
-  const [selReveal, setSelReveal] = useState(1);
-  const [previewUrl, setPreviewUrl] = useState(null);
-  const [selFile, setSelFile] = useState(null);
-  const [caption, setCaption] = useState("");
-  const [note, setNote] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [cards, setCards] = useState(SAMPLE_CARDS);
-  const [toast, setToast] = useState({ msg: "", visible: false });
-  const [dragging, setDragging] = useState(false);
-  const fileRef = useRef(null);
-  const toastTimer = useRef(null);
-
-  // Clock
-  useEffect(() => {
-    function tick() {
-      const d = new Date();
-      let h = d.getHours(), m = d.getMinutes(), s = d.getSeconds();
-      const ap = h >= 12 ? "pm" : "am";
-      h = h % 12 || 12;
-      setClock(`${pad(h)}:${pad(m)}:${pad(s)} ${ap}`);
-    }
-    tick();
-    const id = setInterval(tick, 1000);
-    return () => clearInterval(id);
-  }, []);
-
-  function showToast(msg) {
-    clearTimeout(toastTimer.current);
-    setToast({ msg, visible: true });
-    toastTimer.current = setTimeout(() => setToast(t => ({ ...t, visible: false })), 3000);
-  }
-
-  function handleFile(f) {
-    if (!f) return;
-    if (!f.type.startsWith("image/")) { showToast("Please select an image ♡"); return; }
-    if (f.size > 5 * 1024 * 1024) { showToast("File too large — max 5 MB ♡"); return; }
-    setSelFile(f);
-    setPreviewUrl(URL.createObjectURL(f));
-  }
-
-  function removePhoto() {
-    setSelFile(null);
-    setPreviewUrl(null);
-    if (fileRef.current) fileRef.current.value = "";
-  }
-
-  const onDragOver = useCallback((e) => { e.preventDefault(); setDragging(true); }, []);
-  const onDragLeave = useCallback(() => setDragging(false), []);
-  const onDrop = useCallback((e) => {
-    e.preventDefault(); setDragging(false);
-    handleFile(e.dataTransfer.files[0]);
-  }, []);
-
-  function savePhoto() {
-    if (!selFile) { showToast("Add a photo first 📷"); return; }
-    if (!caption.trim()) { showToast("Add a caption ♡"); return; }
-    setSaving(true);
-    setTimeout(() => {
-      const today = new Date();
-      const unlockDate = new Date(today);
-      unlockDate.setFullYear(unlockDate.getFullYear() + selReveal);
-      const newCard = {
-        id: Date.now(),
-        imgUrl: URL.createObjectURL(selFile),
-        date: formatDate(today),
-        cap: caption.trim(),
-        mood: selMood || "🌸 soft",
-        unlockStr: formatDate(unlockDate),
-      };
-      setCards(prev => [newCard, ...prev]);
-      setSelFile(null);
-      setPreviewUrl(null);
-      setCaption("");
-      setNote("");
-      setSelMood("");
-      setSelReveal(1);
-      if (fileRef.current) fileRef.current.value = "";
-      setSaving(false);
-      showToast("Memory sealed ✨ your future self will love this");
-    }, 900);
-  }
-
-  const todayStr = new Date().toLocaleDateString("en-US", { weekday: "long", day: "numeric", month: "long" });
-
-  return (
-    <div style={{ display: "flex", minHeight: "100vh", background: "#FDF6F0", color: "#3a2a2a", fontFamily: "'DM Sans', sans-serif" }}>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;1,400;1,500&family=DM+Sans:wght@300;400;500&display=swap');
-        * { box-sizing: border-box; }
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: rgba(196,92,122,.2); border-radius: 3px; }
-      `}</style>
-
-      
-
-      {/* Main */}
-      <main style={{ flex: 1, padding: "32px 36px", overflowY: "auto" }}>
-
-        {/* Header */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-          <div>
-            <div style={{ fontSize: 10, letterSpacing: ".14em", color: "#bba0a0", textTransform: "uppercase", display: "flex", alignItems: "center", gap: 6 }}>
-              🕐 {todayStr}
-            </div>
-            <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 40, fontWeight: 400, lineHeight: 1.1, marginTop: 8 }}>
-              Daily Photo<br />
-              <span style={{ color: "#c45c7a", fontStyle: "italic" }}>Time Capsule ♡</span>
-            </div>
-            <div style={{
-              display: "inline-flex", alignItems: "center", gap: 7,
-              background: "rgba(196,92,122,.08)", border: "1px solid rgba(196,92,122,.2)",
-              borderRadius: 20, padding: "7px 16px", fontSize: 12, color: "#c45c7a", marginTop: 12,
-            }}>
-              ✨ your future self will thank you
-            </div>
-          </div>
-          <div style={{
-            background: "rgba(196,92,122,.08)", border: "1px solid rgba(196,92,122,.15)",
-            borderRadius: 16, padding: "12px 20px", textAlign: "right",
-          }}>
-            <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 22, color: "#3a2a2a" }}>{clock}</div>
-            <div style={{ fontSize: 10, color: "#bba0a0", letterSpacing: ".1em" }}>IST</div>
-          </div>
-        </div>
-
-        {/* Memory Banner */}
-        <SectionDivider label="a memory surfaced today" />
-        <div style={{
-          background: "linear-gradient(135deg,rgba(196,92,122,.08),rgba(138,106,184,.08))",
-          border: "1px solid rgba(196,92,122,.2)", borderRadius: 18,
-          padding: "20px 24px", marginBottom: 8, display: "flex", alignItems: "center", gap: 18,
-        }}>
-          <div style={{ fontSize: 36 }}>🎞️</div>
-          <div>
-            <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 18, color: "#3a2a2a", marginBottom: 4 }}>
-              1 year ago today — June 2, 2023
-            </div>
-            <p style={{ fontSize: 13, color: "#8a6a6a", lineHeight: 1.5 }}>
-              You uploaded a photo captioned <em>"Rainy day chai and my favourite book"</em>. Look how far you've come.
-            </p>
-            <div style={{
-              display: "inline-flex", alignItems: "center", gap: 6,
-              background: "rgba(196,92,122,.1)", color: "#c45c7a",
-              fontSize: 11, padding: "4px 12px", borderRadius: 20, marginTop: 8,
-            }}>
-              🎉 this memory is now unlocked
-            </div>
-          </div>
-        </div>
-
-        {/* Upload Section */}
-        <SectionDivider label="today's photo" />
-        <div style={{ background: "white", borderRadius: 20, border: "1px solid rgba(200,140,140,.15)", padding: "28px 28px 24px", marginBottom: 8 }}>
-
-          {!previewUrl ? (
-            <div
-              onDragOver={onDragOver}
-              onDragLeave={onDragLeave}
-              onDrop={onDrop}
-              onClick={() => fileRef.current?.click()}
-              style={{
-                border: `2px dashed ${dragging ? "#c45c7a" : "rgba(196,92,122,.3)"}`,
-                borderRadius: 16, padding: "36px 20px", textAlign: "center",
-                cursor: "pointer", transition: "all .2s",
-                background: dragging ? "rgba(196,92,122,.08)" : "rgba(196,92,122,.02)",
-                position: "relative",
-              }}
-            >
-              <input
-                ref={fileRef}
-                type="file"
-                accept="image/*"
-                style={{ display: "none" }}
-                onChange={e => handleFile(e.target.files[0])}
-              />
-              <div style={{ fontSize: 36, color: "rgba(196,92,122,.4)", marginBottom: 10 }}>📷</div>
-              <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 18, color: "#5a3a3a", marginBottom: 6 }}>Drop your moment here</div>
-              <div style={{ fontSize: 12, color: "#bba0a0" }}>or click to browse · jpg, png, webp, heic · max 5mb</div>
-            </div>
-          ) : (
-            <div style={{ position: "relative", marginTop: 0 }}>
-              <img src={previewUrl} alt="preview" style={{ width: "100%", maxHeight: 320, objectFit: "cover", borderRadius: 14, display: "block" }} />
-              <button
-                onClick={removePhoto}
-                style={{
-                  position: "absolute", top: 10, right: 10,
-                  background: "rgba(255,255,255,.9)", border: "none", borderRadius: "50%",
-                  width: 30, height: 30, cursor: "pointer",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  color: "#c45c7a", fontSize: 16,
-                }}
-              >✕</button>
-            </div>
-          )}
-
-          {/* Form */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginTop: 18 }}>
-            {/* Caption */}
-            <div style={{ gridColumn: "1 / -1" }}>
-              <FormLabel>caption</FormLabel>
-              <input
-                type="text"
-                maxLength={140}
-                placeholder="what's happening in this moment?"
-                value={caption}
-                onChange={e => setCaption(e.target.value)}
-                style={inputStyle}
-                onFocus={e => e.target.style.borderColor = "#c45c7a"}
-                onBlur={e => e.target.style.borderColor = "rgba(200,140,140,.2)"}
-              />
-            </div>
-
-            {/* Mood */}
-            <div style={{ gridColumn: "1 / -1" }}>
-              <FormLabel>mood right now</FormLabel>
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 4 }}>
-                {MOODS.map(m => (
-                  <button
-                    key={m.value}
-                    onClick={() => setSelMood(m.label)}
-                    style={{
-                      padding: "6px 14px", borderRadius: 20,
-                      border: "1px solid rgba(200,140,140,.2)",
-                      fontSize: 12, cursor: "pointer",
-                      fontFamily: "'DM Sans', sans-serif",
-                      transition: "all .15s",
-                      background: selMood === m.label ? "rgba(196,92,122,.12)" : "white",
-                      color: selMood === m.label ? "#c45c7a" : "#9a7a7a",
-                      borderColor: selMood === m.label ? "rgba(196,92,122,.35)" : "rgba(200,140,140,.2)",
-                    }}
-                  >{m.label}</button>
-                ))}
-              </div>
-            </div>
-
-            {/* Note */}
-            <div style={{ gridColumn: "1 / -1" }}>
-              <FormLabel>a little note to future you</FormLabel>
-              <textarea
-                maxLength={300}
-                placeholder="dear future me, today I felt..."
-                value={note}
-                onChange={e => setNote(e.target.value)}
-                style={{ ...inputStyle, resize: "vertical", minHeight: 72 }}
-                onFocus={e => e.target.style.borderColor = "#c45c7a"}
-                onBlur={e => e.target.style.borderColor = "rgba(200,140,140,.2)"}
-              />
-            </div>
-
-            {/* Reveal */}
-            <div style={{ gridColumn: "1 / -1" }}>
-              <FormLabel>unlock this memory after</FormLabel>
-              <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
-                {REVEAL_OPTS.map(r => (
-                  <div
-                    key={r.value}
-                    onClick={() => setSelReveal(r.value)}
-                    style={{
-                      flex: 1, padding: 10, borderRadius: 12,
-                      border: "1px solid rgba(200,140,140,.2)",
-                      textAlign: "center", cursor: "pointer", transition: "all .15s",
-                      background: selReveal === r.value ? "rgba(196,92,122,.08)" : "white",
-                      borderColor: selReveal === r.value ? "rgba(196,92,122,.3)" : "rgba(200,140,140,.2)",
-                    }}
-                  >
-                    <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 22, color: "#c45c7a" }}>{r.label}</div>
-                    <div style={{ fontSize: 11, color: "#bba0a0", marginTop: 2 }}>{r.sub}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          <button
-            onClick={savePhoto}
-            disabled={saving}
-            style={{
-              marginTop: 20, width: "100%", padding: 13,
-              background: "linear-gradient(135deg,#e8789a,#c45c7a)",
-              color: "white", border: "none", borderRadius: 16,
-              fontFamily: "'DM Sans', sans-serif", fontSize: 14, fontWeight: 500,
-              cursor: saving ? "not-allowed" : "pointer",
-              opacity: saving ? .5 : 1,
-              display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-              transition: "opacity .2s",
-            }}
-          >
-            {saving ? "⏳ sealing..." : "💾 seal this memory"}
-          </button>
-        </div>
-
-        {/* Timeline */}
-        <SectionDivider label="sealed away" />
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(220px,1fr))", gap: 16 }}>
-          {cards.map(card => <PhotoCard key={card.id} card={card} />)}
-        </div>
-        <div style={{ height: 36 }} />
-      </main>
-
-      <Toast message={toast.msg} visible={toast.visible} />
-    </div>
-  );
-}
-
-function SectionDivider({ label }) {
-  return (
-    <div style={{
-      display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-      fontSize: 10, letterSpacing: ".18em", color: "#bba0a0", textTransform: "uppercase",
-      margin: "26px 0 18px",
-    }}>
-      ○ {label} ○
-    </div>
-  );
-}
-
-function FormLabel({ children }) {
-  return (
-    <div style={{ fontSize: 11, letterSpacing: ".08em", textTransform: "uppercase", color: "#bba0a0", marginBottom: 6 }}>
-      {children}
-    </div>
-  );
-}
-
-const inputStyle = {
-  width: "100%", padding: "10px 14px",
-  border: "1px solid rgba(200,140,140,.2)", borderRadius: 12,
-  fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: "#3a2a2a",
-  background: "white", outline: "none", transition: "border .15s",
+// ── Types ──────────────────────────────────────────────────────────────────
+const MOODS = {
+  joyful:    { emoji: "✦", color: "#d4834a", bg: "rgba(212,131,74,.12)",   label: "Joyful",    leaf: "🍊" },
+  calm:      { emoji: "◎", color: "#6aab9c", bg: "rgba(106,171,156,.12)",  label: "Calm",      leaf: "🌿" },
+  nostalgic: { emoji: "◈", color: "#9b7bc8", bg: "rgba(155,123,200,.12)",  label: "Nostalgic", leaf: "🪻" },
+  sad:       { emoji: "◦", color: "#7fa8d4", bg: "rgba(127,168,212,.12)",  label: "Sad",       leaf: "🫧" },
+  anxious:   { emoji: "◌", color: "#d47a7a", bg: "rgba(212,122,122,.12)",  label: "Anxious",   leaf: "🌸" },
+  grateful:  { emoji: "❋", color: "#c0485a", bg: "rgba(192,72,90,.12)",    label: "Grateful",  leaf: "🌺" },
+  tired:     { emoji: "◷", color: "#b0a0c0", bg: "rgba(176,160,192,.12)",  label: "Tired",     leaf: "🌙" },
 };
 
-function PhotoCard({ card }) {
+const UNSPLASH = {
+  joyful:    "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600&q=70",
+  calm:      "https://images.unsplash.com/photo-1447752875215-b2761acb3c5d?w=600&q=70",
+  nostalgic: "https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=600&q=70",
+  sad:       "https://images.unsplash.com/photo-1516912481808-3406841bd33c?w=600&q=70",
+  anxious:   "https://images.unsplash.com/photo-1484480974693-6ca0a78fb36b?w=600&q=70",
+  grateful:  "https://images.unsplash.com/photo-1501854140801-50d01698950b?w=600&q=70",
+  tired:     "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=600&q=70",
+};
+
+const MOCK_MEMORIES = [
+  { id: "1", date: "2025-06-03T09:15:00", mood: "joyful",    title: "First morning run of June",            note: "Finally got out at 6am. The air was different. Felt unreasonably proud.",    tags: ["fitness", "morning"], photo: null },
+  { id: "2", date: "2025-06-01T21:00:00", mood: "nostalgic", title: "Old playlist on shuffle",              note: "Stumbled on songs from 2020. Strange how music makes time collapse.",         tags: ["music", "evening"],   photo: null },
+  { id: "3", date: "2025-05-28T14:30:00", mood: "calm",      title: "Quiet afternoon with chai",            note: "Nothing happened. It was perfect.",                                          tags: ["rest"],               photo: null },
+  { id: "4", date: "2025-05-22T11:00:00", mood: "anxious",   title: "Deployment day jitters",               note: "Pushed to prod and stared at the logs for 20 mins. Everything was fine.",   tags: ["work", "coding"],     photo: null },
+  { id: "5", date: "2025-05-18T19:45:00", mood: "grateful",  title: "Surprise call from amma",              note: "She called just to say she was proud. I didn't expect that.",                tags: ["family"],             photo: null },
+  { id: "6", date: "2025-05-10T08:00:00", mood: "tired",     title: "Three days of no sleep",               note: "Finished the feature. Worth it? Maybe. Ask me next week.",                   tags: ["work", "coding"],     photo: null },
+  { id: "7", date: "2025-04-30T16:20:00", mood: "joyful",    title: "Birthday chai at the old place",       note: "Exactly how I remembered it. Some things hold.",                             tags: ["food", "birthday"],   photo: null },
+  { id: "8", date: "2025-04-14T22:10:00", mood: "sad",       title: "Missing someone I don't talk to anymore", note: "Saw a meme they would've sent me. Just sat with it.",                   tags: ["feelings"],           photo: null },
+];
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+function fmtDate(iso) {
+  return new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+}
+function fmtMonth(iso) {
+  return new Date(iso).toLocaleDateString("en-IN", { month: "long", year: "numeric" });
+}
+function groupByMonth(arr) {
+  const g = {};
+  for (const m of arr) {
+    const k = fmtMonth(m.date);
+    if (!g[k]) g[k] = [];
+    g[k].push(m);
+  }
+  return g;
+}
+
+// ── Sidebar ──────────────────────────────────────────────────────────────────
+function Sidebar() {
+  const navItems = [
+    { icon: "layout-dashboard", label: "Dashboard" },
+    { icon: "mood-happy",       label: "Mood"       },
+    { icon: "check",            label: "Habits"     },
+    { icon: "book",             label: "Study"      },
+    { icon: "wallet",           label: "Expenses"   },
+    { icon: "calendar",         label: "Attendance" },
+    { icon: "chart-bar",        label: "Insights"   },
+    { icon: "heart",            label: "Periods Tracker" },
+    { icon: "camera",           label: "Memories",  active: true },
+    { icon: "user",             label: "Profile"    },
+  ];
+
   return (
-    <div style={{
-      background: "white", borderRadius: 18, overflow: "hidden",
-      border: "1px solid rgba(200,140,140,.12)",
-      transition: "transform .2s",
-    }}
-      onMouseEnter={e => e.currentTarget.style.transform = "translateY(-3px)"}
-      onMouseLeave={e => e.currentTarget.style.transform = "translateY(0)"}
-    >
-      {card.imgUrl ? (
-        <img src={card.imgUrl} alt={card.cap} style={{ width: "100%", height: 180, objectFit: "cover", display: "block" }} />
-      ) : (
-        <div style={{ width: "100%", height: 180, background: card.bg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 40 }}>
-          {card.emoji}
+    <aside style={styles.sidebar}>
+      <div style={styles.logo}>
+        <div style={styles.logoName}>
+          <span style={styles.logoDot} /> MoodOS
         </div>
-      )}
-      <div style={{ padding: "14px 16px" }}>
-        <div style={{ fontSize: 10, color: "#bba0a0", letterSpacing: ".08em", textTransform: "uppercase", marginBottom: 6 }}>{card.date}</div>
-        <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 15, color: "#3a2a2a", lineHeight: 1.4, marginBottom: 8 }}>{card.cap}</div>
-        <div style={{ fontSize: 11, color: "#c45c7a", display: "flex", alignItems: "center", gap: 5 }}>🩷 {card.mood}</div>
-        <div style={{
-          display: "inline-flex", alignItems: "center", gap: 5,
-          background: "rgba(138,106,184,.1)", color: "#8a6ab8",
-          fontSize: 10, padding: "3px 10px", borderRadius: 20, marginTop: 8,
-        }}>🔒 unlocks {card.unlockStr}</div>
+        <div style={styles.logoSub}>Girls life, sorted.</div>
+      </div>
+      <div style={styles.navLabel}>Navigation</div>
+      {navItems.map(({ icon, label, active }) => (
+        <div key={label} style={{ ...styles.navItem, ...(active ? styles.navItemActive : {}) }}>
+          <i className={`ti ti-${icon}`} style={{ fontSize: 16, opacity: 0.7 }} aria-hidden="true" />
+          {label}
+        </div>
+      ))}
+      <div style={styles.sidebarFooter}>
+        <div style={styles.userRow}>
+          <div style={styles.avatar}>VW</div>
+          <div>
+            <div style={styles.userName}>Vaishnavi Wakodikar</div>
+            <div style={styles.userEmail}>vaishnaviwakodikar09@gma...</div>
+          </div>
+        </div>
+      </div>
+    </aside>
+  );
+}
+
+// ── Memory Card ──────────────────────────────────────────────────────────────
+function MemoryCard({ memory }) {
+  const [expanded, setExpanded] = useState(false);
+  const [hovered, setHovered] = useState(false);
+  const cfg = MOODS[memory.mood];
+  const imgSrc = memory.photo || UNSPLASH[memory.mood];
+
+  return (
+    <div
+      style={{ ...styles.card, ...(hovered ? styles.cardHover : {}) }}
+      onClick={() => setExpanded(!expanded)}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
+      {/* Photo */}
+      <div style={styles.photoWrap}>
+        <img
+          src={imgSrc}
+          alt={memory.title}
+          style={{ ...styles.photo, ...(hovered ? styles.photoHover : {}) }}
+          loading="lazy"
+        />
+        <div style={styles.photoOverlay} />
+        <span style={{ ...styles.photoMood, color: cfg.color }}>
+          {cfg.emoji} {cfg.label}
+        </span>
+        <span style={styles.photoDate}>{fmtDate(memory.date)}</span>
+        <div style={styles.leafWatermark}>{cfg.leaf}</div>
+      </div>
+      {/* Body */}
+      <div style={styles.cardBody}>
+        <div style={styles.cardTitle}>{memory.title}</div>
+        {expanded && memory.note && (
+          <p style={styles.cardNote}>{memory.note}</p>
+        )}
+        {memory.tags.length > 0 && (
+          <div style={styles.tagRow}>
+            {memory.tags.map((t) => (
+              <span key={t} style={styles.tag}>{t}</span>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
 }
+
+// ── Add Memory Modal ─────────────────────────────────────────────────────────
+function AddMemoryModal({ onClose, onAdd }) {
+  const [title, setTitle] = useState("");
+  const [note, setNote] = useState("");
+  const [mood, setMood] = useState("calm");
+  const [tagInput, setTagInput] = useState("");
+  const [photo, setPhoto] = useState(null);
+
+  const handlePhoto = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => setPhoto(ev.target.result);
+    reader.readAsDataURL(file);
+  };
+
+  const handleSave = () => {
+    if (!title.trim()) return;
+    onAdd({
+      id: Date.now().toString(),
+      date: new Date().toISOString(),
+      mood,
+      title: title.trim(),
+      note: note.trim(),
+      tags: tagInput.split(",").map((t) => t.trim()).filter(Boolean),
+      photo,
+    });
+    onClose();
+  };
+
+  return (
+    <div style={styles.modalBg} onClick={onClose}>
+      <div style={styles.modalCard} onClick={(e) => e.stopPropagation()}>
+        {/* Header */}
+        <div style={styles.modalHeader}>
+          <span style={styles.modalTitle}>New memory ♡</span>
+          <button style={styles.modalClose} onClick={onClose}>✕</button>
+        </div>
+
+        {/* Photo upload */}
+        <span style={styles.fieldLabel}>Photo</span>
+        <label style={styles.uploadArea}>
+          <input type="file" accept="image/*" style={{ display: "none" }} onChange={handlePhoto} />
+          {photo ? (
+            <img src={photo} alt="preview" style={styles.uploadPreview} />
+          ) : (
+            <>
+              <i className="ti ti-camera" style={{ fontSize: 22, color: "#e8c4c4" }} aria-hidden="true" />
+              <span style={{ fontSize: 11, color: "#c9a8a8" }}>Tap to add a photo</span>
+            </>
+          )}
+        </label>
+
+        {/* Title */}
+        <span style={styles.fieldLabel}>Title</span>
+        <input
+          style={styles.fieldInput}
+          placeholder="What happened?"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+        />
+
+        {/* Mood */}
+        <span style={styles.fieldLabel}>Mood</span>
+        <div style={styles.moodGrid}>
+          {Object.entries(MOODS).map(([k, v]) => (
+            <button
+              key={k}
+              style={{
+                ...styles.moodPill,
+                ...(mood === k ? { background: v.bg, borderColor: v.color, color: v.color } : {}),
+              }}
+              onClick={() => setMood(k)}
+            >
+              {v.emoji} {v.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Note */}
+        <span style={styles.fieldLabel}>Note</span>
+        <textarea
+          style={{ ...styles.fieldInput, minHeight: 70, resize: "none" }}
+          placeholder="A little more detail..."
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+        />
+
+        {/* Tags */}
+        <span style={styles.fieldLabel}>
+          Tags <span style={{ opacity: 0.5, textTransform: "none", letterSpacing: 0 }}>(comma separated)</span>
+        </span>
+        <input
+          style={styles.fieldInput}
+          placeholder="e.g. morning, family, joy"
+          value={tagInput}
+          onChange={(e) => setTagInput(e.target.value)}
+        />
+
+        <button style={styles.saveBtn} onClick={handleSave}>
+          Save memory ✦
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ── Main Page ─────────────────────────────────────────────────────────────────
+export default function Memories() {
+  const [memories, setMemories] = useState(MOCK_MEMORIES);
+  const [filterMood, setFilterMood] = useState("all");
+  const [showModal, setShowModal] = useState(false);
+
+  const filtered = filterMood === "all" ? memories : memories.filter((m) => m.mood === filterMood);
+  const sorted = [...filtered].sort((a, b) => new Date(b.date) - new Date(a.date));
+  const grouped = groupByMonth(sorted);
+
+  return (
+    <>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400;1,500&family=DM+Sans:wght@300;400;500&display=swap');
+        @import url('https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css');
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background: #fdf6f0; }
+      `}</style>
+
+      <div style={styles.shell}>
+  <main style={styles.main}>
+          {/* Header */}
+          <div style={styles.eyebrow}>○ Memories ○</div>
+          <h1 style={styles.pageTitle}>
+            Your <em style={{ fontStyle: "italic", color: "#c0485a" }}>photo memories</em>
+          </h1>
+          <p style={styles.pageSub}>Moments, moods, and the little things worth keeping. ♡</p>
+
+          {/* Filter row */}
+          <div style={styles.filterRow}>
+            <button
+              style={{ ...styles.filterPill, ...(filterMood === "all" ? styles.filterPillActive : {}) }}
+              onClick={() => setFilterMood("all")}
+            >
+              All
+            </button>
+            {Object.entries(MOODS).map(([k, v]) => (
+              <button
+                key={k}
+                style={{
+                  ...styles.filterPill,
+                  ...(filterMood === k
+                    ? { borderColor: v.color, color: v.color, background: v.bg }
+                    : {}),
+                }}
+                onClick={() => setFilterMood(k)}
+              >
+                {v.emoji} {v.label}
+              </button>
+            ))}
+            <button style={styles.addBtn} onClick={() => setShowModal(true)}>
+              + Add memory
+            </button>
+          </div>
+
+          {/* Timeline */}
+          {Object.keys(grouped).length === 0 ? (
+            <div style={styles.empty}>No memories here yet… ♡</div>
+          ) : (
+            Object.entries(grouped).map(([month, mems]) => (
+              <div key={month} style={styles.monthGroup}>
+                <div style={styles.monthLabel}>
+                  {month}
+                  <span style={styles.countPill}>{mems.length}</span>
+                  <div style={styles.monthLine} />
+                </div>
+                <div style={styles.grid}>
+                  {mems.map((mem) => (
+                    <MemoryCard key={mem.id} memory={mem} />
+                  ))}
+                </div>
+              </div>
+            ))
+          )}
+        </main>
+      </div>
+
+      {showModal && (
+        <AddMemoryModal
+          onClose={() => setShowModal(false)}
+          onAdd={(m) => {
+            setMemories((prev) => [m, ...prev]);
+            setShowModal(false);
+          }}
+        />
+      )}
+    </>
+  );
+}
+
+// ── Styles ────────────────────────────────────────────────────────────────────
+const styles = {
+  shell:        { display: "flex", minHeight: "100vh", background: "#fdf6f0", fontFamily: "'DM Sans', sans-serif", color: "#3a2a2a" },
+  // Sidebar
+  sidebar:      { width: 210, flexShrink: 0, background: "#fdf6f0", borderRight: "1px solid #f0e0d8", padding: "28px 0", display: "flex", flexDirection: "column" },
+  logo:         { padding: "0 22px 24px", borderBottom: "1px solid #f0e0d8", marginBottom: 20 },
+  logoName:     { fontFamily: "'Cormorant Garamond', serif", fontStyle: "italic", fontSize: 18, color: "#c0485a", display: "flex", alignItems: "center", gap: 6 },
+  logoDot:      { width: 8, height: 8, borderRadius: "50%", background: "#c0485a", display: "inline-block", flexShrink: 0 },
+  logoSub:      { fontSize: 9, letterSpacing: "0.14em", textTransform: "uppercase", color: "#c9a8a8", marginTop: 3, paddingLeft: 14 },
+  navLabel:     { fontSize: 9, letterSpacing: "0.14em", textTransform: "uppercase", color: "#c9a8a8", padding: "0 22px", marginBottom: 10 },
+  navItem:      { display: "flex", alignItems: "center", gap: 10, padding: "9px 22px", fontSize: 13, color: "#8a6868", cursor: "pointer", borderLeft: "2px solid transparent" },
+  navItemActive:{ color: "#c0485a", background: "#fdf0ed", borderLeftColor: "#c0485a", fontWeight: 500 },
+  sidebarFooter:{ marginTop: "auto", padding: "20px 22px 0", borderTop: "1px solid #f0e0d8" },
+  userRow:      { display: "flex", alignItems: "center", gap: 10 },
+  avatar:       { width: 32, height: 32, borderRadius: "50%", background: "linear-gradient(135deg,#e8a0b0,#c0485a)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 500, color: "#fff", flexShrink: 0 },
+  userName:     { fontSize: 12, fontWeight: 500, color: "#3a2a2a" },
+  userEmail:    { fontSize: 10, color: "#c9a8a8", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 120 },
+  // Main
+  main:         { flex: 1, padding: "36px 36px 80px", overflowY: "auto" },
+  eyebrow:      { fontSize: 10, letterSpacing: "0.16em", textTransform: "uppercase", color: "#c9a8a8", marginBottom: 10 },
+  pageTitle:    { fontFamily: "'Cormorant Garamond', serif", fontSize: "clamp(32px, 5vw, 46px)", fontWeight: 300, lineHeight: 1.1, color: "#2a1a1a" },
+  pageSub:      { fontSize: 13, color: "#b08080", marginTop: 8, lineHeight: 1.6 },
+  filterRow:    { display: "flex", alignItems: "center", flexWrap: "wrap", gap: 8, margin: "28px 0" },
+  filterPill:   { border: "1px solid #f0ddd8", background: "transparent", color: "#b08080", fontFamily: "'DM Sans', sans-serif", fontSize: 11, padding: "6px 14px", borderRadius: 100, cursor: "pointer" },
+  filterPillActive: { background: "#fdf0ed", borderColor: "#e8b0bc", color: "#c0485a" },
+  addBtn:       { display: "flex", alignItems: "center", gap: 6, marginLeft: "auto", background: "#c0485a", border: "none", color: "#fff", fontFamily: "'DM Sans', sans-serif", fontSize: 12, fontWeight: 500, padding: "8px 18px", borderRadius: 100, cursor: "pointer", whiteSpace: "nowrap" },
+  monthGroup:   { marginBottom: 44 },
+  monthLabel:   { fontFamily: "'Cormorant Garamond', serif", fontSize: 14, fontStyle: "italic", color: "#c9a8a8", marginBottom: 18, display: "flex", alignItems: "center", gap: 10 },
+  monthLine:    { flex: 1, height: 1, background: "#f0e0d8" },
+  countPill:    { fontSize: 10, color: "#c9a8a8", background: "#fdf0ed", border: "1px solid #f0ddd8", borderRadius: 100, padding: "2px 9px", fontStyle: "normal", fontFamily: "'DM Sans', sans-serif" },
+  grid:         { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(230px, 1fr))", gap: 16 },
+  empty:        { textAlign: "center", padding: "64px 0", color: "#e0c0c0", fontFamily: "'Cormorant Garamond', serif", fontStyle: "italic", fontSize: 18 },
+  // Card
+  card:         { borderRadius: 18, overflow: "hidden", background: "#fff", border: "1px solid #f5e4e0", cursor: "pointer", transition: "transform .22s ease, box-shadow .22s ease" },
+  cardHover:    { transform: "translateY(-3px)", boxShadow: "0 8px 28px rgba(192,72,90,.1)" },
+  photoWrap:    { position: "relative", width: "100%", aspectRatio: "4/3", overflow: "hidden", background: "#fdf0ed" },
+  photo:        { width: "100%", height: "100%", objectFit: "cover", display: "block", transition: "transform .4s ease" },
+  photoHover:   { transform: "scale(1.06)" },
+  photoOverlay: { position: "absolute", inset: 0, background: "linear-gradient(to bottom, transparent 45%, rgba(42,20,20,.45))" },
+  photoMood:    { position: "absolute", top: 10, left: 10, fontSize: 10, fontWeight: 500, padding: "4px 10px", borderRadius: 100, background: "rgba(253,246,240,.85)", letterSpacing: "0.04em" },
+  photoDate:    { position: "absolute", bottom: 10, right: 10, fontSize: 10, color: "rgba(255,240,235,.7)", letterSpacing: "0.04em" },
+  leafWatermark:{ position: "absolute", bottom: -10, right: -10, fontSize: 64, lineHeight: 1, transform: "rotate(-20deg)", opacity: 0.12, pointerEvents: "none" },
+  cardBody:     { padding: "14px 16px 16px" },
+  cardTitle:    { fontFamily: "'Cormorant Garamond', serif", fontSize: 16, fontWeight: 400, lineHeight: 1.3, color: "#2a1a1a", marginBottom: 4 },
+  cardNote:     { fontSize: 12, color: "#b08080", lineHeight: 1.6, marginTop: 4 },
+  tagRow:       { display: "flex", flexWrap: "wrap", gap: 5, marginTop: 10 },
+  tag:          { fontSize: 10, color: "#c9a8a8", background: "#fdf6f2", border: "1px solid #f0ddd8", borderRadius: 100, padding: "3px 9px", letterSpacing: "0.03em" },
+  // Modal
+  modalBg:      { position: "fixed", inset: 0, background: "rgba(42,20,20,.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100, padding: 16 },
+  modalCard:    { width: "100%", maxWidth: 460, background: "#fdf6f0", border: "1px solid #f0ddd8", borderRadius: 24, padding: 28, display: "flex", flexDirection: "column", gap: 12, maxHeight: "90vh", overflowY: "auto" },
+  modalHeader:  { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 },
+  modalTitle:   { fontFamily: "'Cormorant Garamond', serif", fontSize: 22, fontWeight: 400, fontStyle: "italic", color: "#2a1a1a" },
+  modalClose:   { background: "none", border: "none", color: "#c9a8a8", fontSize: 15, cursor: "pointer", padding: 4 },
+  fieldLabel:   { fontSize: 10, fontWeight: 500, letterSpacing: "0.12em", textTransform: "uppercase", color: "#c9a8a8" },
+  fieldInput:   { width: "100%", background: "#fff", border: "1px solid #f0ddd8", borderRadius: 10, color: "#2a1a1a", fontFamily: "'DM Sans', sans-serif", fontSize: 13, padding: "10px 14px", outline: "none" },
+  uploadArea:   { width: "100%", border: "1.5px dashed #f0c4c8", borderRadius: 12, padding: 22, display: "flex", flexDirection: "column", alignItems: "center", gap: 8, cursor: "pointer", background: "#fff" },
+  uploadPreview:{ width: "100%", borderRadius: 8, aspectRatio: "4/3", objectFit: "cover" },
+  moodGrid:     { display: "flex", flexWrap: "wrap", gap: 7 },
+  moodPill:     { border: "1px solid #f0ddd8", background: "transparent", color: "#b08080", fontFamily: "'DM Sans', sans-serif", fontSize: 11, padding: "5px 12px", borderRadius: 100, cursor: "pointer", display: "flex", alignItems: "center", gap: 5 },
+  saveBtn:      { marginTop: 6, width: "100%", background: "#c0485a", border: "none", color: "#fff", fontFamily: "'DM Sans', sans-serif", fontSize: 13, fontWeight: 500, padding: 12, borderRadius: 12, cursor: "pointer" },
+};
