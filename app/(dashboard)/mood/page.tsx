@@ -48,8 +48,9 @@ type Entry = {
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
+// Cast entry.mood to Mood['label'] so moodMap.get() accepts it
 const getMoodConfig = (entry: Entry): Mood | null =>
-  moodMap.get(entry.mood) ?? null
+  moodMap.get(entry.mood as Mood['label']) ?? null
 
 const scoreToLabel = (s: number) =>
   s >= 4.5 ? 'blooming' : s >= 3.5 ? 'glowing' : s >= 2.5 ? 'gentle' : s >= 1.5 ? 'tender' : 'healing'
