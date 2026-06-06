@@ -16,7 +16,7 @@ const MOODS = {
   tired:     { emoji: "◷", color: "#b0a0c0", bg: "rgba(176,160,192,.12)",  label: "Tired",     leaf: "🌙" },
 };
 
-const UNSPLASH = {
+const UNSPLASH: Record<string, string> = {
   joyful:    "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600&q=70",
   calm:      "https://images.unsplash.com/photo-1447752875215-b2761acb3c5d?w=600&q=70",
   nostalgic: "https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=600&q=70",
@@ -26,15 +26,25 @@ const UNSPLASH = {
   tired:     "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=600&q=70",
 };
 
-const MOCK_MEMORIES = [
-  { id: "1", date: "2025-06-03T09:15:00", mood: "joyful",    title: "First morning run of June",            note: "Finally got out at 6am. The air was different. Felt unreasonably proud.",    tags: ["fitness", "morning"], photo: null },
-  { id: "2", date: "2025-06-01T21:00:00", mood: "nostalgic", title: "Old playlist on shuffle",              note: "Stumbled on songs from 2020. Strange how music makes time collapse.",         tags: ["music", "evening"],   photo: null },
-  { id: "3", date: "2025-05-28T14:30:00", mood: "calm",      title: "Quiet afternoon with chai",            note: "Nothing happened. It was perfect.",                                          tags: ["rest"],               photo: null },
-  { id: "4", date: "2025-05-22T11:00:00", mood: "anxious",   title: "Deployment day jitters",               note: "Pushed to prod and stared at the logs for 20 mins. Everything was fine.",   tags: ["work", "coding"],     photo: null },
-  { id: "5", date: "2025-05-18T19:45:00", mood: "grateful",  title: "Surprise call from amma",              note: "She called just to say she was proud. I didn't expect that.",                tags: ["family"],             photo: null },
-  { id: "6", date: "2025-05-10T08:00:00", mood: "tired",     title: "Three days of no sleep",               note: "Finished the feature. Worth it? Maybe. Ask me next week.",                   tags: ["work", "coding"],     photo: null },
-  { id: "7", date: "2025-04-30T16:20:00", mood: "joyful",    title: "Birthday chai at the old place",       note: "Exactly how I remembered it. Some things hold.",                             tags: ["food", "birthday"],   photo: null },
-  { id: "8", date: "2025-04-14T22:10:00", mood: "sad",       title: "Missing someone I don't talk to anymore", note: "Saw a meme they would've sent me. Just sat with it.",                   tags: ["feelings"],           photo: null },
+type Memory = {
+  id: string;
+  date: string;
+  mood: keyof typeof MOODS;
+  title: string;
+  note: string;
+  tags: string[];
+  photo: string | null;
+};
+
+const MOCK_MEMORIES: Memory[] = [
+  { id: "1", date: "2025-06-03T09:15:00", mood: "joyful",    title: "First morning run of June",               note: "Finally got out at 6am. The air was different. Felt unreasonably proud.",    tags: ["fitness", "morning"], photo: null },
+  { id: "2", date: "2025-06-01T21:00:00", mood: "nostalgic", title: "Old playlist on shuffle",                  note: "Stumbled on songs from 2020. Strange how music makes time collapse.",         tags: ["music", "evening"],   photo: null },
+  { id: "3", date: "2025-05-28T14:30:00", mood: "calm",      title: "Quiet afternoon with chai",                note: "Nothing happened. It was perfect.",                                          tags: ["rest"],               photo: null },
+  { id: "4", date: "2025-05-22T11:00:00", mood: "anxious",   title: "Deployment day jitters",                   note: "Pushed to prod and stared at the logs for 20 mins. Everything was fine.",   tags: ["work", "coding"],     photo: null },
+  { id: "5", date: "2025-05-18T19:45:00", mood: "grateful",  title: "Surprise call from amma",                  note: "She called just to say she was proud. I didn't expect that.",                tags: ["family"],             photo: null },
+  { id: "6", date: "2025-05-10T08:00:00", mood: "tired",     title: "Three days of no sleep",                   note: "Finished the feature. Worth it? Maybe. Ask me next week.",                   tags: ["work", "coding"],     photo: null },
+  { id: "7", date: "2025-04-30T16:20:00", mood: "joyful",    title: "Birthday chai at the old place",           note: "Exactly how I remembered it. Some things hold.",                             tags: ["food", "birthday"],   photo: null },
+  { id: "8", date: "2025-04-14T22:10:00", mood: "sad",       title: "Missing someone I don't talk to anymore",  note: "Saw a meme they would've sent me. Just sat with it.",                        tags: ["feelings"],            photo: null },
 ];
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -44,8 +54,8 @@ function fmtDate(iso: string) {
 function fmtMonth(iso: string) {
   return new Date(iso).toLocaleDateString("en-IN", { month: "long", year: "numeric" });
 }
-function groupByMonth(arr: typeof MOCK_MEMORIES) {
-  const g: Record<string, typeof MOCK_MEMORIES> = {};
+function groupByMonth(arr: Memory[]) {
+  const g: Record<string, Memory[]> = {};
   for (const m of arr) {
     const k = fmtMonth(m.date);
     if (!g[k]) g[k] = [];
@@ -98,7 +108,7 @@ function Sidebar() {
 }
 
 // ── Memory Card ──────────────────────────────────────────────────────────────
-function MemoryCard({ memory }) {
+function MemoryCard({ memory }: { memory: Memory }) {
   const [expanded, setExpanded] = useState(false);
   const [hovered, setHovered] = useState(false);
   const cfg = MOODS[memory.mood];
@@ -145,18 +155,18 @@ function MemoryCard({ memory }) {
 }
 
 // ── Add Memory Modal ─────────────────────────────────────────────────────────
-function AddMemoryModal({ onClose, onAdd }) {
+function AddMemoryModal({ onClose, onAdd }: { onClose: () => void; onAdd: (m: Memory) => void }) {
   const [title, setTitle] = useState("");
   const [note, setNote] = useState("");
-  const [mood, setMood] = useState("calm");
+  const [mood, setMood] = useState<keyof typeof MOODS>("calm");
   const [tagInput, setTagInput] = useState("");
-  const [photo, setPhoto] = useState(null);
+  const [photo, setPhoto] = useState<string | null>(null);
 
-  const handlePhoto = (e) => {
-    const file = e.target.files[0];
+  const handlePhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = (ev) => setPhoto(ev.target.result);
+    reader.onload = (ev) => setPhoto(ev.target?.result as string);
     reader.readAsDataURL(file);
   };
 
@@ -216,7 +226,7 @@ function AddMemoryModal({ onClose, onAdd }) {
                 ...styles.moodPill,
                 ...(mood === k ? { background: v.bg, borderColor: v.color, color: v.color } : {}),
               }}
-              onClick={() => setMood(k)}
+              onClick={() => setMood(k as keyof typeof MOODS)}
             >
               {v.emoji} {v.label}
             </button>
@@ -253,12 +263,12 @@ function AddMemoryModal({ onClose, onAdd }) {
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
 export default function Memories() {
-  const [memories, setMemories] = useState(MOCK_MEMORIES);
+  const [memories, setMemories] = useState<Memory[]>(MOCK_MEMORIES);
   const [filterMood, setFilterMood] = useState("all");
   const [showModal, setShowModal] = useState(false);
 
   const filtered = filterMood === "all" ? memories : memories.filter((m) => m.mood === filterMood);
-  const sorted = [...filtered].sort((a, b) => new Date(b.date) - new Date(a.date));
+  const sorted = [...filtered].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   const grouped = groupByMonth(sorted);
 
   return (
@@ -271,7 +281,7 @@ export default function Memories() {
       `}</style>
 
       <div style={styles.shell}>
-  <main style={styles.main}>
+        <main style={styles.main}>
           {/* Header */}
           <div style={styles.eyebrow}>○ Memories ○</div>
           <h1 style={styles.pageTitle}>
@@ -342,7 +352,7 @@ export default function Memories() {
 }
 
 // ── Styles ────────────────────────────────────────────────────────────────────
-const styles = {
+const styles: Record<string, React.CSSProperties> = {
   shell:        { display: "flex", minHeight: "100vh", background: "#fdf6f0", fontFamily: "'DM Sans', sans-serif", color: "#3a2a2a" },
   // Sidebar
   sidebar:      { width: 210, flexShrink: 0, background: "#fdf6f0", borderRight: "1px solid #f0e0d8", padding: "28px 0", display: "flex", flexDirection: "column" },
