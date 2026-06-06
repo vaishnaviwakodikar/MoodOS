@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
 import { createClient } from '@/lib/supabase'
+import type { User } from '@supabase/supabase-js'
 
 type Status = 'present' | 'absent' | 'holiday'
 
@@ -15,252 +15,15 @@ type AttendanceRecord = {
 }
 
 const STATUS_CONFIG = {
-  present: { label: 'Present', icon: 'ti-check', c: '#5a8c63', bg: '#edf6ee', border: '#a8c9ae', dot: '#5a8c63' },
-  absent:  { label: 'Absent',  icon: 'ti-x',     c: '#d4607a', bg: '#fde8ee', border: '#e8a0b0', dot: '#d4607a' },
-  holiday: { label: 'Holiday', icon: 'ti-sun',   c: '#b8860b', bg: '#fef8e7', border: '#f5ddb4', dot: '#b8860b' },
+  present: { label: 'Present', icon: '✓', c: '#5a8c63', bg: '#edf6ee', border: '#a8c9ae' },
+  absent:  { label: 'Absent',  icon: '✗', c: '#d4607a', bg: '#fde8ee', border: '#e8a0b0' },
+  holiday: { label: 'Holiday', icon: '☀', c: '#b8860b', bg: '#fef8e7', border: '#f5ddb4' },
 } as const
 
 const DAYS   = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
-const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December']
+const MONTHS = ['January','February','March','April','May','June',
+                'July','August','September','October','November','December']
 const todayIso = new Date().toISOString().slice(0, 10)
-
-const css = `
-@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;1,9..144,300;1,9..144,400&family=DM+Sans:wght@300;400;500;600&display=swap');
-@import url('https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css');
-
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-.at {
-  --sage:   #5a8c63; --sage2: #a8c9ae; --sage3: #edf6ee;
-  --rose:   #d4607a; --rose2: #e8a0b0; --rose3: #fde8ee;
-  --butter: #b8860b; --butter2: #f5ddb4; --butter3: #fef8e7;
-  --cream:  #fdf7f0; --ink: #3d2a35; --ink2: #7a5c68;
-  --ink3:   #b09aa4; --ink4: #d4bfc5; --card: #ffffff;
-  --line:   rgba(61,42,53,0.08);
-  font-family: 'DM Sans', sans-serif;
-  width: 100%;
-  height: 100vh;
-  display: flex;
-  overflow: hidden;
-  color: var(--ink);
-  background: var(--cream);
-}
-
-/* ── Sidebar ── */
-.at-side {
-  width: 210px;
-  flex-shrink: 0;
-  background: var(--ink);
-  display: flex;
-  flex-direction: column;
-  padding: 24px 16px 18px;
-  gap: 0;
-  overflow: hidden;
-}
-
-.at-eyebrow {
-  font-size: 8px; font-weight: 600; letter-spacing: 3px;
-  text-transform: uppercase; color: var(--sage2);
-  display: flex; align-items: center; gap: 6px; margin-bottom: 8px;
-}
-.at-eyebrow::before { content: ''; width: 12px; height: 1px; background: var(--sage2); display: block; }
-
-.at-h1 {
-  font-family: 'Fraunces', serif;
-  font-size: 23px; font-weight: 300; font-style: italic;
-  letter-spacing: -0.5px; line-height: 1.1; color: #fff; margin-bottom: 3px;
-}
-.at-h1 em { color: var(--sage2); }
-.at-sub { font-size: 10px; color: rgba(255,255,255,.3); margin-bottom: 16px; }
-
-.at-stats { display: flex; flex-direction: column; gap: 6px; }
-
-.at-stat {
-  border-radius: 9px; padding: 10px 12px;
-  background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.07);
-  flex-shrink: 0;
-}
-.at-stat-lbl { font-size: 7.5px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; color: rgba(255,255,255,.3); margin-bottom: 2px; }
-.at-stat-val { font-family: 'Fraunces', serif; font-size: 22px; font-weight: 300; letter-spacing: -1px; line-height: 1; margin-bottom: 1px; }
-.at-stat-sub { font-size: 9px; color: rgba(255,255,255,.25); }
-.at-bar { height: 2px; border-radius: 999px; background: rgba(255,255,255,.1); overflow: hidden; margin-top: 6px; }
-.at-bar-fill { height: 100%; border-radius: 999px; transition: width .7s cubic-bezier(.16,1,.3,1); }
-
-.at-spacer { flex: 1; }
-
-.at-side-footer {
-  padding: 10px 12px;
-  border-radius: 9px;
-  background: rgba(255,255,255,.04);
-  border: 1px solid rgba(255,255,255,.06);
-  flex-shrink: 0;
-}
-.at-footer-lbl { font-size: 7px; letter-spacing: 2.5px; text-transform: uppercase; color: rgba(255,255,255,.25); margin-bottom: 3px; }
-.at-footer-txt { font-family: 'Fraunces', serif; font-style: italic; font-size: 11px; font-weight: 300; color: rgba(255,255,255,.45); line-height: 1.55; }
-
-/* ── Main area ── */
-.at-main {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  background: var(--cream);
-}
-
-/* Topbar */
-.at-topbar {
-  flex-shrink: 0;
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 12px 18px 11px;
-  border-bottom: 1px solid var(--line);
-  background: var(--cream);
-}
-.at-monlabel { font-family: 'Fraunces', serif; font-size: 16px; font-weight: 300; font-style: italic; color: var(--ink); letter-spacing: -.3px; }
-.at-monbtns  { display: flex; gap: 5px; }
-.at-monarrow {
-  width: 26px; height: 26px; border-radius: 7px; border: 1px solid var(--line);
-  background: var(--card); display: flex; align-items: center; justify-content: center;
-  cursor: pointer; color: var(--ink3); font-size: 11px; transition: .15s;
-}
-.at-monarrow:hover { color: var(--sage); background: var(--sage3); border-color: var(--sage2); }
-.at-monarrow:disabled { opacity: .25; cursor: not-allowed; }
-
-/* Scrollable content area */
-.at-content {
-  flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
-  padding: 14px 18px 18px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-.at-content::-webkit-scrollbar { width: 3px; }
-.at-content::-webkit-scrollbar-thumb { background: var(--ink4); border-radius: 99px; }
-
-/* ── Calendar ── */
-.at-cal { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 12px; flex-shrink: 0; }
-.at-cal-days { display: grid; grid-template-columns: repeat(7,1fr); gap: 2px; margin-bottom: 2px; }
-.at-cal-day-lbl { text-align: center; font-size: 8px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--ink4); padding: 2px 0 4px; }
-.at-cal-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 3px; }
-
-/* FIXED: compact day cells — no aspect-ratio trap */
-.at-day {
-  height: 38px;
-  border-radius: 7px;
-  display: flex; flex-direction: column;
-  align-items: center; justify-content: center; gap: 2px;
-  cursor: pointer; border: 1.5px solid transparent; transition: all .12s;
-}
-.at-day:hover:not(.empty):not(.future) { border-color: var(--sage2); background: var(--sage3); }
-.at-day.empty { cursor: default; pointer-events: none; }
-.at-day.today { border-color: var(--sage2) !important; }
-.at-day.today .at-day-num { font-weight: 700; color: var(--sage) !important; }
-.at-day-num { font-size: 11px; font-weight: 500; color: var(--ink2); line-height: 1; }
-.at-day-dot { width: 4px; height: 4px; border-radius: 50%; }
-.at-day.future { opacity: .28; cursor: not-allowed; pointer-events: none; }
-
-/* ── Bottom two-col row ── */
-.at-row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; flex: 1; min-height: 0; }
-
-.at-card {
-  background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 12px;
-  display: flex; flex-direction: column; min-height: 0;
-}
-
-.at-sec-title {
-  font-size: 8px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase;
-  color: var(--ink3); margin-bottom: 10px; display: flex; align-items: center; gap: 5px; flex-shrink: 0;
-}
-.at-sec-title i { font-size: 12px; color: var(--sage); }
-
-/* Log form */
-.at-date-row { display: flex; align-items: center; gap: 8px; margin-bottom: 9px; flex-shrink: 0; }
-.at-date-in {
-  flex: 1; padding: 6px 9px; border-radius: 7px; background: var(--cream);
-  border: 1px solid var(--line); color: var(--ink); font-size: 12px;
-  font-family: 'DM Sans', sans-serif; outline: none; transition: .15s; min-width: 0;
-}
-.at-date-in:focus { border-color: rgba(90,140,99,.4); background: #fff; box-shadow: 0 0 0 3px rgba(90,140,99,.06); }
-.at-date-label { font-size: 10px; color: var(--ink3); white-space: nowrap; flex-shrink: 0; }
-
-.at-status-row { display: flex; gap: 5px; margin-bottom: 9px; flex-shrink: 0; }
-.at-status-btn {
-  flex: 1; padding: 8px 4px; border-radius: 9px;
-  border: 1.5px solid var(--line); background: var(--cream);
-  display: flex; flex-direction: column; align-items: center; gap: 3px;
-  cursor: pointer; transition: all .12s; font-family: 'DM Sans', sans-serif;
-}
-.at-status-btn:hover { transform: translateY(-1px); }
-.at-status-btn i { font-size: 14px; }
-.at-status-btn span { font-size: 9px; font-weight: 600; }
-
-.at-save-btn {
-  width: 100%; padding: 8px; border-radius: 8px; border: none;
-  font-family: 'Fraunces', serif; font-size: 12.5px; font-style: italic; font-weight: 300;
-  cursor: pointer; transition: .18s; background: var(--ink); color: #fff; flex-shrink: 0;
-}
-.at-save-btn:hover:not(:disabled) { background: var(--sage); transform: translateY(-1px); }
-.at-save-btn:disabled { opacity: .35; cursor: not-allowed; }
-.at-save-btn.ready { background: var(--sage); }
-.at-save-btn.ready:hover { background: #3d6b45; }
-
-.at-toast {
-  padding: 5px 9px; border-radius: 6px; font-size: 10.5px; font-style: italic;
-  font-family: 'Fraunces', serif; background: var(--sage3); border: 1px solid var(--sage2);
-  color: var(--sage); text-align: center; margin-top: 8px; flex-shrink: 0;
-}
-
-/* History */
-.at-hist-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; flex-shrink: 0; }
-.at-hist-pct  { font-family: 'Fraunces', serif; font-size: 12px; font-weight: 300; color: var(--sage); font-style: italic; }
-
-.at-hist-inner {
-  flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
-  min-height: 0;
-}
-.at-hist-inner::-webkit-scrollbar { width: 2px; }
-.at-hist-inner::-webkit-scrollbar-thumb { background: var(--ink4); border-radius: 99px; }
-
-.at-hist-item {
-  display: flex; align-items: center; gap: 7px;
-  padding: 5px 7px; border-radius: 8px; margin-bottom: 3px; transition: .12s;
-}
-.at-hist-item:hover { background: var(--cream); }
-.at-hist-icon { width: 26px; height: 26px; border-radius: 7px; display: flex; align-items: center; justify-content: center; font-size: 12px; flex-shrink: 0; }
-.at-hist-date { font-size: 11px; font-weight: 500; color: var(--ink); flex: 1; min-width: 0; }
-.at-hist-day  { font-size: 9px; color: var(--ink3); margin-top: 1px; }
-.at-hist-badge { padding: 2px 7px; border-radius: 999px; font-size: 8px; font-weight: 600; white-space: nowrap; flex-shrink: 0; }
-.at-hist-del  { background: none; border: none; cursor: pointer; color: var(--ink4); font-size: 11px; padding: 2px 4px; border-radius: 5px; transition: .12s; flex-shrink: 0; }
-.at-hist-del:hover { color: var(--rose); background: var(--rose3); }
-
-.at-empty { text-align: center; padding: 20px 12px; color: var(--ink4); font-size: 11px; font-style: italic; font-family: 'Fraunces', serif; }
-.at-empty i { font-size: 18px; display: block; margin-bottom: 7px; opacity: .3; }
-
-/* ── Responsive ── */
-@media (max-width: 860px) {
-  .at-side { width: 185px; padding: 20px 14px 16px; }
-  .at-row2  { grid-template-columns: 1fr; }
-}
-
-@media (max-width: 640px) {
-  .at { flex-direction: column; height: auto; overflow: auto; }
-  .at-side {
-    width: 100%; flex-direction: row; flex-wrap: wrap;
-    padding: 14px; gap: 10px; overflow: visible;
-  }
-  .at-side > div:first-child { width: 100%; }
-  .at-stats { flex-direction: row; flex-wrap: wrap; gap: 6px; }
-  .at-stat { flex: 1 1 calc(50% - 3px); }
-  .at-spacer, .at-side-footer { display: none; }
-  .at-main { overflow: visible; height: auto; }
-  .at-content { overflow: visible; }
-  .at-row2 { grid-template-columns: 1fr; }
-}
-`
 
 function getDaysInMonth(y: number, m: number) { return new Date(y, m + 1, 0).getDate() }
 function getFirstDay(y: number, m: number)    { return new Date(y, m, 1).getDay() }
@@ -268,58 +31,107 @@ function getFirstDay(y: number, m: number)    { return new Date(y, m, 1).getDay(
 export default function AttendancePage() {
   const supabase = createClient()
 
+  const [user,      setUser]      = useState<User | null>(null)
   const [records,   setRecords]   = useState<AttendanceRecord[]>([])
   const [loading,   setLoading]   = useState(true)
   const [saving,    setSaving]    = useState(false)
   const [saved,     setSaved]     = useState(false)
+  const [error,     setError]     = useState<string | null>(null)
   const [selStatus, setSelStatus] = useState<Status | null>(null)
   const [selDate,   setSelDate]   = useState(todayIso)
   const [viewMonth, setViewMonth] = useState(() => {
-    const d = new Date(); return { year: d.getFullYear(), month: d.getMonth() }
+    const d = new Date()
+    return { year: d.getFullYear(), month: d.getMonth() }
   })
 
-  const isCurrentMonth = viewMonth.year === new Date().getFullYear() && viewMonth.month === new Date().getMonth()
   const monthStr = `${viewMonth.year}-${String(viewMonth.month + 1).padStart(2, '0')}`
+  const isCurrentMonth =
+    viewMonth.year  === new Date().getFullYear() &&
+    viewMonth.month === new Date().getMonth()
 
+  // ── Auth: get current user on mount ──────────────────────────────────────
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data, error }) => {
+      if (error || !data.user) {
+        setError('Not logged in. Please sign in to track attendance.')
+        setLoading(false)
+        return
+      }
+      setUser(data.user)
+    })
+
+    // Listen for auth changes (e.g. token refresh)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null)
+    })
+    return () => subscription.unsubscribe()
+  }, [])
+
+  // ── Fetch records whenever user or viewed month changes ───────────────────
   const fetchRecords = useCallback(async () => {
+    if (!user) return
     setLoading(true)
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) { setLoading(false); return }
-    const { data } = await supabase.from('attendance').select('*')
+    setError(null)
+
+    const { data, error } = await supabase
+      .from('attendance')
+      .select('*')
       .eq('user_id', user.id)
       .gte('date', `${monthStr}-01`)
       .lte('date', `${monthStr}-31`)
       .order('date', { ascending: false })
-    setRecords((data || []).map(r => ({ ...r, status: (r.status ?? 'present') as Status, created_at: r.created_at ?? '' })))
+
+    if (error) {
+      setError(`Failed to load records: ${error.message}`)
+    } else {
+      setRecords(
+        (data ?? []).map(r => ({
+          ...r,
+          status: (r.status ?? 'present') as Status,
+          created_at: r.created_at ?? '',
+        }))
+      )
+    }
     setLoading(false)
-  }, [monthStr])
+  }, [user, monthStr])
 
   useEffect(() => { fetchRecords() }, [fetchRecords])
 
-  // When clicking a calendar date, pre-fill the form
+  // ── Clicking a calendar day pre-fills the form ────────────────────────────
   const handleDayClick = (dateStr: string) => {
     const existing = records.find(r => r.date === dateStr)
     setSelDate(dateStr)
     setSelStatus(existing?.status ?? null)
   }
 
+  // ── Save / upsert a record ────────────────────────────────────────────────
   const saveAttendance = async () => {
-    if (!selStatus) return
+    if (!selStatus || !user) return
     setSaving(true)
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) { setSaving(false); return }
-    await (supabase.from('attendance') as any).upsert(
-      { user_id: user.id, date: selDate, status: selStatus },
-      { onConflict: 'user_id,date' }
-    )
-    setSaving(false); setSaved(true)
-    setTimeout(() => setSaved(false), 2500)
-    fetchRecords()
+    setError(null)
+
+    const { error } = await supabase
+      .from('attendance')
+      .upsert(
+        { user_id: user.id, date: selDate, status: selStatus },
+        { onConflict: 'user_id,date' }
+      )
+
+    if (error) {
+      setError(`Save failed: ${error.message}`)
+    } else {
+      setSaved(true)
+      setTimeout(() => setSaved(false), 2500)
+      await fetchRecords()
+    }
+    setSaving(false)
   }
 
+  // ── Delete a record ───────────────────────────────────────────────────────
   const deleteRecord = async (id: string) => {
-    await supabase.from('attendance').delete().eq('id', id)
-    fetchRecords()
+    const { error } = await supabase.from('attendance').delete().eq('id', id)
+    if (error) setError(`Delete failed: ${error.message}`)
+    else await fetchRecords()
   }
 
   const navMonth = (dir: -1 | 1) => {
@@ -329,239 +141,220 @@ export default function AttendancePage() {
     })
   }
 
-  const daysInMonth = getDaysInMonth(viewMonth.year, viewMonth.month)
-  const firstDay    = getFirstDay(viewMonth.year, viewMonth.month)
-  const recordMap   = Object.fromEntries(records.map(r => [r.date, r]))
-
+  // ── Derived stats ─────────────────────────────────────────────────────────
   const present = records.filter(r => r.status === 'present').length
   const absent  = records.filter(r => r.status === 'absent').length
   const holiday = records.filter(r => r.status === 'holiday').length
   const total   = present + absent
   const pct     = total > 0 ? Math.round((present / total) * 100) : 0
-  const barColor = pct >= 75 ? '#5a8c63' : pct >= 50 ? '#b8860b' : '#d4607a'
 
-  const footerMsg =
-    pct >= 90 ? 'Excellent attendance — you show up beautifully.' :
-    pct >= 75 ? 'Good consistency — keep the momentum.' :
-    pct >= 50 ? 'Halfway there — every day counts.' :
-    records.length > 0 ? 'Small steps still move you forward.' :
-    'Start tracking — every day is a new leaf.'
+  const daysInMonth = getDaysInMonth(viewMonth.year, viewMonth.month)
+  const firstDay    = getFirstDay(viewMonth.year, viewMonth.month)
+  const recordMap   = Object.fromEntries(records.map(r => [r.date, r]))
 
   const selDateFormatted = selDate
-    ? new Date(selDate + 'T00:00:00').toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' })
+    ? new Date(selDate + 'T00:00:00').toLocaleDateString('en-IN', {
+        weekday: 'short', day: 'numeric', month: 'short',
+      })
     : ''
 
+  // ── Render ────────────────────────────────────────────────────────────────
+  if (error && !user) {
+    return (
+      <div style={{ padding: 40, fontFamily: 'sans-serif', color: '#d4607a' }}>
+        {error}
+      </div>
+    )
+  }
+
   return (
-    <>
-      <style>{css}</style>
-      <div className="at">
+    <div style={{ display: 'flex', minHeight: '100vh', fontFamily: 'DM Sans, sans-serif' }}>
 
-        {/* ── Sidebar ── */}
-        <div className="at-side">
-          <div>
-            <p className="at-eyebrow">attendance tracker</p>
-            <h1 className="at-h1">show up,<br /><em>every day</em></h1>
-            <p className="at-sub">track your presence</p>
+      {/* Sidebar */}
+      <aside style={{ width: 210, background: '#3d2a35', display: 'flex', flexDirection: 'column', padding: '24px 16px', gap: 8 }}>
+        <h1 style={{ fontFamily: 'serif', color: '#fff', fontSize: 22, fontWeight: 300, fontStyle: 'italic', marginBottom: 4 }}>
+          show up,<br /><span style={{ color: '#a8c9ae' }}>every day</span>
+        </h1>
+        <p style={{ fontSize: 10, color: 'rgba(255,255,255,.3)', marginBottom: 12 }}>track your presence</p>
+
+        {[
+          { label: 'Attendance', value: `${pct}%`,      color: '#a8c9ae' },
+          { label: 'Present',    value: String(present), color: '#a8c9ae' },
+          { label: 'Absent',     value: String(absent),  color: '#e8a0b0' },
+          { label: 'Holidays',   value: String(holiday), color: '#f5ddb4' },
+        ].map(s => (
+          <div key={s.label} style={{ background: 'rgba(255,255,255,.06)', borderRadius: 8, padding: '8px 10px' }}>
+            <div style={{ fontSize: 7, letterSpacing: 2, textTransform: 'uppercase', color: 'rgba(255,255,255,.3)', marginBottom: 2 }}>{s.label}</div>
+            <div style={{ fontFamily: 'serif', fontSize: 20, fontWeight: 300, color: s.color }}>{s.value}</div>
           </div>
+        ))}
 
-          <div className="at-stats">
-            {[
-              { label: 'Attendance', value: `${pct}%`,      sub: `${present} of ${total} days`, color: '#a8c9ae', bar: true  },
-              { label: 'Present',    value: String(present), sub: 'days present',                color: '#a8c9ae', bar: false },
-              { label: 'Absent',     value: String(absent),  sub: 'days absent',                 color: '#e8a0b0', bar: false },
-              { label: 'Holidays',   value: String(holiday), sub: 'days off',                    color: '#f5ddb4', bar: false },
-            ].map((s, i) => (
-              <motion.div key={s.label} className="at-stat"
-                initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: .06 * i + .08 }}>
-                <div className="at-stat-lbl">{s.label}</div>
-                <div className="at-stat-val" style={{ color: s.color }}>{s.value}</div>
-                <div className="at-stat-sub">{s.sub}</div>
-                {s.bar && (
-                  <div className="at-bar">
-                    <motion.div className="at-bar-fill"
-                      initial={{ width: 0 }} animate={{ width: `${pct}%` }}
-                      transition={{ duration: .8, ease: [.16, 1, .3, 1] }}
-                      style={{ background: barColor }} />
-                  </div>
-                )}
-              </motion.div>
+        {error && (
+          <div style={{ marginTop: 8, padding: '6px 8px', background: '#fde8ee', borderRadius: 6, fontSize: 10, color: '#d4607a' }}>
+            {error}
+          </div>
+        )}
+      </aside>
+
+      {/* Main */}
+      <main style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#fdf7f0' }}>
+
+        {/* Topbar */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 18px', borderBottom: '1px solid rgba(61,42,53,.09)' }}>
+          <span style={{ fontFamily: 'serif', fontSize: 16, fontStyle: 'italic', fontWeight: 300 }}>
+            {MONTHS[viewMonth.month]} {viewMonth.year}
+          </span>
+          <div style={{ display: 'flex', gap: 4 }}>
+            {[-1, 1].map(dir => (
+              <button key={dir}
+                onClick={() => navMonth(dir as -1 | 1)}
+                disabled={dir === 1 && isCurrentMonth}
+                style={{ width: 26, height: 26, borderRadius: 7, border: '1px solid rgba(61,42,53,.09)', background: '#fff', cursor: 'pointer', fontSize: 13 }}>
+                {dir === -1 ? '‹' : '›'}
+              </button>
             ))}
-          </div>
-
-          <div className="at-spacer" />
-
-          <div className="at-side-footer">
-            <p className="at-footer-lbl">your story</p>
-            <p className="at-footer-txt">{footerMsg}</p>
           </div>
         </div>
 
-        {/* ── Main ── */}
-        <div className="at-main">
+        <div style={{ flex: 1, overflow: 'auto', padding: '14px 18px', display: 'flex', flexDirection: 'column', gap: 12 }}>
 
-          <div className="at-topbar">
-            <span className="at-monlabel">{MONTHS[viewMonth.month]} {viewMonth.year}</span>
-            <div className="at-monbtns">
-              <button className="at-monarrow" onClick={() => navMonth(-1)}>
-                <i className="ti ti-chevron-left" />
-              </button>
-              <button className="at-monarrow" onClick={() => navMonth(1)} disabled={isCurrentMonth}>
-                <i className="ti ti-chevron-right" />
-              </button>
+          {/* Calendar */}
+          <div style={{ background: '#fff', border: '1px solid rgba(61,42,53,.09)', borderRadius: 12, padding: 12 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', marginBottom: 4 }}>
+              {DAYS.map(d => (
+                <div key={d} style={{ textAlign: 'center', fontSize: 7.5, fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase', color: '#d4bfc5', paddingBottom: 6 }}>{d}</div>
+              ))}
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: 3 }}>
+              {Array.from({ length: firstDay }).map((_, i) => <div key={`e${i}`} />)}
+              {Array.from({ length: daysInMonth }).map((_, i) => {
+                const day     = i + 1
+                const dateStr = `${monthStr}-${String(day).padStart(2, '0')}`
+                const rec     = recordMap[dateStr]
+                const cfg     = rec ? STATUS_CONFIG[rec.status] : null
+                const isToday  = dateStr === todayIso
+                const isFuture = dateStr > todayIso
+                const isSel    = dateStr === selDate
+                return (
+                  <div key={day}
+                    onClick={() => !isFuture && handleDayClick(dateStr)}
+                    style={{
+                      height: 38, borderRadius: 7, display: 'flex', flexDirection: 'column',
+                      alignItems: 'center', justifyContent: 'center', gap: 2, cursor: isFuture ? 'not-allowed' : 'pointer',
+                      border: `1.5px solid ${cfg ? cfg.border : isToday || isSel ? '#a8c9ae' : 'transparent'}`,
+                      background: cfg ? cfg.bg : 'transparent',
+                      opacity: isFuture ? 0.28 : 1,
+                      outline: isSel && !cfg ? '2px solid #a8c9ae' : 'none',
+                      outlineOffset: 1,
+                    }}>
+                    <span style={{ fontSize: 11, fontWeight: isToday ? 700 : 500, color: cfg ? cfg.c : isToday ? '#5a8c63' : '#7a5c68' }}>
+                      {day}
+                    </span>
+                    {cfg && <div style={{ width: 4, height: 4, borderRadius: '50%', background: cfg.c }} />}
+                  </div>
+                )
+              })}
             </div>
           </div>
 
-          <div className="at-content">
+          {/* Log + History row */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
 
-            {/* Calendar */}
-            <motion.div className="at-cal"
-              initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: .12 }}>
-              <div className="at-cal-days">
-                {DAYS.map(d => <div key={d} className="at-cal-day-lbl">{d}</div>)}
+            {/* Log form */}
+            <div style={{ background: '#fff', border: '1px solid rgba(61,42,53,.09)', borderRadius: 12, padding: 12 }}>
+              <p style={{ fontSize: 7.5, fontWeight: 600, letterSpacing: 2, textTransform: 'uppercase', color: '#b09aa4', marginBottom: 10 }}>Log attendance</p>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                <input type="date" value={selDate} max={todayIso}
+                  onChange={e => { setSelDate(e.target.value); setSelStatus(null) }}
+                  style={{ flex: 1, padding: '5px 8px', borderRadius: 6, border: '1px solid rgba(61,42,53,.09)', fontSize: 12, fontFamily: 'inherit', outline: 'none' }} />
+                <span style={{ fontSize: 9.5, color: '#b09aa4', whiteSpace: 'nowrap' }}>{selDateFormatted}</span>
               </div>
-              <div className="at-cal-grid">
-                {Array.from({ length: firstDay }).map((_, i) => (
-                  <div key={`e-${i}`} className="at-day empty" />
+
+              <div style={{ display: 'flex', gap: 4, marginBottom: 8 }}>
+                {(Object.entries(STATUS_CONFIG) as [Status, typeof STATUS_CONFIG[Status]][]).map(([key, cfg]) => (
+                  <button key={key}
+                    onClick={() => setSelStatus(selStatus === key ? null : key)}
+                    style={{
+                      flex: 1, padding: '7px 3px', borderRadius: 8, cursor: 'pointer',
+                      border: `1.5px solid ${selStatus === key ? cfg.border : 'rgba(61,42,53,.09)'}`,
+                      background: selStatus === key ? cfg.bg : '#fdf7f0',
+                      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
+                      fontFamily: 'inherit',
+                    }}>
+                    <span style={{ fontSize: 14, color: selStatus === key ? cfg.c : '#b09aa4' }}>{cfg.icon}</span>
+                    <span style={{ fontSize: 8.5, fontWeight: 600, color: selStatus === key ? cfg.c : '#b09aa4' }}>{cfg.label}</span>
+                  </button>
                 ))}
-                {Array.from({ length: daysInMonth }).map((_, i) => {
-                  const day     = i + 1
-                  const dateStr = `${monthStr}-${String(day).padStart(2, '0')}`
-                  const rec     = recordMap[dateStr]
-                  const cfg     = rec ? STATUS_CONFIG[rec.status] : null
-                  const isToday = dateStr === todayIso
-                  const isFuture = dateStr > todayIso
-                  const isSelected = dateStr === selDate
+              </div>
+
+              <button
+                onClick={saveAttendance}
+                disabled={!selStatus || saving || !user}
+                style={{
+                  width: '100%', padding: '8px', borderRadius: 7, border: 'none', cursor: selStatus ? 'pointer' : 'not-allowed',
+                  fontFamily: 'Georgia, serif', fontSize: 12, fontStyle: 'italic',
+                  background: selStatus ? '#5a8c63' : '#3d2a35', color: '#fff', opacity: (!selStatus || saving) ? 0.4 : 1,
+                  transition: '.18s',
+                }}>
+                {saving ? 'Saving…' : saved ? 'Logged ✓' : selStatus ? `Mark as ${STATUS_CONFIG[selStatus].label}` : 'Select a status first'}
+              </button>
+
+              {saved && (
+                <div style={{ marginTop: 8, padding: '4px 8px', borderRadius: 5, fontSize: 10, fontStyle: 'italic', background: '#edf6ee', border: '1px solid #a8c9ae', color: '#5a8c63', textAlign: 'center' }}>
+                  Attendance logged — showing up matters 🌿
+                </div>
+              )}
+            </div>
+
+            {/* History */}
+            <div style={{ background: '#fff', border: '1px solid rgba(61,42,53,.09)', borderRadius: 12, padding: 12, display: 'flex', flexDirection: 'column', maxHeight: 320 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                <p style={{ fontSize: 7.5, fontWeight: 600, letterSpacing: 2, textTransform: 'uppercase', color: '#b09aa4' }}>
+                  {records.length} record{records.length !== 1 ? 's' : ''} · {MONTHS[viewMonth.month]}
+                </p>
+                <span style={{ fontFamily: 'serif', fontSize: 12, fontStyle: 'italic', color: '#5a8c63' }}>{pct}% present</span>
+              </div>
+
+              <div style={{ flex: 1, overflowY: 'auto' }}>
+                {loading ? (
+                  <div style={{ textAlign: 'center', padding: 20, color: '#d4bfc5', fontSize: 11 }}>Loading…</div>
+                ) : records.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: 20, color: '#d4bfc5', fontSize: 11, fontStyle: 'italic' }}>
+                    Nothing logged for {MONTHS[viewMonth.month]} yet
+                  </div>
+                ) : records.map(rec => {
+                  const cfg = STATUS_CONFIG[rec.status]
+                  const d   = new Date(rec.date + 'T00:00:00')
                   return (
-                    <motion.div key={day}
-                      className={`at-day${isToday ? ' today' : ''}${isFuture ? ' future' : ''}`}
-                      style={{
-                        background: cfg ? cfg.bg : 'transparent',
-                        borderColor: cfg ? cfg.border
-                          : isSelected ? 'var(--sage2)'
-                          : isToday ? 'var(--sage2)'
-                          : 'transparent',
-                        outline: isSelected && !cfg ? '2px solid var(--sage2)' : 'none',
-                        outlineOffset: '1px',
-                      }}
-                      onClick={() => !isFuture && handleDayClick(dateStr)}
-                      whileHover={!isFuture ? { scale: 1.07 } : {}}
-                      whileTap={!isFuture   ? { scale: 0.93 } : {}}>
-                      <span className="at-day-num"
-                        style={{ color: cfg ? cfg.c : isToday ? 'var(--sage)' : 'var(--ink2)' }}>
-                        {day}
+                    <div key={rec.id} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '4px 6px', borderRadius: 7, marginBottom: 2 }}>
+                      <div style={{ width: 24, height: 24, borderRadius: 6, background: cfg.bg, border: `1px solid ${cfg.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, color: cfg.c, flexShrink: 0 }}>
+                        {cfg.icon}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 10.5, fontWeight: 500, color: '#3d2a35' }}>
+                          {d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        </div>
+                        <div style={{ fontSize: 8.5, color: '#b09aa4' }}>
+                          {d.toLocaleDateString('en-IN', { weekday: 'long' })}
+                        </div>
+                      </div>
+                      <span style={{ padding: '2px 6px', borderRadius: 999, fontSize: 7.5, fontWeight: 600, background: cfg.bg, border: `1px solid ${cfg.border}`, color: cfg.c }}>
+                        {cfg.label}
                       </span>
-                      {cfg && <div className="at-day-dot" style={{ background: cfg.dot }} />}
-                    </motion.div>
+                      <button onClick={() => deleteRecord(rec.id)}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#d4bfc5', fontSize: 11, padding: '2px 4px', borderRadius: 4 }}>
+                        🗑
+                      </button>
+                    </div>
                   )
                 })}
               </div>
-            </motion.div>
-
-            {/* Log + History */}
-            <div className="at-row2">
-
-              {/* Log */}
-              <motion.div className="at-card"
-                initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: .18 }}>
-                <p className="at-sec-title"><i className="ti ti-calendar-plus" /> Log attendance</p>
-
-                <div className="at-date-row">
-                  <input type="date" className="at-date-in" value={selDate} max={todayIso}
-                    onChange={e => { setSelDate(e.target.value); setSelStatus(null) }} />
-                  {selDateFormatted && (
-                    <span className="at-date-label">{selDateFormatted}</span>
-                  )}
-                </div>
-
-                <div className="at-status-row">
-                  {(Object.entries(STATUS_CONFIG) as [Status, typeof STATUS_CONFIG[Status]][]).map(([key, cfg]) => (
-                    <button key={key} className="at-status-btn"
-                      onClick={() => setSelStatus(selStatus === key ? null : key)}
-                      style={selStatus === key ? { background: cfg.bg, borderColor: cfg.border } : {}}>
-                      <i className={`ti ${cfg.icon}`} style={{ color: selStatus === key ? cfg.c : 'var(--ink3)' }} />
-                      <span style={{ color: selStatus === key ? cfg.c : 'var(--ink3)' }}>{cfg.label}</span>
-                    </button>
-                  ))}
-                </div>
-
-                <button
-                  className={`at-save-btn${selStatus ? ' ready' : ''}`}
-                  onClick={saveAttendance}
-                  disabled={!selStatus || saving}>
-                  {saving ? 'Saving…' : saved ? 'Logged ✓' : selStatus ? `Mark as ${STATUS_CONFIG[selStatus].label}` : 'Select a status first'}
-                </button>
-
-                <AnimatePresence>
-                  {saved && (
-                    <motion.div className="at-toast"
-                      initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-                      Attendance logged — showing up matters 🌿
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </motion.div>
-
-              {/* History */}
-              <motion.div className="at-card"
-                initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: .22 }}>
-                <div className="at-hist-head">
-                  <p className="at-sec-title" style={{ marginBottom: 0 }}>
-                    <i className="ti ti-clock" />
-                    {records.length} record{records.length !== 1 ? 's' : ''} · {MONTHS[viewMonth.month]}
-                  </p>
-                  <span className="at-hist-pct">{pct}% present</span>
-                </div>
-
-                <div className="at-hist-inner">
-                  {loading ? (
-                    <div className="at-empty"><i className="ti ti-loader-2" /></div>
-                  ) : records.length === 0 ? (
-                    <div className="at-empty">
-                      <i className="ti ti-calendar" />
-                      Nothing logged for {MONTHS[viewMonth.month]} yet
-                    </div>
-                  ) : (
-                    <AnimatePresence>
-                      {records.map((rec, i) => {
-                        const cfg = STATUS_CONFIG[rec.status]
-                        const d   = new Date(rec.date + 'T00:00:00')
-                        return (
-                          <motion.div key={rec.id} className="at-hist-item"
-                            initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }}
-                            exit={{ opacity: 0, x: 6 }} transition={{ delay: i * .02 }}>
-                            <div className="at-hist-icon"
-                              style={{ background: cfg.bg, border: `1px solid ${cfg.border}` }}>
-                              <i className={`ti ${cfg.icon}`} style={{ color: cfg.c }} />
-                            </div>
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                              <div className="at-hist-date">
-                                {d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
-                              </div>
-                              <div className="at-hist-day">
-                                {d.toLocaleDateString('en-IN', { weekday: 'long' })}
-                              </div>
-                            </div>
-                            <span className="at-hist-badge"
-                              style={{ background: cfg.bg, border: `1px solid ${cfg.border}`, color: cfg.c }}>
-                              {cfg.label}
-                            </span>
-                            <button className="at-hist-del" onClick={() => deleteRecord(rec.id)}>
-                              <i className="ti ti-trash" />
-                            </button>
-                          </motion.div>
-                        )
-                      })}
-                    </AnimatePresence>
-                  )}
-                </div>
-              </motion.div>
-
             </div>
+
           </div>
         </div>
-
-      </div>
-    </>
+      </main>
+    </div>
   )
 }
