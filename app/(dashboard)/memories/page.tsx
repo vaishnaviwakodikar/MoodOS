@@ -38,14 +38,14 @@ const MOCK_MEMORIES = [
 ];
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
-function fmtDate(iso) {
+function fmtDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short" });
 }
-function fmtMonth(iso) {
+function fmtMonth(iso: string) {
   return new Date(iso).toLocaleDateString("en-IN", { month: "long", year: "numeric" });
 }
-function groupByMonth(arr) {
-  const g = {};
+function groupByMonth(arr: typeof MOCK_MEMORIES) {
+  const g: Record<string, typeof MOCK_MEMORIES> = {};
   for (const m of arr) {
     const k = fmtMonth(m.date);
     if (!g[k]) g[k] = [];
