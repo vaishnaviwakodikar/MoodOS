@@ -1,7 +1,7 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase'
 
 const vibes = [
@@ -87,212 +87,262 @@ const css = `
   }
 `
 
+// ── Types ──────────────────────────────────────────────────────────────────
+interface MetricState {
+  mood: string
+  habits: string
+  habitSub: string
+  studyTime: string
+  attendance: string
+  expenses: string
+  streak: string
+  period: string
+  periodSub: string
+}
+
+const DEFAULT_METRICS: MetricState = {
+  mood: '—',
+  habits: '0 / 0',
+  habitSub: 'none added yet',
+  studyTime: '0min',
+  attendance: '—%',
+  expenses: '₹0',
+  streak: '0',
+  period: '—',
+  periodSub: 'not tracked yet',
+}
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+function formatExpenses(total: number): string {
+  if (total >= 100_000) return `₹${(total / 100_000).toFixed(1)}L`
+  if (total >= 1_000)   return `₹${(total / 1_000).toFixed(1)}k`
+  return `₹${Math.round(total)}`
+}
+
+function formatStudyTime(mins: number): string {
+  const h = Math.floor(mins / 60)
+  const m = mins % 60
+  if (h > 0) return m > 0 ? `${h}h ${m}m` : `${h}h`
+  return `${m}m`
+}
+
+// ── Component ──────────────────────────────────────────────────────────────
 export default function DashboardPage() {
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
+
   const [greeting, setGreeting] = useState('')
   const [vibe,     setVibe]     = useState('')
   const [date,     setDate]     = useState('')
   const [userName, setUserName] = useState('')
+  const [metrics,  setMetrics]  = useState<MetricState>(DEFAULT_METRICS)
 
-  const [mood,       setMood]       = useState('—')
-  const [habits,     setHabits]     = useState('0 / 0')
-  const [habitSub,   setHabitSub]   = useState('none added yet')
-  const [studyTime,  setStudyTime]  = useState('0min')
-  const [attendance, setAttendance] = useState('—%')
-  const [expenses,   setExpenses]   = useState('₹0')
-  const [streak,     setStreak]     = useState('0')
-  const [period,     setPeriod]     = useState('—')
-  const [periodSub,  setPeriodSub]  = useState('not tracked yet')
+  const fetchMetrics = useCallback(async (userId: string) => {
+    const today     = new Date().toISOString().slice(0, 10)
+    const thisMonth = today.slice(0, 7)
+
+    // Fire all queries in parallel
+    const [
+      moodRes,
+      habitsRes,
+      logsRes,
+      attRes,
+      studyRes,
+      expRes,
+      streakRes,
+      periodRes,
+    ] = await Promise.all([
+      supabase
+        .from('mood_entries')
+        .select('mood, emoji')
+        .eq('user_id', userId)
+        .gte('created_at', `${today}T00:00:00`)
+        .lte('created_at', `${today}T23:59:59`)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+
+      supabase
+        .from('habits')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('archived', false),
+
+      supabase
+        .from('habit_logs')
+        .select('habit_id')
+        .eq('user_id', userId)
+        .eq('date', today),
+
+      supabase
+        .from('attendance')
+        .select('status')
+        .eq('user_id', userId)
+        .gte('date', `${thisMonth}-01`)
+        .lte('date', `${thisMonth}-31`),
+
+      supabase
+        .from('study_sessions')
+        .select('duration_mins')
+        .eq('user_id', userId)
+        .eq('date', today),
+
+      supabase
+        .from('expenses')
+        .select('amount')
+        .eq('user_id', userId)
+        .gte('date', `${thisMonth}-01`)
+        .lte('date', `${thisMonth}-31`),
+
+      supabase
+        .from('habit_logs')
+        .select('date')
+        .eq('user_id', userId)
+        .gte('date', (() => {
+          const d = new Date()
+          d.setDate(d.getDate() - 90)
+          return d.toISOString().slice(0, 10)
+        })())
+        .lte('date', today),
+
+      supabase
+        .from('period_entries')
+        .select('start_date, end_date')
+        .eq('user_id', userId)
+        .order('start_date', { ascending: false })
+        .limit(2),
+    ])
+
+    // ── Compute all metrics from resolved data ─────────────────────────────
+    const next: MetricState = { ...DEFAULT_METRICS }
+
+    // mood
+    if (moodRes.data) {
+      next.mood = moodRes.data.emoji ?? moodRes.data.mood
+    }
+
+    // habits
+    const totalHabits = habitsRes.data?.length ?? 0
+    const doneHabits  = logsRes.data?.length ?? 0
+    if (totalHabits > 0) {
+      next.habits   = `${doneHabits} / ${totalHabits}`
+      next.habitSub = doneHabits === totalHabits ? 'all done! 🌿' : `${totalHabits - doneHabits} remaining`
+    }
+
+    // attendance
+    const attRows = (attRes.data ?? []) as { status: string }[]
+    if (attRows.length > 0) {
+      const present  = attRows.filter(a => a.status === 'present').length
+      const absent   = attRows.filter(a => a.status === 'absent').length
+      const workDays = present + absent
+      next.attendance = workDays > 0 ? `${Math.round((present / workDays) * 100)}%` : '—%'
+    }
+
+    // study
+    if (studyRes.data && studyRes.data.length > 0) {
+      const totalMins = (studyRes.data as { duration_mins: number }[])
+        .reduce((sum, s) => sum + s.duration_mins, 0)
+      next.studyTime = formatStudyTime(totalMins)
+    }
+
+    // expenses
+    if (expRes.data && expRes.data.length > 0) {
+      const total = (expRes.data as { amount: number }[])
+        .reduce((sum, e) => sum + e.amount, 0)
+      next.expenses = formatExpenses(total)
+    }
+
+    // streak — count consecutive days backwards that have at least one habit log
+    if (streakRes.data && streakRes.data.length > 0) {
+      const loggedDates = new Set(
+        (streakRes.data as { date: string }[]).map(l => l.date)
+      )
+      let count = 0
+      const cursor = new Date()
+      if (!loggedDates.has(today)) cursor.setDate(cursor.getDate() - 1)
+
+      while (true) {
+        const dateStr = cursor.toISOString().slice(0, 10)
+        if (!loggedDates.has(dateStr)) break
+        count++
+        cursor.setDate(cursor.getDate() - 1)
+      }
+      next.streak = String(count)
+    }
+
+    // periods
+    const periodEntries = periodRes.data
+    if (periodEntries && periodEntries.length > 0) {
+      const latest = periodEntries[0]
+      const cycleLength = periodEntries.length >= 2
+        ? Math.round(
+            (new Date(periodEntries[0].start_date).getTime() -
+             new Date(periodEntries[1].start_date).getTime()) / 86_400_000
+          )
+        : 28
+
+      const now   = new Date()
+      const start = new Date(latest.start_date)
+      const end   = latest.end_date ? new Date(latest.end_date) : null
+
+      if (end && now >= start && now <= end) {
+        next.period    = '🩸'
+        next.periodSub = 'currently on your period'
+      } else {
+        const nextDate = new Date(latest.start_date)
+        nextDate.setDate(nextDate.getDate() + cycleLength)
+        const daysLeft = Math.ceil((nextDate.getTime() - now.getTime()) / 86_400_000)
+        next.period    = daysLeft > 0 ? `${daysLeft}d` : 'due'
+        next.periodSub = daysLeft > 0 ? `next in ${daysLeft} days` : 'period due today'
+      }
+    }
+
+    setMetrics(next)
+  }, [supabase])
 
   useEffect(() => {
     const h = new Date().getHours()
     setGreeting(h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening')
     setVibe(vibes[Math.floor(Math.random() * vibes.length)])
     setDate(new Date().toLocaleDateString('en-IN', { weekday: 'long', month: 'long', day: 'numeric' }))
+
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) return
       const full = user.user_metadata?.full_name as string | undefined
-      if (full) setUserName(full.split(' ')[0])
-      else if (user.email) {
+      if (full) {
+        setUserName(full.split(' ')[0])
+      } else if (user.email) {
         const part = user.email.split('@')[0]
         setUserName(part.charAt(0).toUpperCase() + part.slice(1))
       }
       fetchMetrics(user.id)
     })
-  }, [])
+  }, [supabase, fetchMetrics])
 
-  async function fetchMetrics(userId: string) {
-  const today     = new Date().toISOString().slice(0, 10)
-  const thisMonth = today.slice(0, 7)
-
-   // ── mood ──────────────────────────────────────────
-  const { data: moodData } = await supabase
-    .from('mood_entries')
-    .select('mood, emoji')
-    .eq('user_id', userId)
-    .gte('created_at', `${today}T00:00:00`)
-    .lte('created_at', `${today}T23:59:59`)
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .maybeSingle()
-  if (moodData) setMood(moodData.emoji ?? moodData.mood)
-
-  // ── habits ────────────────────────────────────────────────────────────────
-  const { data: habitsData } = await supabase
-    .from('habits')
-    .select('id')
-    .eq('user_id', userId)
-    .eq('archived', false)
-
-  const { data: logsData } = await supabase
-    .from('habit_logs')
-    .select('habit_id')
-    .eq('user_id', userId)
-    .eq('date', today)
-
-  if (habitsData && habitsData.length > 0) {
-    const total = habitsData.length
-    const done  = logsData?.length ?? 0
-    setHabits(`${done} / ${total}`)
-    setHabitSub(done === total ? 'all done! 🌿' : `${total - done} remaining`)
-  }
-
-// ── attendance ────────────────────────────────────────────────────────────
-type AttendanceRow = { status: string }
-const { data: attData } = await supabase
-  .from('attendance')
-  .select('status')
-  .eq('user_id', userId)
-  .gte('date', `${thisMonth}-01`)
-  .lte('date', `${thisMonth}-31`)
-
-const attendanceRows = (attData || []) as AttendanceRow[]
-if (attendanceRows.length > 0) {
-  const present  = attendanceRows.filter(a => a.status === 'present').length
-  const absent   = attendanceRows.filter(a => a.status === 'absent').length
-  const workDays = present + absent   // holidays excluded, matching attendance page
-  const pct      = workDays > 0 ? Math.round((present / workDays) * 100) : 0
-  setAttendance(`${pct}%`)
-}
-
-  // ── study ─────────────────────────────────────────────────────────────────
-  const { data: studyData } = await supabase
-    .from('study_sessions')
-    .select('duration_mins')
-    .eq('user_id', userId)
-    .eq('date', today)
-
-  if (studyData && studyData.length > 0) {
-    const total = (studyData as { duration_mins: number }[]).reduce((a, s) => a + s.duration_mins, 0)
-    const h = Math.floor(total / 60)
-    const m = total % 60
-    setStudyTime(h > 0 ? (m > 0 ? `${h}h ${m}m` : `${h}h`) : `${m}m`)
-  }
-
-  // ── expenses ──────────────────────────────────────────────────────────────
-  const { data: expData } = await supabase
-    .from('expenses')
-    .select('amount')
-    .eq('user_id', userId)
-    .gte('date', `${thisMonth}-01`)
-    .lte('date', `${thisMonth}-31`)
-
-  if (expData && expData.length > 0) {
-    const total = (expData as { amount: number }[]).reduce((a, e) => a + e.amount, 0)
-    setExpenses(
-      total >= 100000 ? `₹${(total / 100000).toFixed(1)}L` :
-      total >= 1000   ? `₹${(total / 1000).toFixed(1)}k` :
-                        `₹${Math.round(total)}`
-    )
-  }
-
-  // ── streak (NEW) ──────────────────────────────────────────────────────────
-  // Fetch last 90 days of habit logs, then count consecutive days backwards
-  // where at least 1 habit was logged
-  const ninetyDaysAgo = new Date()
-  ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90)
-  const since = ninetyDaysAgo.toISOString().slice(0, 10)
-
-  const { data: streakLogs } = await supabase
-    .from('habit_logs')
-    .select('date')
-    .eq('user_id', userId)
-    .gte('date', since)
-    .lte('date', today)
-
-  if (streakLogs && streakLogs.length > 0) {
-    // Unique dates that have at least one log
-    const loggedDates = new Set(streakLogs.map((l: { date: string }) => l.date))
-
-    let count = 0
-    const cursor = new Date()
-    // If today isn't logged yet, start counting from yesterday
-    // so the streak doesn't break just because today isn't done
-    if (!loggedDates.has(today)) cursor.setDate(cursor.getDate() - 1)
-
-    while (true) {
-      const dateStr = cursor.toISOString().slice(0, 10)
-      if (!loggedDates.has(dateStr)) break
-      count++
-      cursor.setDate(cursor.getDate() - 1)
-    }
-
-    setStreak(String(count))
-  }
-
-  // ── periods ───────────────────────────────────────────────────────────────
-// ── periods ───────────────────────────────────────────────────────────────
-  const { data: periodEntries } = await supabase
-    .from('period_entries')
-    .select('start_date, end_date')
-    .eq('user_id', userId)
-    .order('start_date', { ascending: false })
-    .limit(2)
-
-  if (periodEntries && periodEntries.length > 0) {
-    const latest = periodEntries[0]
-
-    let cycleLength = 28
-    if (periodEntries.length >= 2) {
-      const d1 = new Date(periodEntries[0].start_date).getTime()
-      const d2 = new Date(periodEntries[1].start_date).getTime()
-      cycleLength = Math.round((d1 - d2) / 86400000)
-    }
-
-    const now = new Date()
-    const start = new Date(latest.start_date)
-    const end = latest.end_date ? new Date(latest.end_date) : null
-
-    if (end && now >= start && now <= end) {
-      setPeriod('🩸')
-      setPeriodSub('currently on your period')
-    } else {
-      const next = new Date(latest.start_date)
-      next.setDate(next.getDate() + cycleLength)
-      const daysLeft = Math.ceil((next.getTime() - now.getTime()) / 86400000)
-      setPeriod(daysLeft > 0 ? `${daysLeft}d` : 'due')
-      setPeriodSub(daysLeft > 0 ? `next in ${daysLeft} days` : 'period due today')
-    }
-  }
-  }
-
-  const metrics = [
-    { label: 'mood today', value: mood, sub: mood === '—' ? 'not logged yet' : 'logged today',   c: '#d4607a', bg: '#fff9fb', border: 'rgba(212,96,122,0.1)',    dotC: '#e8a0b0', icon: 'ti-mood-smile'     },
-    { label: 'habits',      value: habits,     sub: habitSub,                                            c: '#9b7ec8', bg: '#fdf8ff', border: 'rgba(201,184,232,0.25)', dotC: '#c9b8e8', icon: 'ti-checks'         },
-    { label: 'study time',  value: studyTime,  sub: "today's session",                                   c: '#b8860b', bg: '#fffdf5', border: 'rgba(245,221,180,0.35)', dotC: '#f5ddb4', icon: 'ti-clock-hour-4'   },
-    { label: 'attendance',  value: attendance, sub: "this month's record",                               c: '#5a8c63', bg: '#f8fcf8', border: 'rgba(168,201,174,0.3)',  dotC: '#a8c9ae', icon: 'ti-calendar-stats' },
-    { label: 'expenses',    value: expenses,   sub: 'this month',                                        c: '#d4607a', bg: '#fff9fb', border: 'rgba(212,96,122,0.1)',    dotC: '#e8a0b0', icon: 'ti-receipt'        },
-    { label: 'streak',      value: streak,     sub: 'days',                                              c: '#9b7ec8', bg: '#fdf8ff', border: 'rgba(201,184,232,0.25)', dotC: '#c9b8e8', icon: 'ti-flame'          },
-    { label: 'periods',     value: period,     sub: periodSub,                                           c: '#9b7ec8', bg: '#fdf8ff', border: 'rgba(201,184,232,0.25)', dotC: '#c9b8e8', icon: 'ti-calendar-heart' },
-  ]
+  const metricCards = useMemo(() => [
+    { label: 'mood today', value: metrics.mood,       sub: metrics.mood === '—' ? 'not logged yet' : 'logged today', c: '#d4607a', bg: '#fff9fb', border: 'rgba(212,96,122,0.1)',    dotC: '#e8a0b0', icon: 'ti-mood-smile'     },
+    { label: 'habits',     value: metrics.habits,     sub: metrics.habitSub,                                          c: '#9b7ec8', bg: '#fdf8ff', border: 'rgba(201,184,232,0.25)', dotC: '#c9b8e8', icon: 'ti-checks'         },
+    { label: 'study time', value: metrics.studyTime,  sub: "today's session",                                         c: '#b8860b', bg: '#fffdf5', border: 'rgba(245,221,180,0.35)', dotC: '#f5ddb4', icon: 'ti-clock-hour-4'   },
+    { label: 'attendance', value: metrics.attendance, sub: "this month's record",                                     c: '#5a8c63', bg: '#f8fcf8', border: 'rgba(168,201,174,0.3)',  dotC: '#a8c9ae', icon: 'ti-calendar-stats' },
+    { label: 'expenses',   value: metrics.expenses,   sub: 'this month',                                              c: '#d4607a', bg: '#fff9fb', border: 'rgba(212,96,122,0.1)',    dotC: '#e8a0b0', icon: 'ti-receipt'        },
+    { label: 'streak',     value: metrics.streak,     sub: 'days',                                                    c: '#9b7ec8', bg: '#fdf8ff', border: 'rgba(201,184,232,0.25)', dotC: '#c9b8e8', icon: 'ti-flame'          },
+    { label: 'periods',    value: metrics.period,     sub: metrics.periodSub,                                         c: '#9b7ec8', bg: '#fdf8ff', border: 'rgba(201,184,232,0.25)', dotC: '#c9b8e8', icon: 'ti-calendar-heart' },
+  ], [metrics])
 
   return (
     <>
       <style>{css}</style>
       <div className="sg">
-        <motion.header className="sg-header" initial={{ opacity: 0, y: -14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.44 }}>
+        <motion.header
+          className="sg-header"
+          initial={{ opacity: 0, y: -14 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.44 }}
+        >
           <div className="sg-header-left">
-            <p className="sg-eyebrow"><i className="ti ti-leaf sg-petal-ico" aria-hidden="true" />{date}</p>
+            <p className="sg-eyebrow">
+              <i className="ti ti-leaf sg-petal-ico" aria-hidden="true" />
+              {date}
+            </p>
             <h1 className="sg-name">
               {greeting},<br />
               <span className="accent">
@@ -302,57 +352,74 @@ if (attendanceRows.length > 0) {
                 </svg>
               </span>
             </h1>
-            <motion.span className="sg-vibe" initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
-              <i className="ti ti-heart sg-vibe-heart" aria-hidden="true" />{vibe}
+            <motion.span
+              className="sg-vibe"
+              initial={{ opacity: 0, y: 5 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+            >
+              <i className="ti ti-heart sg-vibe-heart" aria-hidden="true" />
+              {vibe}
             </motion.span>
           </div>
           <LiveTime />
         </motion.header>
 
-        <div className="sg-divider">
-          <div className="sg-divider-line" />
-          <i className="ti ti-circle sg-divider-flower" aria-hidden="true" />
-          <span className="sg-divider-label">your day at a glance</span>
-          <i className="ti ti-circle sg-divider-flower" aria-hidden="true" />
-          <div className="sg-divider-line" />
-        </div>
+        <Divider label="your day at a glance" />
 
         <div className="sg-grid">
-          {metrics.map((m, i) => (
-            <motion.div key={m.label} className="sg-card"
+          {metricCards.map((m, i) => (
+            <motion.div
+              key={m.label}
+              className="sg-card"
               style={{ background: m.bg, border: `1px solid ${m.border}`, ['--dot-c' as string]: m.dotC }}
-              initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.05 * i, duration: 0.36 }}>
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.05 * i, duration: 0.36 }}
+            >
               <i className={`ti ${m.icon} sg-card-ico`} aria-hidden="true" style={{ color: m.c }} />
-  <p className="sg-card-lbl"><span className="sg-card-lbl-dot" style={{ background: m.dotC }} />{m.label}</p>
-  {m.label === 'mood today' && mood !== '—'
-    ? <i className={`ti ${mood} sg-card-val`} aria-hidden="true" style={{ color: m.c, fontSize: 28 }} />
-    : <p className="sg-card-val" style={{ color: m.c }}>{m.value}</p>
-  }
-  <p className="sg-card-sub">{m.sub}</p>
-</motion.div>
-
+              <p className="sg-card-lbl">
+                <span className="sg-card-lbl-dot" style={{ background: m.dotC }} />
+                {m.label}
+              </p>
+              {m.label === 'mood today' && metrics.mood !== '—'
+                ? <i className={`ti ${metrics.mood} sg-card-val`} aria-hidden="true" style={{ color: m.c, fontSize: 28 }} />
+                : <p className="sg-card-val" style={{ color: m.c }}>{m.value}</p>
+              }
+              <p className="sg-card-sub">{m.sub}</p>
+            </motion.div>
           ))}
         </div>
 
-        <div className="sg-divider">
-          <div className="sg-divider-line" />
-          <i className="ti ti-circle sg-divider-flower" aria-hidden="true" />
-          <span className="sg-divider-label">quick actions</span>
-          <i className="ti ti-circle sg-divider-flower" aria-hidden="true" />
-          <div className="sg-divider-line" />
-        </div>
+        <Divider label="quick actions" />
 
-        <motion.div className="sg-acts" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.38 }}>
+        <motion.div
+          className="sg-acts"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.38 }}
+        >
           {actions.map((a, i) => (
-            <motion.a key={a.label} href={a.href} className="sg-act" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.38 + i * 0.05 }}>
+            <motion.a
+              key={a.label}
+              href={a.href}
+              className="sg-act"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.38 + i * 0.05 }}
+            >
               <i className={`ti ${a.icon} sg-act-ico`} aria-hidden="true" style={{ color: a.iconC }} />
               {a.label}
             </motion.a>
           ))}
         </motion.div>
 
-        <motion.div className="sg-footer" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.7 }}>
+        <motion.div
+          className="sg-footer"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.7 }}
+        >
           <div>
             <p className="sg-footer-lbl">today's intention</p>
             <p className="sg-footer-msg">log your mood, tend your habits, bloom gently.</p>
@@ -367,16 +434,38 @@ if (attendanceRows.length > 0) {
   )
 }
 
+// ── Sub-components ─────────────────────────────────────────────────────────
+
+function Divider({ label }: { label: string }) {
+  return (
+    <div className="sg-divider">
+      <div className="sg-divider-line" />
+      <i className="ti ti-circle sg-divider-flower" aria-hidden="true" />
+      <span className="sg-divider-label">{label}</span>
+      <i className="ti ti-circle sg-divider-flower" aria-hidden="true" />
+      <div className="sg-divider-line" />
+    </div>
+  )
+}
+
 function LiveTime() {
   const [time, setTime] = useState('')
+
   useEffect(() => {
-    const tick = () => setTime(new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }))
+    const tick = () =>
+      setTime(new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }))
     tick()
-    const id = setInterval(tick, 1000)
+    const id = setInterval(tick, 1_000)
     return () => clearInterval(id)
   }, [])
+
   return (
-    <motion.div className="sg-clock-card" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.24 }}>
+    <motion.div
+      className="sg-clock-card"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ delay: 0.24 }}
+    >
       <p className="sg-clock-val">{time}</p>
       <p className="sg-clock-sub">IST</p>
     </motion.div>
