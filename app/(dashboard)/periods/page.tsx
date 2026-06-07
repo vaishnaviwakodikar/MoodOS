@@ -56,6 +56,17 @@ type PainLog = {
   created_at: string
 }
 
+type DailySymptom = {
+  id: string
+  user_id: string
+  date: string
+  symptoms: string[]
+  mood: string | null
+  energy: number | null
+  notes: string | null
+  created_at: string
+}
+
 const symptomList = [
   { label: 'cramps',       icon: 'ti-bolt' },
   { label: 'bloating',     icon: 'ti-circle' },
@@ -423,8 +434,6 @@ function OnboardingFlow({ onComplete }: { onComplete: (profile: CycleProfile) =>
 }
 
 // ─── Period Arrival Banner ────────────────────────────────────────────────────
-// Shows when period is due (within 2 days) or overdue (up to 14 days late).
-// Lets user confirm it arrived (quick-log with flow) or say "not yet".
 
 type ArrivalBannerProps = {
   daysUntilNext: number | null
@@ -440,14 +449,12 @@ function PeriodArrivalBanner({ daysUntilNext, predictedDate, onConfirm, onSnooze
   const [confirmed, setConfirmed] = useState(false)
   const [expanded, setExpanded] = useState(false)
 
-  // Only show when within 2 days before or up to 14 days after predicted date
   if (daysUntilNext === null || predictedDate === null) return null
   if (daysUntilNext > 2 || daysUntilNext < -14) return null
   if (snoozed || confirmed) return null
 
   const isOverdue = daysUntilNext < 0
   const isDueToday = daysUntilNext === 0
-  const isDueSoon  = daysUntilNext > 0
 
   const overdueDays = Math.abs(daysUntilNext)
 
@@ -468,7 +475,7 @@ function PeriodArrivalBanner({ daysUntilNext, predictedDate, onConfirm, onSnooze
   const handleConfirm = async () => {
     if (!quickFlow) return
     setConfirming(true)
-    const date = isOverdue || isDueToday ? toYMD(new Date()) : toYMD(new Date())
+    const date = toYMD(new Date())
     await onConfirm(quickFlow, date)
     setConfirmed(true)
     setConfirming(false)
@@ -488,7 +495,6 @@ function PeriodArrivalBanner({ daysUntilNext, predictedDate, onConfirm, onSnooze
         position: 'relative',
       }}>
 
-      {/* Dismiss × */}
       <button
         onClick={onSnooze}
         style={{
@@ -503,7 +509,6 @@ function PeriodArrivalBanner({ daysUntilNext, predictedDate, onConfirm, onSnooze
       </button>
 
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
-        {/* Icon */}
         <div style={{
           width: 38, height: 38, borderRadius: '12px', flexShrink: 0,
           background: `rgba(212,96,122,0.12)`,
@@ -545,7 +550,6 @@ function PeriodArrivalBanner({ daysUntilNext, predictedDate, onConfirm, onSnooze
             </div>
           )}
 
-          {/* Expanded: pick flow then confirm */}
           <AnimatePresence>
             {expanded && (
               <motion.div
@@ -618,8 +622,28 @@ export default function PeriodsPage() {
   const [sexLogs,  setSexLogs]  = useState<SexLog[]>([])
   const [painLogs, setPainLogs] = useState<PainLog[]>([])
 
+  // ── Daily symptom log state ──
+  const [dailySymptoms,     setDailySymptoms]     = useState<DailySymptom[]>([])
+  const [symptomDate,       setSymptomDate]       = useState(toYMD(new Date()))
+  const [dailySelSymptoms,  setDailySelSymptoms]  = useState<string[]>([])
+  const [dailyMood,         setDailyMood]         = useState<string | null>(null)
+  const [dailyEnergy,       setDailyEnergy]       = useState<number>(3)
+  const [dailyNotes,        setDailyNotes]        = useState('')
+  const [savingSymptom,     setSavingSymptom]     = useState(false)
+  const [successSymptom,    setSuccessSymptom]    = useState(false)
+
+  // ── Edit daily symptom state ──
+  const [editingSymptom,    setEditingSymptom]    = useState<DailySymptom | null>(null)
+  const [editDSymptoms,     setEditDSymptoms]     = useState<string[]>([])
+  const [editDMood,         setEditDMood]         = useState<string | null>(null)
+  const [editDEnergy,       setEditDEnergy]       = useState<number>(3)
+  const [editDNotes,        setEditDNotes]        = useState('')
+  const [editDDate,         setEditDDate]         = useState('')
+  const [savingEditSymptom, setSavingEditSymptom] = useState(false)
+  const [confirmDeleteSym,  setConfirmDeleteSym]  = useState(false)
+
   // ── navigation ──
-  const [activeTab, setActiveTab] = useState<'log' | 'pain' | 'sex' | 'calendar' | 'insights' | 'profile'>('log')
+  const [activeTab, setActiveTab] = useState<'log' | 'pain' | 'symptoms' | 'sex' | 'calendar' | 'insights' | 'profile'>('log')
 
   // ── period arrival banner ──
   const [arrivalSnoozed, setArrivalSnoozed] = useState(false)
@@ -665,11 +689,36 @@ export default function PeriodsPage() {
   const [savingEdit,    setSavingEdit]    = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
 
+  // ── Edit Pain Log state ──
+  const [editingPain,       setEditingPain]       = useState<PainLog | null>(null)
+  const [editPainType,      setEditPainType]      = useState<string | null>(null)
+  const [editPainSeverity,  setEditPainSeverity]  = useState<number>(3)
+  const [editPainDuration,  setEditPainDuration]  = useState('')
+  const [editPainRelief,    setEditPainRelief]    = useState<string[]>([])
+  const [editPainNotes,     setEditPainNotes]     = useState('')
+  const [editPainDate,      setEditPainDate]      = useState('')
+  const [savingEditPain,    setSavingEditPain]    = useState(false)
+  const [confirmDeletePain, setConfirmDeletePain] = useState(false)
+
+  // ── Edit Sex Log state ──
+  const [editingSex,       setEditingSex]       = useState<SexLog | null>(null)
+  const [editSexDate,      setEditSexDate]      = useState('')
+  const [editSexProtected, setEditSexProtected] = useState(true)
+  const [editSexNotes,     setEditSexNotes]     = useState('')
+  const [savingEditSex,    setSavingEditSex]    = useState(false)
+  const [confirmDeleteSex, setConfirmDeleteSex] = useState(false)
+
+  // ── Edit Profile state ──
+  const [editingProfile,     setEditingProfile]     = useState(false)
+  const [editProfile,        setEditProfile]        = useState<Partial<CycleProfile>>({})
+  const [savingEditProfile,  setSavingEditProfile]  = useState(false)
+
   useEffect(() => {
     fetchEntries()
     fetchProfile()
     fetchSexLogs()
     fetchPainLogs()
+    fetchDailySymptoms()
   }, [])
 
   // ─── Fetch functions ───────────────────────────────────────────────────────
@@ -705,6 +754,68 @@ export default function PeriodsPage() {
     if (data) setPainLogs(data as PainLog[])
   }
 
+  const fetchDailySymptoms = async () => {
+    const { data } = await supabase
+      .from('daily_symptoms')
+      .select('*')
+      .order('date', { ascending: false })
+      .limit(30)
+    if (data) setDailySymptoms(data as DailySymptom[])
+  }
+
+  // ─── Daily symptom handlers ────────────────────────────────────────────────
+
+  const handleLogDailySymptom = async () => {
+    if (!dailySelSymptoms.length && !dailyMood) return
+    setSavingSymptom(true)
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) { setSavingSymptom(false); return }
+    await (supabase.from('daily_symptoms') as any).upsert(
+      { user_id: user.id, date: symptomDate, symptoms: dailySelSymptoms, mood: dailyMood, energy: dailyEnergy, notes: dailyNotes.trim() || null },
+      { onConflict: 'user_id,date' }
+    )
+    setDailySelSymptoms([]); setDailyMood(null); setDailyEnergy(3); setDailyNotes('')
+    setSuccessSymptom(true)
+    setTimeout(() => setSuccessSymptom(false), 3000)
+    setSavingSymptom(false)
+    fetchDailySymptoms()
+  }
+
+  const toggleDailySymptom = (s: string) =>
+    setDailySelSymptoms(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s])
+
+  const openEditSymptom = (s: DailySymptom) => {
+    setEditingSymptom(s)
+    setEditDDate(s.date)
+    setEditDSymptoms(s.symptoms ?? [])
+    setEditDMood(s.mood ?? null)
+    setEditDEnergy(s.energy ?? 3)
+    setEditDNotes(s.notes ?? '')
+    setConfirmDeleteSym(false)
+  }
+  const closeEditSymptom = () => { setEditingSymptom(null); setConfirmDeleteSym(false) }
+  const toggleEditDSymptom = (s: string) =>
+    setEditDSymptoms(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s])
+
+  const handleSaveEditSymptom = async () => {
+    if (!editingSymptom) return
+    setSavingEditSymptom(true)
+    await (supabase.from('daily_symptoms') as any).update({
+      date: editDDate, symptoms: editDSymptoms, mood: editDMood,
+      energy: editDEnergy, notes: editDNotes.trim() || null,
+    }).eq('id', editingSymptom.id)
+    setSavingEditSymptom(false)
+    closeEditSymptom()
+    fetchDailySymptoms()
+  }
+
+  const handleDeleteSymptom = async () => {
+    if (!editingSymptom) return
+    await (supabase.from('daily_symptoms') as any).delete().eq('id', editingSymptom.id)
+    closeEditSymptom()
+    fetchDailySymptoms()
+  }
+
   // ─── Handlers ─────────────────────────────────────────────────────────────
 
   const handleOnboardingComplete = async (profile: CycleProfile) => {
@@ -738,20 +849,14 @@ export default function PeriodsPage() {
     setSaving(false); fetchEntries()
   }
 
-  // Quick-log from the arrival banner
   const handleArrivalConfirm = async (flow: Flow, date: string) => {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
     await supabase.from('period_entries').insert({
-      user_id: user.id,
-      start_date: date,
-      end_date: null,
-      flow,
-      symptoms: [],
-      mood: null,
-      notes: null,
+      user_id: user.id, start_date: date, end_date: null,
+      flow, symptoms: [], mood: null, notes: null,
     })
-    setArrivalSnoozed(true)   // hide banner after logging
+    setArrivalSnoozed(true)
     fetchEntries()
   }
 
@@ -778,11 +883,11 @@ export default function PeriodsPage() {
     setSavingSex(true)
     try {
       const { data: { user }, error: authError } = await supabase.auth.getUser()
-      if (authError || !user) { console.error('Auth error:', authError); setSavingSex(false); return }
+      if (authError || !user) { setSavingSex(false); return }
       const { error } = await supabase.from('sex_log').insert({
         user_id: user.id, date: sexDate, protected: sexProtected, notes: sexNotes.trim() || null,
       })
-      if (error) { console.error('Sex log insert error:', error.message, error.details, error.hint); setSavingSex(false); return }
+      if (error) { setSavingSex(false); return }
       setSuccessSex(true)
       setSexNotes(''); setSexDate(toYMD(new Date()))
       setTimeout(() => setSuccessSex(false), 3000)
@@ -793,29 +898,6 @@ export default function PeriodsPage() {
       setSavingSex(false)
     }
   }
-  // ── Edit Pain Log state ──
-const [editingPain, setEditingPain] = useState<PainLog | null>(null)
-const [editPainType, setEditPainType] = useState<string | null>(null)
-const [editPainSeverity, setEditPainSeverity] = useState<number>(3)
-const [editPainDuration, setEditPainDuration] = useState('')
-const [editPainRelief, setEditPainRelief] = useState<string[]>([])
-const [editPainNotes, setEditPainNotes] = useState('')
-const [editPainDate, setEditPainDate] = useState('')
-const [savingEditPain, setSavingEditPain] = useState(false)
-const [confirmDeletePain, setConfirmDeletePain] = useState(false)
-
-// ── Edit Sex Log state ──
-const [editingSex, setEditingSex] = useState<SexLog | null>(null)
-const [editSexDate, setEditSexDate] = useState('')
-const [editSexProtected, setEditSexProtected] = useState(true)
-const [editSexNotes, setEditSexNotes] = useState('')
-const [savingEditSex, setSavingEditSex] = useState(false)
-const [confirmDeleteSex, setConfirmDeleteSex] = useState(false)
-
-// ── Edit Profile state ──
-const [editingProfile, setEditingProfile] = useState(false)
-const [editProfile, setEditProfile] = useState<Partial<CycleProfile>>({})
-const [savingEditProfile, setSavingEditProfile] = useState(false)
 
   // ── Edit modal handlers ──────────────────────────────────────────────────
 
@@ -839,12 +921,9 @@ const [savingEditProfile, setSavingEditProfile] = useState(false)
     if (!editingEntry || !editFlow) return
     setSavingEdit(true)
     await supabase.from('period_entries').update({
-      start_date: editStart,
-      end_date:   editEnd || null,
-      flow:       editFlow,
-      symptoms:   editSymptoms,
-      mood:       editMood,
-      notes:      editNotes.trim() || null,
+      start_date: editStart, end_date: editEnd || null,
+      flow: editFlow, symptoms: editSymptoms, mood: editMood,
+      notes: editNotes.trim() || null,
     }).eq('id', editingEntry.id)
     setSavingEdit(false)
     closeEdit()
@@ -862,90 +941,90 @@ const [savingEditProfile, setSavingEditProfile] = useState(false)
     setEditSymptoms(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s])
 
   // ── Pain edit handlers ──
-const openEditPain = (p: PainLog) => {
-  setEditingPain(p)
-  setEditPainType(p.type)
-  setEditPainSeverity(p.severity)
-  setEditPainDuration(p.duration_hours ? String(p.duration_hours) : '')
-  setEditPainRelief(p.relief_used ? p.relief_used.split(', ').filter(Boolean) : [])
-  setEditPainNotes(p.notes ?? '')
-  setEditPainDate(p.date)
-  setConfirmDeletePain(false)
-}
-const closeEditPain = () => { setEditingPain(null); setConfirmDeletePain(false) }
-const toggleEditPainRelief = (r: string) =>
-  setEditPainRelief(prev => prev.includes(r) ? prev.filter(x => x !== r) : [...prev, r])
 
-const handleSaveEditPain = async () => {
-  if (!editingPain || !editPainType) return
-  setSavingEditPain(true)
-  await supabase.from('pain_logs').update({
-    date: editPainDate,
-    type: editPainType,
-    severity: editPainSeverity,
-    duration_hours: editPainDuration ? Number(editPainDuration) : null,
-    relief_used: editPainRelief.join(', ') || null,
-    notes: editPainNotes.trim() || null,
-  }).eq('id', editingPain.id)
-  setSavingEditPain(false)
-  closeEditPain()
-  fetchPainLogs()
-}
-const handleDeletePain = async () => {
-  if (!editingPain) return
-  await supabase.from('pain_logs').delete().eq('id', editingPain.id)
-  closeEditPain()
-  fetchPainLogs()
-}
+  const openEditPain = (p: PainLog) => {
+    setEditingPain(p)
+    setEditPainType(p.type)
+    setEditPainSeverity(p.severity)
+    setEditPainDuration(p.duration_hours ? String(p.duration_hours) : '')
+    setEditPainRelief(p.relief_used ? p.relief_used.split(', ').filter(Boolean) : [])
+    setEditPainNotes(p.notes ?? '')
+    setEditPainDate(p.date)
+    setConfirmDeletePain(false)
+  }
+  const closeEditPain = () => { setEditingPain(null); setConfirmDeletePain(false) }
+  const toggleEditPainRelief = (r: string) =>
+    setEditPainRelief(prev => prev.includes(r) ? prev.filter(x => x !== r) : [...prev, r])
 
-// ── Sex edit handlers ──
-const openEditSex = (s: SexLog) => {
-  setEditingSex(s)
-  setEditSexDate(s.date)
-  setEditSexProtected(s.protected ?? true)
-  setEditSexNotes(s.notes ?? '')
-  setConfirmDeleteSex(false)
-}
-const closeEditSex = () => { setEditingSex(null); setConfirmDeleteSex(false) }
+  const handleSaveEditPain = async () => {
+    if (!editingPain || !editPainType) return
+    setSavingEditPain(true)
+    await supabase.from('pain_logs').update({
+      date: editPainDate, type: editPainType, severity: editPainSeverity,
+      duration_hours: editPainDuration ? Number(editPainDuration) : null,
+      relief_used: editPainRelief.join(', ') || null,
+      notes: editPainNotes.trim() || null,
+    }).eq('id', editingPain.id)
+    setSavingEditPain(false)
+    closeEditPain()
+    fetchPainLogs()
+  }
+  const handleDeletePain = async () => {
+    if (!editingPain) return
+    await supabase.from('pain_logs').delete().eq('id', editingPain.id)
+    closeEditPain()
+    fetchPainLogs()
+  }
 
-const handleSaveEditSex = async () => {
-  if (!editingSex) return
-  setSavingEditSex(true)
-  await supabase.from('sex_log').update({
-    date: editSexDate,
-    protected: editSexProtected,
-    notes: editSexNotes.trim() || null,
-  }).eq('id', editingSex.id)
-  setSavingEditSex(false)
-  closeEditSex()
-  fetchSexLogs()
-}
-const handleDeleteSex = async () => {
-  if (!editingSex) return
-  await supabase.from('sex_log').delete().eq('id', editingSex.id)
-  closeEditSex()
-  fetchSexLogs()
-}
+  // ── Sex edit handlers ──
 
-// ── Profile edit handlers ──
-const openEditProfile = () => {
-  setEditProfile({ ...cycleProfile })
-  setEditingProfile(true)
-}
-const closeEditProfile = () => setEditingProfile(false)
-const updateEditProfile = (k: keyof CycleProfile, v: any) =>
-  setEditProfile(p => ({ ...p, [k]: v }))
+  const openEditSex = (s: SexLog) => {
+    setEditingSex(s)
+    setEditSexDate(s.date)
+    setEditSexProtected(s.protected ?? true)
+    setEditSexNotes(s.notes ?? '')
+    setConfirmDeleteSex(false)
+  }
+  const closeEditSex = () => { setEditingSex(null); setConfirmDeleteSex(false) }
 
-const handleSaveEditProfile = async () => {
-  if (!editProfile) return
-  setSavingEditProfile(true)
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) { setSavingEditProfile(false); return }
-  await (supabase as any).from('cycle_profiles').upsert({ ...editProfile, user_id: user.id })
-  setCycleProfile(editProfile as CycleProfile)
-  setSavingEditProfile(false)
-  closeEditProfile()
-}
+  const handleSaveEditSex = async () => {
+    if (!editingSex) return
+    setSavingEditSex(true)
+    await supabase.from('sex_log').update({
+      date: editSexDate, protected: editSexProtected,
+      notes: editSexNotes.trim() || null,
+    }).eq('id', editingSex.id)
+    setSavingEditSex(false)
+    closeEditSex()
+    fetchSexLogs()
+  }
+  const handleDeleteSex = async () => {
+    if (!editingSex) return
+    await supabase.from('sex_log').delete().eq('id', editingSex.id)
+    closeEditSex()
+    fetchSexLogs()
+  }
+
+  // ── Profile edit handlers ──
+
+  const openEditProfile = () => {
+    setEditProfile({ ...cycleProfile })
+    setEditingProfile(true)
+  }
+  const closeEditProfile = () => setEditingProfile(false)
+  const updateEditProfile = (k: keyof CycleProfile, v: any) =>
+    setEditProfile(p => ({ ...p, [k]: v }))
+
+  const handleSaveEditProfile = async () => {
+    if (!editProfile) return
+    setSavingEditProfile(true)
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) { setSavingEditProfile(false); return }
+    await (supabase as any).from('cycle_profiles').upsert({ ...editProfile, user_id: user.id })
+    setCycleProfile(editProfile as CycleProfile)
+    setSavingEditProfile(false)
+    closeEditProfile()
+  }
 
   // ─── Derived stats ─────────────────────────────────────────────────────────
 
@@ -1015,6 +1094,7 @@ const handleSaveEditProfile = async () => {
     { key: 'calendar' as const, label: 'calendar', icon: 'ti-calendar-heart' },
     { key: 'insights' as const, label: 'insights', icon: 'ti-chart-bar' },
     { key: 'profile'  as const, label: 'profile',  icon: 'ti-settings' },
+    { key: 'symptoms' as const, label: 'symptoms', icon: 'ti-stethoscope' },
   ]
 
   const tabColors: Record<string, { bg: string; border: string; color: string }> = {
@@ -1024,6 +1104,7 @@ const handleSaveEditProfile = async () => {
     calendar: { bg: '#f3edfb', border: '#c9b8e8', color: '#4a2a80' },
     insights: { bg: '#e8f4fd', border: '#b8d8f5', color: '#1a4a7a' },
     profile:  { bg: '#f5f0f2', border: '#d0bcc8', color: '#3d2a35' },
+    symptoms: { bg: '#f3edfb', border: '#c9b8e8', color: '#4a2a80' },
   }
 
   const statCards = [
@@ -1123,6 +1204,52 @@ const handleSaveEditProfile = async () => {
             </div>
           )}
         </motion.div>
+
+        {/* ── Phase timeline ── */}
+        {phase !== 'unknown' && (() => {
+          const periodLen = cycleProfile?.period_length ?? avgPeriod
+          const phases = [
+            { key: 'menstrual'  as Phase, label: 'menstrual',  startDay: 1,               endDay: periodLen,     icon: 'ti-droplet'  },
+            { key: 'follicular' as Phase, label: 'follicular', startDay: periodLen + 1,   endDay: avgCycle - 15, icon: 'ti-leaf'     },
+            { key: 'ovulation'  as Phase, label: 'ovulation',  startDay: avgCycle - 14,   endDay: avgCycle - 12, icon: 'ti-sparkles' },
+            { key: 'luteal'     as Phase, label: 'luteal',     startDay: avgCycle - 11,   endDay: avgCycle,      icon: 'ti-moon'     },
+          ]
+          return (
+            <motion.div
+              initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.22 }}
+              style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', marginBottom: '4px' }}>
+              {phases.map(ph => {
+                const cfg2 = phaseConfig[ph.key]
+                const isActive = phase === ph.key
+                const daysUntilStart = ph.startDay - phaseDay
+                const daysUntilEnd   = ph.endDay   - phaseDay
+                const label = isActive
+                  ? daysUntilEnd === 0 ? 'ends today' : `${daysUntilEnd}d left`
+                  : daysUntilStart <= 0 ? 'passed'
+                  : `in ${daysUntilStart}d`
+                const isPast = !isActive && daysUntilStart <= 0
+                return (
+                  <div key={ph.key} style={{
+                    padding: '10px 10px 8px', borderRadius: '14px',
+                    background: isActive ? cfg2.bg : 'rgba(255,255,255,0.5)',
+                    border: `1.5px solid ${isActive ? cfg2.border : 'rgba(212,96,122,0.08)'}`,
+                    opacity: isPast ? 0.45 : 1,
+                    display: 'flex', flexDirection: 'column', gap: '5px', transition: 'all 0.2s',
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                      <i className={`ti ${ph.icon}`} style={{ fontSize: '12px', color: isActive ? cfg2.c : '#b09aa4' }} />
+                      <span style={{ fontSize: '9px', fontWeight: 700, letterSpacing: '1.5px', textTransform: 'uppercase', color: isActive ? cfg2.c : '#b09aa4' }}>{ph.label}</span>
+                    </div>
+                    <div style={{ fontFamily: 'Fraunces, serif', fontSize: '15px', fontWeight: 300, color: isActive ? cfg2.c : isPast ? '#b09aa4' : '#7a5c68', lineHeight: 1 }}>
+                      {isActive ? '● now' : label}
+                    </div>
+                    <div style={{ fontSize: '9.5px', color: '#b09aa4' }}>day {ph.startDay}–{ph.endDay}</div>
+                  </div>
+                )
+              })}
+            </motion.div>
+          )
+        })()}
 
         {/* Stats */}
         <div className={styles['pt-stats']}>
@@ -1324,14 +1451,12 @@ const handleSaveEditProfile = async () => {
                                 border: '1.5px solid rgba(212,96,122,0.18)',
                                 background: '#fdf8fa', cursor: 'pointer',
                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                fontSize: 13, color: '#d4607a', flexShrink: 0,
-                                transition: 'all 0.18s ease',
+                                fontSize: 13, color: '#d4607a', flexShrink: 0, transition: 'all 0.18s ease',
                               }}
                               onMouseEnter={e2 => (e2.currentTarget.style.background = '#fde8ee')}
                               onMouseLeave={e2 => (e2.currentTarget.style.background = '#fdf8fa')}>
                               <i className="ti ti-pencil" />
                             </button>
-                            
                           </motion.div>
                         )
                       })}
@@ -1379,9 +1504,7 @@ const handleSaveEditProfile = async () => {
                       <button key={n} className={`${styles['pt-sev-btn']} ${painSeverity >= n ? styles.active : ''}`}
                         onClick={() => setPainSeverity(n)}
                         style={{
-                          background: painSeverity >= n
-                            ? `hsl(${340 - n * 18},${60 + n * 6}%,${60 - n * 4}%)`
-                            : 'transparent',
+                          background: painSeverity >= n ? `hsl(${340 - n * 18},${60 + n * 6}%,${60 - n * 4}%)` : 'transparent',
                           borderColor: painSeverity >= n ? 'transparent' : 'rgba(212,96,122,0.15)',
                         }}>
                         {n}
@@ -1417,8 +1540,7 @@ const handleSaveEditProfile = async () => {
                   <div className={styles['pt-input-lbl']}><i className="ti ti-pencil" /> notes</div>
                   <textarea className={styles['pt-input']} value={painNotes} rows={2}
                     onChange={e => setPainNotes(e.target.value)}
-                    placeholder="describe how you feel..."
-                    style={{ resize: 'none' }} />
+                    placeholder="describe how you feel..." style={{ resize: 'none' }} />
 
                   <button className={styles['pt-submit']} onClick={handleLogPain}
                     disabled={!painType || savingPain}
@@ -1468,21 +1590,186 @@ const handleSaveEditProfile = async () => {
                             <div className={styles['pt-hitem-days-lbl']}>severity</div>
                           </div>
                           <button onClick={() => openEditPain(p)}
-  style={{
-    width: 30, height: 30, borderRadius: '50%',
-    border: '1.5px solid rgba(184,134,11,0.2)',
-    background: '#fefdf8', cursor: 'pointer',
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
-    fontSize: 13, color: '#b8860b', flexShrink: 0,
-    transition: 'all 0.18s ease',
-  }}
-  onMouseEnter={e2 => (e2.currentTarget.style.background = '#fef8e7')}
-  onMouseLeave={e2 => (e2.currentTarget.style.background = '#fefdf8')}>
-  <i className="ti ti-pencil" />
-</button>
+                            style={{
+                              width: 30, height: 30, borderRadius: '50%',
+                              border: '1.5px solid rgba(184,134,11,0.2)',
+                              background: '#fefdf8', cursor: 'pointer',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              fontSize: 13, color: '#b8860b', flexShrink: 0, transition: 'all 0.18s ease',
+                            }}
+                            onMouseEnter={e2 => (e2.currentTarget.style.background = '#fef8e7')}
+                            onMouseLeave={e2 => (e2.currentTarget.style.background = '#fefdf8')}>
+                            <i className="ti ti-pencil" />
+                          </button>
                         </motion.div>
                       )
                     })}
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          )}
+
+          {/* ── DAILY SYMPTOMS ── */}
+          {activeTab === 'symptoms' && (
+            <motion.div key="symptoms" className={styles['pt-grid']}
+              initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 16 }}>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <div className={styles['pt-card']}>
+                  <p className={styles['pt-card-lbl']}><i className="ti ti-stethoscope" style={{ color: '#9b7ec8' }} /> log today's symptoms</p>
+                  <p style={{ fontSize: '12px', color: '#b09aa4', marginBottom: '16px', lineHeight: 1.5 }}>
+                    Track how your body feels each day — unlinked from your period. Spot patterns over time.
+                  </p>
+
+                  <div className={styles['pt-input-lbl']}><i className="ti ti-calendar" /> date</div>
+                  <input type="date" className={styles['pt-input']} value={symptomDate}
+                    onChange={e => setSymptomDate(e.target.value)} />
+
+                  <div className={styles['pt-input-lbl']} style={{ marginTop: '4px' }}><i className="ti ti-bolt" /> symptoms</div>
+                  <div className={styles['pt-chips']} style={{ marginBottom: '14px' }}>
+                    {symptomList.map(s => {
+                      const active = dailySelSymptoms.includes(s.label)
+                      return (
+                        <button key={s.label} className={styles['pt-chip']}
+                          onClick={() => toggleDailySymptom(s.label)}
+                          style={{
+                            background: active ? '#f3edfb' : 'transparent',
+                            borderColor: active ? '#c9b8e8' : 'rgba(155,126,200,0.2)',
+                            color: active ? '#4a2a80' : '#b09aa4',
+                          }}>
+                          <i className={`ti ${s.icon}`} style={{ color: active ? '#9b7ec8' : '#b09aa4' }} />
+                          {s.label}
+                        </button>
+                      )
+                    })}
+                  </div>
+
+                  <div className={styles['pt-input-lbl']}><i className="ti ti-mood-smile" /> mood</div>
+                  <div className={styles['pt-mood-row']} style={{ marginBottom: '14px' }}>
+                    {moodOpts.map(m => {
+                      const active = dailyMood === m.label
+                      return (
+                        <button key={m.label} className={styles['pt-mood-btn']}
+                          onClick={() => setDailyMood(active ? null : m.label)}
+                          style={{
+                            background: active ? '#f3edfb' : 'transparent',
+                            borderColor: active ? '#c9b8e8' : 'rgba(155,126,200,0.15)',
+                            color: active ? m.c : '#b09aa4',
+                          }}>
+                          <i className={`ti ${m.icon}`} style={{ color: active ? m.c : '#b09aa4' }} />
+                          {m.label}
+                        </button>
+                      )
+                    })}
+                  </div>
+
+                  <div className={styles['pt-input-lbl']}><i className="ti ti-battery" /> energy level</div>
+                  <div className={styles['pt-severity']} style={{ marginBottom: '14px' }}>
+                    {[1,2,3,4,5].map(n => (
+                      <button key={n} onClick={() => setDailyEnergy(n)}
+                        style={{
+                          width: 36, height: 36, borderRadius: '10px', border: 'none',
+                          cursor: 'pointer', fontWeight: 700, fontSize: '13px', fontFamily: 'DM Sans, sans-serif',
+                          background: dailyEnergy >= n ? `hsl(${140 + n * 15}, ${50 + n * 5}%, ${55 - n * 3}%)` : 'transparent',
+                          color: dailyEnergy >= n ? '#fff' : '#b09aa4',
+                          outline: dailyEnergy >= n ? 'none' : '1.5px solid rgba(155,126,200,0.2)',
+                          transition: 'all 0.15s',
+                        }}>
+                        {n}
+                      </button>
+                    ))}
+                    <span style={{ fontSize: '11px', color: '#b09aa4', marginLeft: '4px' }}>
+                      {['','very low','low','okay','good','great'][dailyEnergy]}
+                    </span>
+                  </div>
+
+                  <div className={styles['pt-input-lbl']}><i className="ti ti-pencil" /> notes</div>
+                  <textarea className={styles['pt-input']} value={dailyNotes} rows={2}
+                    onChange={e => setDailyNotes(e.target.value)}
+                    placeholder="anything on your mind..." style={{ resize: 'none' }} />
+
+                  <button className={styles['pt-submit']}
+                    onClick={handleLogDailySymptom}
+                    disabled={(!dailySelSymptoms.length && !dailyMood) || savingSymptom}
+                    style={{
+                      background: (dailySelSymptoms.length || dailyMood)
+                        ? 'linear-gradient(135deg, #9b7ec8, #d4607a)'
+                        : 'rgba(155,126,200,0.08)',
+                      color: (dailySelSymptoms.length || dailyMood) ? '#fff' : '#b09aa4',
+                    }}>
+                    {savingSymptom ? 'saving...' : successSymptom ? 'logged 💜' : 'log symptoms'}
+                  </button>
+                  <AnimatePresence>
+                    {successSymptom && (
+                      <motion.div className={styles['pt-toast']}
+                        initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                        style={{ background: '#f3edfb', border: '1px solid #c9b8e8', color: '#4a2a80' }}>
+                        symptoms logged — your body is being heard 💜
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              </div>
+
+              {/* History */}
+              <div className={styles['pt-card']}>
+                <p className={styles['pt-card-lbl']}><i className="ti ti-history" style={{ color: '#9b7ec8' }} /> symptom history</p>
+                {dailySymptoms.length === 0 ? (
+                  <div className={styles['pt-empty']}><i className="ti ti-stethoscope" />no symptoms logged yet</div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '9px' }}>
+                    {dailySymptoms.map((s, i) => (
+                      <motion.div key={s.id}
+                        initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: i * 0.04 }}
+                        style={{
+                          display: 'flex', alignItems: 'flex-start', gap: '10px',
+                          padding: '10px 12px', borderRadius: '13px',
+                          background: 'rgba(155,126,200,0.05)',
+                          border: '1px solid rgba(155,126,200,0.12)',
+                        }}>
+                        <div style={{
+                          width: 34, height: 34, borderRadius: '10px', flexShrink: 0,
+                          background: '#f3edfb', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        }}>
+                          <i className="ti ti-stethoscope" style={{ fontSize: '15px', color: '#9b7ec8' }} />
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: '11px', fontWeight: 600, color: '#4a2a80', marginBottom: '3px' }}>
+                            {parseYMD(s.date).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' })}
+                            {s.mood && <span style={{ marginLeft: '8px', color: '#9b7ec8', fontWeight: 400, fontStyle: 'italic' }}>· {s.mood}</span>}
+                            {s.energy && <span style={{ marginLeft: '8px', color: '#b09aa4', fontWeight: 400 }}>· energy {s.energy}/5</span>}
+                          </div>
+                          {s.symptoms?.length > 0 && (
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginBottom: s.notes ? '4px' : 0 }}>
+                              {s.symptoms.map(sym => (
+                                <span key={sym} style={{
+                                  padding: '2px 8px', borderRadius: '999px', fontSize: '10px', fontWeight: 600,
+                                  background: 'rgba(155,126,200,0.1)', color: '#9b7ec8',
+                                  border: '1px solid rgba(155,126,200,0.2)',
+                                }}>{sym}</span>
+                              ))}
+                            </div>
+                          )}
+                          {s.notes && (
+                            <div style={{ fontSize: '11px', color: '#b09aa4', fontStyle: 'italic', marginTop: '3px' }}>{s.notes}</div>
+                          )}
+                        </div>
+                        <button onClick={() => openEditSymptom(s)}
+                          style={{
+                            width: 30, height: 30, borderRadius: '50%', flexShrink: 0,
+                            border: '1.5px solid rgba(155,126,200,0.2)',
+                            background: '#faf8fe', cursor: 'pointer',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            fontSize: 13, color: '#9b7ec8', transition: 'all 0.18s ease',
+                          }}
+                          onMouseEnter={e2 => (e2.currentTarget.style.background = '#f3edfb')}
+                          onMouseLeave={e2 => (e2.currentTarget.style.background = '#faf8fe')}>
+                          <i className="ti ti-pencil" />
+                        </button>
+                      </motion.div>
+                    ))}
                   </div>
                 )}
               </div>
@@ -1528,15 +1815,13 @@ const handleSaveEditProfile = async () => {
                         : phase === 'follicular' ? 'Approaching fertile window — good timing.'
                         : 'Ovulation window is in a few days.'
                       }
-                      
                     </motion.div>
                   )}
 
                   <div className={styles['pt-input-lbl']}><i className="ti ti-pencil" /> notes (optional)</div>
                   <textarea className={styles['pt-input']} value={sexNotes} rows={2}
                     onChange={e => setSexNotes(e.target.value)}
-                    placeholder="e.g. pain, discomfort, notes..."
-                    style={{ resize: 'none' }} />
+                    placeholder="e.g. pain, discomfort, notes..." style={{ resize: 'none' }} />
 
                   <button className={styles['pt-submit']} onClick={handleLogSex} disabled={savingSex}
                     style={{ background: 'linear-gradient(135deg, #5a8c63, #9b7ec8)', color: '#fff' }}>
@@ -1548,7 +1833,6 @@ const handleSaveEditProfile = async () => {
                         initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
                         style={{ background: '#edf6ee', border: '1px solid #a8c9ae', color: '#1a4a22' }}>
                         logged 💚
-                        
                       </motion.div>
                     )}
                   </AnimatePresence>
@@ -1581,18 +1865,17 @@ const handleSaveEditProfile = async () => {
                           {s.protected ? 'protected' : 'unprotected'}
                         </span>
                         <button onClick={() => openEditSex(s)}
-  style={{
-    width: 30, height: 30, borderRadius: '50%',
-    border: '1.5px solid rgba(90,140,99,0.2)',
-    background: '#f8fdf9', cursor: 'pointer',
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
-    fontSize: 13, color: '#5a8c63', flexShrink: 0,
-    transition: 'all 0.18s ease',
-  }}
-  onMouseEnter={e2 => (e2.currentTarget.style.background = '#edf6ee')}
-  onMouseLeave={e2 => (e2.currentTarget.style.background = '#f8fdf9')}>
-  <i className="ti ti-pencil" />
-</button>
+                          style={{
+                            width: 30, height: 30, borderRadius: '50%',
+                            border: '1.5px solid rgba(90,140,99,0.2)',
+                            background: '#f8fdf9', cursor: 'pointer',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            fontSize: 13, color: '#5a8c63', flexShrink: 0, transition: 'all 0.18s ease',
+                          }}
+                          onMouseEnter={e2 => (e2.currentTarget.style.background = '#edf6ee')}
+                          onMouseLeave={e2 => (e2.currentTarget.style.background = '#f8fdf9')}>
+                          <i className="ti ti-pencil" />
+                        </button>
                       </motion.div>
                     ))}
                   </div>
@@ -1687,12 +1970,12 @@ const handleSaveEditProfile = async () => {
 
               <div className={styles['pt-insights']}>
                 {[
-                  { label: 'avg cycle',    value: `${avgCycle} days`,  c: '#d4607a', bg: '#fde8ee', border: '#f2b3c0', icon: 'ti-rotate-clockwise' },
-                  { label: 'avg period',   value: `${avgPeriod} days`, c: '#9b7ec8', bg: '#f3edfb', border: '#c9b8e8', icon: 'ti-droplet' },
-                  { label: 'next period',  value: nextPredicted ? nextPredicted.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : '—', c: '#b8860b', bg: '#fef8e7', border: '#f5ddb4', icon: 'ti-clock' },
+                  { label: 'avg cycle',     value: `${avgCycle} days`,  c: '#d4607a', bg: '#fde8ee', border: '#f2b3c0', icon: 'ti-rotate-clockwise' },
+                  { label: 'avg period',    value: `${avgPeriod} days`, c: '#9b7ec8', bg: '#f3edfb', border: '#c9b8e8', icon: 'ti-droplet' },
+                  { label: 'next period',   value: nextPredicted ? nextPredicted.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : '—', c: '#b8860b', bg: '#fef8e7', border: '#f5ddb4', icon: 'ti-clock' },
                   { label: 'ovulation est.', value: lastStart ? addDays(lastStart, avgCycle - 14).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : '—', c: '#5a8c63', bg: '#edf6ee', border: '#a8c9ae', icon: 'ti-sparkles' },
-                  { label: 'pain logs',    value: String(painLogs.length), c: '#b8860b', bg: '#fef8e7', border: '#f5ddb4', icon: 'ti-bolt' },
-                  { label: 'intimacy logs', value: String(sexLogs.length), c: '#5a8c63', bg: '#edf6ee', border: '#a8c9ae', icon: 'ti-heart' },
+                  { label: 'pain logs',     value: String(painLogs.length), c: '#b8860b', bg: '#fef8e7', border: '#f5ddb4', icon: 'ti-bolt' },
+                  { label: 'intimacy logs', value: String(sexLogs.length),  c: '#5a8c63', bg: '#edf6ee', border: '#a8c9ae', icon: 'ti-heart' },
                 ].map((ins, i) => (
                   <motion.div key={ins.label} className={styles['pt-insight']}
                     style={{ background: ins.bg, border: `1px solid ${ins.border}` }}
@@ -1816,9 +2099,9 @@ const handleSaveEditProfile = async () => {
                       </div>
                     )}
                     <button className={styles['pt-submit']} onClick={openEditProfile}
-  style={{ background: 'linear-gradient(135deg, #d4607a, #9b7ec8)', color: '#fff' }}>
-  edit profile
-</button>
+                      style={{ background: 'linear-gradient(135deg, #d4607a, #9b7ec8)', color: '#fff' }}>
+                      edit profile
+                    </button>
                   </>
                 )}
               </div>
@@ -1827,21 +2110,17 @@ const handleSaveEditProfile = async () => {
 
         </AnimatePresence>
 
-        {/* ── EDIT MODAL ── */}
+        {/* ── EDIT PERIOD MODAL ── */}
         <AnimatePresence>
           {editingEntry && (
             <OnboardingPortal>
-              <motion.div
-                className={styles['pt-onboard-overlay']}
+              <motion.div className={styles['pt-onboard-overlay']}
                 initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                 onClick={e => { if (e.target === e.currentTarget) closeEdit() }}>
-                <motion.div
-                  className={styles['pt-onboard-card']}
-                  style={{ maxWidth: 540 }}
+                <motion.div className={styles['pt-onboard-card']} style={{ maxWidth: 540 }}
                   initial={{ opacity: 0, y: 32, scale: 0.97 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: 24 }}
-                  transition={{ duration: 0.3 }}>
+                  exit={{ opacity: 0, y: 24 }} transition={{ duration: 0.3 }}>
 
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
                     <div>
@@ -1852,12 +2131,11 @@ const handleSaveEditProfile = async () => {
                         edit <span className={styles.accent}>cycle entry</span>
                       </h2>
                     </div>
-                    <button onClick={closeEdit}
-                      style={{
-                        width: 36, height: 36, borderRadius: '50%', border: '1.5px solid #eddde3',
-                        background: '#fdf8fa', cursor: 'pointer', display: 'flex', alignItems: 'center',
-                        justifyContent: 'center', fontSize: 16, color: '#b09aa4', flexShrink: 0,
-                      }}>
+                    <button onClick={closeEdit} style={{
+                      width: 36, height: 36, borderRadius: '50%', border: '1.5px solid #eddde3',
+                      background: '#fdf8fa', cursor: 'pointer', display: 'flex', alignItems: 'center',
+                      justifyContent: 'center', fontSize: 16, color: '#b09aa4', flexShrink: 0,
+                    }}>
                       <i className="ti ti-x" />
                     </button>
                   </div>
@@ -1971,44 +2249,32 @@ const handleSaveEditProfile = async () => {
                     </button>
 
                     {!confirmDelete ? (
-                      <button onClick={() => setConfirmDelete(true)}
-                        style={{
-                          width: '100%', padding: '11px', borderRadius: '999px',
-                          border: '1.5px solid rgba(212,96,122,0.2)', background: 'transparent',
-                          color: '#b09aa4', fontSize: '13px', cursor: 'pointer',
-                          fontFamily: 'DM Sans, sans-serif', fontWeight: 600,
-                          transition: 'all 0.18s ease',
-                        }}>
-                        <i className="ti ti-trash" style={{ marginRight: '6px' }} />
-                        delete this entry
+                      <button onClick={() => setConfirmDelete(true)} style={{
+                        width: '100%', padding: '11px', borderRadius: '999px',
+                        border: '1.5px solid rgba(212,96,122,0.2)', background: 'transparent',
+                        color: '#b09aa4', fontSize: '13px', cursor: 'pointer',
+                        fontFamily: 'DM Sans, sans-serif', fontWeight: 600,
+                      }}>
+                        <i className="ti ti-trash" style={{ marginRight: '6px' }} />delete this entry
                       </button>
                     ) : (
                       <motion.div initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }}
-                        style={{
-                          padding: '14px 18px', borderRadius: '18px',
-                          background: 'rgba(212,96,122,0.06)', border: '1.5px solid rgba(212,96,122,0.2)',
-                          display: 'flex', flexDirection: 'column', gap: '10px',
-                        }}>
+                        style={{ padding: '14px 18px', borderRadius: '18px', background: 'rgba(212,96,122,0.06)',
+                          border: '1.5px solid rgba(212,96,122,0.2)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                         <p style={{ fontSize: '13px', color: '#8b1a35', margin: 0, fontWeight: 600, textAlign: 'center' }}>
                           are you sure? this can&apos;t be undone.
                         </p>
                         <div style={{ display: 'flex', gap: '8px' }}>
-                          <button onClick={() => setConfirmDelete(false)}
-                            style={{
-                              flex: 1, padding: '10px', borderRadius: '999px',
-                              border: '1.5px solid #eddde3', background: '#fdf8fa',
-                              color: '#b09aa4', fontSize: '12px', cursor: 'pointer',
-                              fontFamily: 'DM Sans, sans-serif', fontWeight: 600,
-                            }}>
-                            cancel
-                          </button>
-                          <button onClick={handleDeleteEntry}
-                            style={{
-                              flex: 1, padding: '10px', borderRadius: '999px',
-                              border: 'none', background: 'linear-gradient(135deg, #d4607a, #8b1a35)',
-                              color: 'white', fontSize: '12px', cursor: 'pointer',
-                              fontFamily: 'DM Sans, sans-serif', fontWeight: 700,
-                            }}>
+                          <button onClick={() => setConfirmDelete(false)} style={{
+                            flex: 1, padding: '10px', borderRadius: '999px', border: '1.5px solid #eddde3',
+                            background: '#fdf8fa', color: '#b09aa4', fontSize: '12px', cursor: 'pointer',
+                            fontFamily: 'DM Sans, sans-serif', fontWeight: 600,
+                          }}>cancel</button>
+                          <button onClick={handleDeleteEntry} style={{
+                            flex: 1, padding: '10px', borderRadius: '999px', border: 'none',
+                            background: 'linear-gradient(135deg, #d4607a, #8b1a35)', color: 'white',
+                            fontSize: '12px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', fontWeight: 700,
+                          }}>
                             <i className="ti ti-trash" style={{ marginRight: '4px' }} /> yes, delete
                           </button>
                         </div>
@@ -2020,429 +2286,573 @@ const handleSaveEditProfile = async () => {
             </OnboardingPortal>
           )}
         </AnimatePresence>
+
         {/* ── EDIT PAIN MODAL ── */}
-<AnimatePresence>
-  {editingPain && (
-    <OnboardingPortal>
-      <motion.div className={styles['pt-onboard-overlay']}
-        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-        onClick={e => { if (e.target === e.currentTarget) closeEditPain() }}>
-        <motion.div className={styles['pt-onboard-card']} style={{ maxWidth: 480 }}
-          initial={{ opacity: 0, y: 32, scale: 0.97 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: 24 }} transition={{ duration: 0.3 }}>
+        <AnimatePresence>
+          {editingPain && (
+            <OnboardingPortal>
+              <motion.div className={styles['pt-onboard-overlay']}
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                onClick={e => { if (e.target === e.currentTarget) closeEditPain() }}>
+                <motion.div className={styles['pt-onboard-card']} style={{ maxWidth: 480 }}
+                  initial={{ opacity: 0, y: 32, scale: 0.97 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 24 }} transition={{ duration: 0.3 }}>
 
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
-            <div>
-              <div className={styles['pt-onboard-step']}>
-                <i className="ti ti-edit" style={{ color: '#b8860b' }} /> edit pain entry
-              </div>
-              <h2 className={styles['pt-onboard-title']} style={{ marginBottom: 0 }}>
-                edit <span style={{ color: '#b8860b' }}>pain log</span>
-              </h2>
-            </div>
-            <button onClick={closeEditPain} style={{
-              width: 36, height: 36, borderRadius: '50%', border: '1.5px solid #eddde3',
-              background: '#fdf8fa', cursor: 'pointer', display: 'flex', alignItems: 'center',
-              justifyContent: 'center', fontSize: 16, color: '#b09aa4', flexShrink: 0,
-            }}>
-              <i className="ti ti-x" />
-            </button>
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', maxHeight: '65vh', overflowY: 'auto', paddingRight: '4px' }}>
-            <div>
-              <div className={styles['pt-input-lbl']}><i className="ti ti-calendar" /> date</div>
-              <input type="date" className={styles['pt-input']} value={editPainDate}
-                onChange={e => setEditPainDate(e.target.value)} />
-            </div>
-            <div>
-              <div className={styles['pt-input-lbl']}><i className="ti ti-stethoscope" /> type of pain</div>
-              <div className={styles['pt-pain-type-grid']}>
-                {painTypes.map(pt2 => {
-                  const active = editPainType === pt2.key
-                  return (
-                    <button key={pt2.key} className={styles['pt-pain-type-btn']}
-                      onClick={() => setEditPainType(active ? null : pt2.key)}
-                      style={{
-                        background: active ? pt2.bg : 'transparent',
-                        borderColor: active ? pt2.c : 'rgba(212,96,122,0.12)',
-                        color: active ? pt2.c : '#b09aa4',
-                      }}>
-                      <i className={`ti ${pt2.icon}`} style={{ color: active ? pt2.c : '#b09aa4' }} />
-                      {pt2.label}
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
-            <div>
-              <div className={styles['pt-input-lbl']}><i className="ti ti-chart-bar" /> severity (1 = mild, 5 = severe)</div>
-              <div className={styles['pt-severity']}>
-                {[1,2,3,4,5].map(n => (
-                  <button key={n} className={`${styles['pt-sev-btn']} ${editPainSeverity >= n ? styles.active : ''}`}
-                    onClick={() => setEditPainSeverity(n)}
-                    style={{
-                      background: editPainSeverity >= n
-                        ? `hsl(${340 - n * 18},${60 + n * 6}%,${60 - n * 4}%)`
-                        : 'transparent',
-                      borderColor: editPainSeverity >= n ? 'transparent' : 'rgba(212,96,122,0.15)',
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+                    <div>
+                      <div className={styles['pt-onboard-step']}>
+                        <i className="ti ti-edit" style={{ color: '#b8860b' }} /> edit pain entry
+                      </div>
+                      <h2 className={styles['pt-onboard-title']} style={{ marginBottom: 0 }}>
+                        edit <span style={{ color: '#b8860b' }}>pain log</span>
+                      </h2>
+                    </div>
+                    <button onClick={closeEditPain} style={{
+                      width: 36, height: 36, borderRadius: '50%', border: '1.5px solid #eddde3',
+                      background: '#fdf8fa', cursor: 'pointer', display: 'flex', alignItems: 'center',
+                      justifyContent: 'center', fontSize: 16, color: '#b09aa4', flexShrink: 0,
                     }}>
-                    {n}
-                  </button>
-                ))}
-                <span style={{ fontSize: '11px', color: '#b09aa4', marginLeft: '4px' }}>
-                  {['','mild','moderate','notable','strong','severe'][editPainSeverity]}
-                </span>
-              </div>
-            </div>
-            <div>
-              <div className={styles['pt-input-lbl']}><i className="ti ti-clock" /> duration (hours)</div>
-              <input type="number" className={styles['pt-input']} placeholder="e.g. 2"
-                value={editPainDuration} onChange={e => setEditPainDuration(e.target.value)} />
-            </div>
-            <div>
-              <div className={styles['pt-input-lbl']}><i className="ti ti-first-aid-kit" /> relief used</div>
-              <div className={styles['pt-chips']} style={{ marginBottom: '4px' }}>
-                {reliefOptions.map(r => {
-                  const active = editPainRelief.includes(r)
-                  return (
-                    <button key={r} className={styles['pt-chip']}
-                      onClick={() => toggleEditPainRelief(r)}
-                      style={{
-                        background: active ? '#fef8e7' : 'transparent',
-                        borderColor: active ? '#f5ddb4' : 'rgba(212,96,122,0.15)',
-                        color: active ? '#5a3a00' : '#b09aa4',
-                      }}>
-                      {r}
+                      <i className="ti ti-x" />
                     </button>
-                  )
-                })}
-              </div>
-            </div>
-            <div>
-              <div className={styles['pt-input-lbl']}><i className="ti ti-pencil" /> notes</div>
-              <textarea className={styles['pt-input']} value={editPainNotes} rows={2}
-                onChange={e => setEditPainNotes(e.target.value)}
-                placeholder="describe how you feel..." style={{ resize: 'none', marginBottom: 0 }} />
-            </div>
-          </div>
+                  </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '20px' }}>
-            <button className={styles['pt-submit']} onClick={handleSaveEditPain}
-              disabled={!editPainType || savingEditPain}
-              style={{
-                background: editPainType ? 'linear-gradient(135deg, #b8860b, #d4607a)' : 'rgba(212,96,122,0.08)',
-                color: editPainType ? '#fff' : '#b09aa4',
-              }}>
-              {savingEditPain ? 'saving...' : 'save changes ✨'}
-            </button>
-            {!confirmDeletePain ? (
-              <button onClick={() => setConfirmDeletePain(true)} style={{
-                width: '100%', padding: '11px', borderRadius: '999px',
-                border: '1.5px solid rgba(212,96,122,0.2)', background: 'transparent',
-                color: '#b09aa4', fontSize: '13px', cursor: 'pointer',
-                fontFamily: 'DM Sans, sans-serif', fontWeight: 600,
-              }}>
-                <i className="ti ti-trash" style={{ marginRight: '6px' }} />delete this entry
-              </button>
-            ) : (
-              <motion.div initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }}
-                style={{ padding: '14px 18px', borderRadius: '18px', background: 'rgba(212,96,122,0.06)',
-                  border: '1.5px solid rgba(212,96,122,0.2)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                <p style={{ fontSize: '13px', color: '#8b1a35', margin: 0, fontWeight: 600, textAlign: 'center' }}>
-                  are you sure? this can't be undone.
-                </p>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <button onClick={() => setConfirmDeletePain(false)} style={{
-                    flex: 1, padding: '10px', borderRadius: '999px', border: '1.5px solid #eddde3',
-                    background: '#fdf8fa', color: '#b09aa4', fontSize: '12px', cursor: 'pointer',
-                    fontFamily: 'DM Sans, sans-serif', fontWeight: 600,
-                  }}>cancel</button>
-                  <button onClick={handleDeletePain} style={{
-                    flex: 1, padding: '10px', borderRadius: '999px', border: 'none',
-                    background: 'linear-gradient(135deg, #d4607a, #8b1a35)', color: 'white',
-                    fontSize: '12px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', fontWeight: 700,
-                  }}>
-                    <i className="ti ti-trash" style={{ marginRight: '4px' }} /> yes, delete
-                  </button>
-                </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', maxHeight: '65vh', overflowY: 'auto', paddingRight: '4px' }}>
+                    <div>
+                      <div className={styles['pt-input-lbl']}><i className="ti ti-calendar" /> date</div>
+                      <input type="date" className={styles['pt-input']} value={editPainDate}
+                        onChange={e => setEditPainDate(e.target.value)} />
+                    </div>
+                    <div>
+                      <div className={styles['pt-input-lbl']}><i className="ti ti-stethoscope" /> type of pain</div>
+                      <div className={styles['pt-pain-type-grid']}>
+                        {painTypes.map(pt2 => {
+                          const active = editPainType === pt2.key
+                          return (
+                            <button key={pt2.key} className={styles['pt-pain-type-btn']}
+                              onClick={() => setEditPainType(active ? null : pt2.key)}
+                              style={{
+                                background: active ? pt2.bg : 'transparent',
+                                borderColor: active ? pt2.c : 'rgba(212,96,122,0.12)',
+                                color: active ? pt2.c : '#b09aa4',
+                              }}>
+                              <i className={`ti ${pt2.icon}`} style={{ color: active ? pt2.c : '#b09aa4' }} />
+                              {pt2.label}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
+                    <div>
+                      <div className={styles['pt-input-lbl']}><i className="ti ti-chart-bar" /> severity</div>
+                      <div className={styles['pt-severity']}>
+                        {[1,2,3,4,5].map(n => (
+                          <button key={n} className={`${styles['pt-sev-btn']} ${editPainSeverity >= n ? styles.active : ''}`}
+                            onClick={() => setEditPainSeverity(n)}
+                            style={{
+                              background: editPainSeverity >= n ? `hsl(${340 - n * 18},${60 + n * 6}%,${60 - n * 4}%)` : 'transparent',
+                              borderColor: editPainSeverity >= n ? 'transparent' : 'rgba(212,96,122,0.15)',
+                            }}>
+                            {n}
+                          </button>
+                        ))}
+                        <span style={{ fontSize: '11px', color: '#b09aa4', marginLeft: '4px' }}>
+                          {['','mild','moderate','notable','strong','severe'][editPainSeverity]}
+                        </span>
+                      </div>
+                    </div>
+                    <div>
+                      <div className={styles['pt-input-lbl']}><i className="ti ti-clock" /> duration (hours)</div>
+                      <input type="number" className={styles['pt-input']} placeholder="e.g. 2"
+                        value={editPainDuration} onChange={e => setEditPainDuration(e.target.value)} />
+                    </div>
+                    <div>
+                      <div className={styles['pt-input-lbl']}><i className="ti ti-first-aid-kit" /> relief used</div>
+                      <div className={styles['pt-chips']} style={{ marginBottom: '4px' }}>
+                        {reliefOptions.map(r => {
+                          const active = editPainRelief.includes(r)
+                          return (
+                            <button key={r} className={styles['pt-chip']}
+                              onClick={() => toggleEditPainRelief(r)}
+                              style={{
+                                background: active ? '#fef8e7' : 'transparent',
+                                borderColor: active ? '#f5ddb4' : 'rgba(212,96,122,0.15)',
+                                color: active ? '#5a3a00' : '#b09aa4',
+                              }}>
+                              {r}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
+                    <div>
+                      <div className={styles['pt-input-lbl']}><i className="ti ti-pencil" /> notes</div>
+                      <textarea className={styles['pt-input']} value={editPainNotes} rows={2}
+                        onChange={e => setEditPainNotes(e.target.value)}
+                        placeholder="describe how you feel..." style={{ resize: 'none', marginBottom: 0 }} />
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '20px' }}>
+                    <button className={styles['pt-submit']} onClick={handleSaveEditPain}
+                      disabled={!editPainType || savingEditPain}
+                      style={{
+                        background: editPainType ? 'linear-gradient(135deg, #b8860b, #d4607a)' : 'rgba(212,96,122,0.08)',
+                        color: editPainType ? '#fff' : '#b09aa4',
+                      }}>
+                      {savingEditPain ? 'saving...' : 'save changes ✨'}
+                    </button>
+                    {!confirmDeletePain ? (
+                      <button onClick={() => setConfirmDeletePain(true)} style={{
+                        width: '100%', padding: '11px', borderRadius: '999px',
+                        border: '1.5px solid rgba(212,96,122,0.2)', background: 'transparent',
+                        color: '#b09aa4', fontSize: '13px', cursor: 'pointer',
+                        fontFamily: 'DM Sans, sans-serif', fontWeight: 600,
+                      }}>
+                        <i className="ti ti-trash" style={{ marginRight: '6px' }} />delete this entry
+                      </button>
+                    ) : (
+                      <motion.div initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }}
+                        style={{ padding: '14px 18px', borderRadius: '18px', background: 'rgba(212,96,122,0.06)',
+                          border: '1.5px solid rgba(212,96,122,0.2)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        <p style={{ fontSize: '13px', color: '#8b1a35', margin: 0, fontWeight: 600, textAlign: 'center' }}>
+                          are you sure? this can&apos;t be undone.
+                        </p>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <button onClick={() => setConfirmDeletePain(false)} style={{
+                            flex: 1, padding: '10px', borderRadius: '999px', border: '1.5px solid #eddde3',
+                            background: '#fdf8fa', color: '#b09aa4', fontSize: '12px', cursor: 'pointer',
+                            fontFamily: 'DM Sans, sans-serif', fontWeight: 600,
+                          }}>cancel</button>
+                          <button onClick={handleDeletePain} style={{
+                            flex: 1, padding: '10px', borderRadius: '999px', border: 'none',
+                            background: 'linear-gradient(135deg, #d4607a, #8b1a35)', color: 'white',
+                            fontSize: '12px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', fontWeight: 700,
+                          }}>
+                            <i className="ti ti-trash" style={{ marginRight: '4px' }} /> yes, delete
+                          </button>
+                        </div>
+                      </motion.div>
+                    )}
+                  </div>
+                </motion.div>
               </motion.div>
-            )}
-          </div>
-        </motion.div>
-      </motion.div>
-    </OnboardingPortal>
-  )}
-</AnimatePresence>
+            </OnboardingPortal>
+          )}
+        </AnimatePresence>
 
-{/* ── EDIT SEX LOG MODAL ── */}
-<AnimatePresence>
-  {editingSex && (
-    <OnboardingPortal>
-      <motion.div className={styles['pt-onboard-overlay']}
-        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-        onClick={e => { if (e.target === e.currentTarget) closeEditSex() }}>
-        <motion.div className={styles['pt-onboard-card']} style={{ maxWidth: 420 }}
-          initial={{ opacity: 0, y: 32, scale: 0.97 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: 24 }} transition={{ duration: 0.3 }}>
+        {/* ── EDIT SEX LOG MODAL ── */}
+        <AnimatePresence>
+          {editingSex && (
+            <OnboardingPortal>
+              <motion.div className={styles['pt-onboard-overlay']}
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                onClick={e => { if (e.target === e.currentTarget) closeEditSex() }}>
+                <motion.div className={styles['pt-onboard-card']} style={{ maxWidth: 420 }}
+                  initial={{ opacity: 0, y: 32, scale: 0.97 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 24 }} transition={{ duration: 0.3 }}>
 
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
-            <div>
-              <div className={styles['pt-onboard-step']}>
-                <i className="ti ti-edit" style={{ color: '#5a8c63' }} /> edit intimacy entry
-              </div>
-              <h2 className={styles['pt-onboard-title']} style={{ marginBottom: 0 }}>
-                edit <span style={{ color: '#5a8c63' }}>intimacy log</span>
-              </h2>
-            </div>
-            <button onClick={closeEditSex} style={{
-              width: 36, height: 36, borderRadius: '50%', border: '1.5px solid #eddde3',
-              background: '#fdf8fa', cursor: 'pointer', display: 'flex', alignItems: 'center',
-              justifyContent: 'center', fontSize: 16, color: '#b09aa4', flexShrink: 0,
-            }}>
-              <i className="ti ti-x" />
-            </button>
-          </div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+                    <div>
+                      <div className={styles['pt-onboard-step']}>
+                        <i className="ti ti-edit" style={{ color: '#5a8c63' }} /> edit intimacy entry
+                      </div>
+                      <h2 className={styles['pt-onboard-title']} style={{ marginBottom: 0 }}>
+                        edit <span style={{ color: '#5a8c63' }}>intimacy log</span>
+                      </h2>
+                    </div>
+                    <button onClick={closeEditSex} style={{
+                      width: 36, height: 36, borderRadius: '50%', border: '1.5px solid #eddde3',
+                      background: '#fdf8fa', cursor: 'pointer', display: 'flex', alignItems: 'center',
+                      justifyContent: 'center', fontSize: 16, color: '#b09aa4', flexShrink: 0,
+                    }}>
+                      <i className="ti ti-x" />
+                    </button>
+                  </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            <div>
-              <div className={styles['pt-input-lbl']}><i className="ti ti-calendar" /> date</div>
-              <input type="date" className={styles['pt-input']} value={editSexDate}
-                onChange={e => setEditSexDate(e.target.value)} />
-            </div>
-            <div className={styles['pt-toggle-row']}>
-              <span className={styles['pt-toggle-lbl']}>
-                <i className="ti ti-shield-check" style={{ color: '#5a8c63' }} />
-                protected?
-              </span>
-              <button
-                className={`${styles['pt-toggle']} ${editSexProtected ? styles.on : styles.off}`}
-                style={{ background: editSexProtected ? '#5a8c63' : undefined }}
-                onClick={() => setEditSexProtected(p => !p)} />
-            </div>
-            <div>
-              <div className={styles['pt-input-lbl']}><i className="ti ti-pencil" /> notes</div>
-              <textarea className={styles['pt-input']} value={editSexNotes} rows={3}
-                onChange={e => setEditSexNotes(e.target.value)}
-                placeholder="e.g. pain, discomfort, notes..."
-                style={{ resize: 'none', marginBottom: 0 }} />
-            </div>
-          </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                    <div>
+                      <div className={styles['pt-input-lbl']}><i className="ti ti-calendar" /> date</div>
+                      <input type="date" className={styles['pt-input']} value={editSexDate}
+                        onChange={e => setEditSexDate(e.target.value)} />
+                    </div>
+                    <div className={styles['pt-toggle-row']}>
+                      <span className={styles['pt-toggle-lbl']}>
+                        <i className="ti ti-shield-check" style={{ color: '#5a8c63' }} />protected?
+                      </span>
+                      <button
+                        className={`${styles['pt-toggle']} ${editSexProtected ? styles.on : styles.off}`}
+                        style={{ background: editSexProtected ? '#5a8c63' : undefined }}
+                        onClick={() => setEditSexProtected(p => !p)} />
+                    </div>
+                    <div>
+                      <div className={styles['pt-input-lbl']}><i className="ti ti-pencil" /> notes</div>
+                      <textarea className={styles['pt-input']} value={editSexNotes} rows={3}
+                        onChange={e => setEditSexNotes(e.target.value)}
+                        placeholder="e.g. pain, discomfort, notes..."
+                        style={{ resize: 'none', marginBottom: 0 }} />
+                    </div>
+                  </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '20px' }}>
-            <button className={styles['pt-submit']} onClick={handleSaveEditSex}
-              disabled={savingEditSex}
-              style={{ background: 'linear-gradient(135deg, #5a8c63, #9b7ec8)', color: '#fff' }}>
-              {savingEditSex ? 'saving...' : 'save changes ✨'}
-            </button>
-            {!confirmDeleteSex ? (
-              <button onClick={() => setConfirmDeleteSex(true)} style={{
-                width: '100%', padding: '11px', borderRadius: '999px',
-                border: '1.5px solid rgba(212,96,122,0.2)', background: 'transparent',
-                color: '#b09aa4', fontSize: '13px', cursor: 'pointer',
-                fontFamily: 'DM Sans, sans-serif', fontWeight: 600,
-              }}>
-                <i className="ti ti-trash" style={{ marginRight: '6px' }} />delete this entry
-              </button>
-            ) : (
-              <motion.div initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }}
-                style={{ padding: '14px 18px', borderRadius: '18px', background: 'rgba(212,96,122,0.06)',
-                  border: '1.5px solid rgba(212,96,122,0.2)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                <p style={{ fontSize: '13px', color: '#8b1a35', margin: 0, fontWeight: 600, textAlign: 'center' }}>
-                  are you sure? this can't be undone.
-                </p>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <button onClick={() => setConfirmDeleteSex(false)} style={{
-                    flex: 1, padding: '10px', borderRadius: '999px', border: '1.5px solid #eddde3',
-                    background: '#fdf8fa', color: '#b09aa4', fontSize: '12px', cursor: 'pointer',
-                    fontFamily: 'DM Sans, sans-serif', fontWeight: 600,
-                  }}>cancel</button>
-                  <button onClick={handleDeleteSex} style={{
-                    flex: 1, padding: '10px', borderRadius: '999px', border: 'none',
-                    background: 'linear-gradient(135deg, #5a8c63, #8b1a35)', color: 'white',
-                    fontSize: '12px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', fontWeight: 700,
-                  }}>
-                    <i className="ti ti-trash" style={{ marginRight: '4px' }} /> yes, delete
-                  </button>
-                </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '20px' }}>
+                    <button className={styles['pt-submit']} onClick={handleSaveEditSex}
+                      disabled={savingEditSex}
+                      style={{ background: 'linear-gradient(135deg, #5a8c63, #9b7ec8)', color: '#fff' }}>
+                      {savingEditSex ? 'saving...' : 'save changes ✨'}
+                    </button>
+                    {!confirmDeleteSex ? (
+                      <button onClick={() => setConfirmDeleteSex(true)} style={{
+                        width: '100%', padding: '11px', borderRadius: '999px',
+                        border: '1.5px solid rgba(212,96,122,0.2)', background: 'transparent',
+                        color: '#b09aa4', fontSize: '13px', cursor: 'pointer',
+                        fontFamily: 'DM Sans, sans-serif', fontWeight: 600,
+                      }}>
+                        <i className="ti ti-trash" style={{ marginRight: '6px' }} />delete this entry
+                      </button>
+                    ) : (
+                      <motion.div initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }}
+                        style={{ padding: '14px 18px', borderRadius: '18px', background: 'rgba(212,96,122,0.06)',
+                          border: '1.5px solid rgba(212,96,122,0.2)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        <p style={{ fontSize: '13px', color: '#8b1a35', margin: 0, fontWeight: 600, textAlign: 'center' }}>
+                          are you sure? this can&apos;t be undone.
+                        </p>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <button onClick={() => setConfirmDeleteSex(false)} style={{
+                            flex: 1, padding: '10px', borderRadius: '999px', border: '1.5px solid #eddde3',
+                            background: '#fdf8fa', color: '#b09aa4', fontSize: '12px', cursor: 'pointer',
+                            fontFamily: 'DM Sans, sans-serif', fontWeight: 600,
+                          }}>cancel</button>
+                          <button onClick={handleDeleteSex} style={{
+                            flex: 1, padding: '10px', borderRadius: '999px', border: 'none',
+                            background: 'linear-gradient(135deg, #5a8c63, #8b1a35)', color: 'white',
+                            fontSize: '12px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', fontWeight: 700,
+                          }}>
+                            <i className="ti ti-trash" style={{ marginRight: '4px' }} /> yes, delete
+                          </button>
+                        </div>
+                      </motion.div>
+                    )}
+                  </div>
+                </motion.div>
               </motion.div>
-            )}
-          </div>
-        </motion.div>
-      </motion.div>
-    </OnboardingPortal>
-  )}
-</AnimatePresence>
+            </OnboardingPortal>
+          )}
+        </AnimatePresence>
 
-{/* ── EDIT PROFILE MODAL ── */}
-<AnimatePresence>
-  {editingProfile && (
-    <OnboardingPortal>
-      <motion.div className={styles['pt-onboard-overlay']}
-        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-        onClick={e => { if (e.target === e.currentTarget) closeEditProfile() }}>
-        <motion.div className={styles['pt-onboard-card']} style={{ maxWidth: 520 }}
-          initial={{ opacity: 0, y: 32, scale: 0.97 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: 24 }} transition={{ duration: 0.3 }}>
+        {/* ── EDIT PROFILE MODAL ── */}
+        <AnimatePresence>
+          {editingProfile && (
+            <OnboardingPortal>
+              <motion.div className={styles['pt-onboard-overlay']}
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                onClick={e => { if (e.target === e.currentTarget) closeEditProfile() }}>
+                <motion.div className={styles['pt-onboard-card']} style={{ maxWidth: 520 }}
+                  initial={{ opacity: 0, y: 32, scale: 0.97 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 24 }} transition={{ duration: 0.3 }}>
 
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
-            <div>
-              <div className={styles['pt-onboard-step']}>
-                <i className="ti ti-user" style={{ color: '#d4607a' }} /> edit profile
-              </div>
-              <h2 className={styles['pt-onboard-title']} style={{ marginBottom: 0 }}>
-                your <span className={styles.accent}>cycle profile</span>
-              </h2>
-            </div>
-            <button onClick={closeEditProfile} style={{
-              width: 36, height: 36, borderRadius: '50%', border: '1.5px solid #eddde3',
-              background: '#fdf8fa', cursor: 'pointer', display: 'flex', alignItems: 'center',
-              justifyContent: 'center', fontSize: 16, color: '#b09aa4', flexShrink: 0,
-            }}>
-              <i className="ti ti-x" />
-            </button>
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxHeight: '65vh', overflowY: 'auto', paddingRight: '4px' }}>
-            {/* Cycle & period lengths */}
-            <div>
-              <div className={styles['pt-input-lbl']}><i className="ti ti-rotate-clockwise" /> cycle length ({editProfile.cycle_length} days)</div>
-              <input type="range" className={styles['pt-range']} min={20} max={45}
-                value={editProfile.cycle_length ?? 28}
-                onChange={e => updateEditProfile('cycle_length', Number(e.target.value))} />
-              <div className={styles['pt-range-labels']}><span>20</span><span style={{ color: '#d4607a', fontWeight: 600 }}>{editProfile.cycle_length}d</span><span>45</span></div>
-            </div>
-            <div>
-              <div className={styles['pt-input-lbl']}><i className="ti ti-droplet" /> period length ({editProfile.period_length} days)</div>
-              <input type="range" className={styles['pt-range']} min={2} max={10}
-                value={editProfile.period_length ?? 5}
-                onChange={e => updateEditProfile('period_length', Number(e.target.value))} />
-              <div className={styles['pt-range-labels']}><span>2</span><span style={{ color: '#d4607a', fontWeight: 600 }}>{editProfile.period_length}d</span><span>10</span></div>
-            </div>
-
-            {/* Regularity */}
-            <div>
-              <div className={styles['pt-input-lbl']}><i className="ti ti-activity" /> regularity</div>
-              <div className={styles['pt-radio-group']}>
-                {[
-                  { key: 'regular', label: 'Pretty regular', icon: 'ti-clock', c: '#5a8c63', bg: '#edf6ee', border: 'rgba(90,140,99,0.25)' },
-                  { key: 'irregular', label: 'Somewhat irregular', icon: 'ti-clock-off', c: '#b8860b', bg: '#fef8e7', border: 'rgba(184,134,11,0.25)' },
-                  { key: 'very_irregular', label: 'Very irregular', icon: 'ti-help', c: '#9b7ec8', bg: '#f3edfb', border: 'rgba(155,126,200,0.25)' },
-                ].map(opt => (
-                  <button key={opt.key} className={styles['pt-radio-btn']}
-                    onClick={() => updateEditProfile('cycle_regularity', opt.key as CycleProfile['cycle_regularity'])}
-                    style={{
-                      background: editProfile.cycle_regularity === opt.key ? opt.bg : 'transparent',
-                      borderColor: editProfile.cycle_regularity === opt.key ? opt.border : 'rgba(212,96,122,0.12)',
-                      color: editProfile.cycle_regularity === opt.key ? opt.c : 'var(--ink)',
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+                    <div>
+                      <div className={styles['pt-onboard-step']}>
+                        <i className="ti ti-user" style={{ color: '#d4607a' }} /> edit profile
+                      </div>
+                      <h2 className={styles['pt-onboard-title']} style={{ marginBottom: 0 }}>
+                        your <span className={styles.accent}>cycle profile</span>
+                      </h2>
+                    </div>
+                    <button onClick={closeEditProfile} style={{
+                      width: 36, height: 36, borderRadius: '50%', border: '1.5px solid #eddde3',
+                      background: '#fdf8fa', cursor: 'pointer', display: 'flex', alignItems: 'center',
+                      justifyContent: 'center', fontSize: 16, color: '#b09aa4', flexShrink: 0,
                     }}>
-                    <i className={`ti ${opt.icon}`} style={{ color: opt.c }} />
-                    <div><div style={{ fontWeight: 600 }}>{opt.label}</div></div>
-                  </button>
-                ))}
-              </div>
-            </div>
+                      <i className="ti ti-x" />
+                    </button>
+                  </div>
 
-            {/* PCOS */}
-            <div>
-              <div className={styles['pt-input-lbl']}><i className="ti ti-ribbon" /> PCOS / PCOD</div>
-              <div className={styles['pt-radio-group']}>
-                {[
-                  { v: false, label: "No / not diagnosed", icon: 'ti-check', c: '#5a8c63', bg: '#edf6ee', border: 'rgba(90,140,99,0.25)' },
-                  { v: true,  label: 'Yes, diagnosed',     icon: 'ti-ribbon', c: '#9b7ec8', bg: '#f3edfb', border: 'rgba(155,126,200,0.25)' },
-                ].map(opt => (
-                  <button key={String(opt.v)} className={styles['pt-radio-btn']}
-                    onClick={() => updateEditProfile('has_pcos_pcod', opt.v)}
-                    style={{
-                      background: editProfile.has_pcos_pcod === opt.v ? opt.bg : 'transparent',
-                      borderColor: editProfile.has_pcos_pcod === opt.v ? opt.border : 'rgba(212,96,122,0.12)',
-                      color: editProfile.has_pcos_pcod === opt.v ? opt.c : 'var(--ink)',
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxHeight: '65vh', overflowY: 'auto', paddingRight: '4px' }}>
+                    <div>
+                      <div className={styles['pt-input-lbl']}><i className="ti ti-rotate-clockwise" /> cycle length ({editProfile.cycle_length} days)</div>
+                      <input type="range" className={styles['pt-range']} min={20} max={45}
+                        value={editProfile.cycle_length ?? 28}
+                        onChange={e => updateEditProfile('cycle_length', Number(e.target.value))} />
+                      <div className={styles['pt-range-labels']}><span>20</span><span style={{ color: '#d4607a', fontWeight: 600 }}>{editProfile.cycle_length}d</span><span>45</span></div>
+                    </div>
+                    <div>
+                      <div className={styles['pt-input-lbl']}><i className="ti ti-droplet" /> period length ({editProfile.period_length} days)</div>
+                      <input type="range" className={styles['pt-range']} min={2} max={10}
+                        value={editProfile.period_length ?? 5}
+                        onChange={e => updateEditProfile('period_length', Number(e.target.value))} />
+                      <div className={styles['pt-range-labels']}><span>2</span><span style={{ color: '#d4607a', fontWeight: 600 }}>{editProfile.period_length}d</span><span>10</span></div>
+                    </div>
+
+                    <div>
+                      <div className={styles['pt-input-lbl']}><i className="ti ti-activity" /> regularity</div>
+                      <div className={styles['pt-radio-group']}>
+                        {[
+                          { key: 'regular',       label: 'Pretty regular',      icon: 'ti-clock',     c: '#5a8c63', bg: '#edf6ee', border: 'rgba(90,140,99,0.25)' },
+                          { key: 'irregular',     label: 'Somewhat irregular',  icon: 'ti-clock-off', c: '#b8860b', bg: '#fef8e7', border: 'rgba(184,134,11,0.25)' },
+                          { key: 'very_irregular', label: 'Very irregular',     icon: 'ti-help',      c: '#9b7ec8', bg: '#f3edfb', border: 'rgba(155,126,200,0.25)' },
+                        ].map(opt => (
+                          <button key={opt.key} className={styles['pt-radio-btn']}
+                            onClick={() => updateEditProfile('cycle_regularity', opt.key as CycleProfile['cycle_regularity'])}
+                            style={{
+                              background: editProfile.cycle_regularity === opt.key ? opt.bg : 'transparent',
+                              borderColor: editProfile.cycle_regularity === opt.key ? opt.border : 'rgba(212,96,122,0.12)',
+                              color: editProfile.cycle_regularity === opt.key ? opt.c : 'var(--ink)',
+                            }}>
+                            <i className={`ti ${opt.icon}`} style={{ color: opt.c }} />
+                            <div><div style={{ fontWeight: 600 }}>{opt.label}</div></div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className={styles['pt-input-lbl']}><i className="ti ti-ribbon" /> PCOS / PCOD</div>
+                      <div className={styles['pt-radio-group']}>
+                        {[
+                          { v: false, label: "No / not diagnosed", icon: 'ti-check',  c: '#5a8c63', bg: '#edf6ee', border: 'rgba(90,140,99,0.25)' },
+                          { v: true,  label: 'Yes, diagnosed',     icon: 'ti-ribbon', c: '#9b7ec8', bg: '#f3edfb', border: 'rgba(155,126,200,0.25)' },
+                        ].map(opt => (
+                          <button key={String(opt.v)} className={styles['pt-radio-btn']}
+                            onClick={() => updateEditProfile('has_pcos_pcod', opt.v)}
+                            style={{
+                              background: editProfile.has_pcos_pcod === opt.v ? opt.bg : 'transparent',
+                              borderColor: editProfile.has_pcos_pcod === opt.v ? opt.border : 'rgba(212,96,122,0.12)',
+                              color: editProfile.has_pcos_pcod === opt.v ? opt.c : 'var(--ink)',
+                            }}>
+                            <i className={`ti ${opt.icon}`} style={{ color: opt.c }} />
+                            <div><div style={{ fontWeight: 600 }}>{opt.label}</div></div>
+                          </button>
+                        ))}
+                      </div>
+                      {editProfile.has_pcos_pcod && (
+                        <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                          {(['pcos', 'pcod'] as const).map(t => (
+                            <button key={t} className={styles['pt-radio-btn']}
+                              onClick={() => updateEditProfile('pcos_type', t)}
+                              style={{
+                                flex: 1,
+                                background: editProfile.pcos_type === t ? '#f3edfb' : 'transparent',
+                                borderColor: editProfile.pcos_type === t ? '#c9b8e8' : 'rgba(212,96,122,0.12)',
+                                color: editProfile.pcos_type === t ? '#9b7ec8' : 'var(--ink)',
+                              }}>
+                              <i className="ti ti-ribbon" style={{ color: '#9b7ec8' }} />
+                              <div><div style={{ fontWeight: 600 }}>{t.toUpperCase()}</div></div>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    <div>
+                      <div className={styles['pt-toggle-row']}>
+                        <span className={styles['pt-toggle-lbl']}><i className="ti ti-pill" /> On birth control?</span>
+                        <button className={`${styles['pt-toggle']} ${editProfile.on_birth_control ? styles.on : styles.off}`}
+                          onClick={() => updateEditProfile('on_birth_control', !editProfile.on_birth_control)} />
+                      </div>
+                      {editProfile.on_birth_control && (
+                        <div className={styles['pt-checkbox-group']} style={{ marginTop: '8px' }}>
+                          {['pill','IUD (hormonal)','IUD (copper)','implant','injection','patch','ring','condoms only'].map(bc => (
+                            <button key={bc} className={styles['pt-checkbox-btn']}
+                              onClick={() => updateEditProfile('birth_control_type', bc)}
+                              style={{
+                                background: editProfile.birth_control_type === bc ? '#fde8ee' : 'transparent',
+                                borderColor: editProfile.birth_control_type === bc ? '#e8a0b0' : 'rgba(212,96,122,0.12)',
+                                color: editProfile.birth_control_type === bc ? '#7a1a35' : 'var(--ink)',
+                              }}>
+                              <i className={`ti ${editProfile.birth_control_type === bc ? 'ti-circle-check' : 'ti-circle'}`}
+                                style={{ color: editProfile.birth_control_type === bc ? '#d4607a' : '#b09aa4' }} />
+                              {bc}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className={styles['pt-toggle-row']}>
+                      <span className={styles['pt-toggle-lbl']}><i className="ti ti-heart" /> Trying to conceive?</span>
+                      <button className={`${styles['pt-toggle']} ${editProfile.trying_to_conceive ? styles.on : styles.off}`}
+                        onClick={() => updateEditProfile('trying_to_conceive', !editProfile.trying_to_conceive)} />
+                    </div>
+                    <div>
+                      <div className={styles['pt-input-lbl']}><i className="ti ti-user" /> age (optional)</div>
+                      <input type="number" className={styles['pt-input']} placeholder="e.g. 26"
+                        value={editProfile.age ?? ''}
+                        onChange={e => updateEditProfile('age', Number(e.target.value) || null)} />
+                    </div>
+                    <div>
+                      <div className={styles['pt-input-lbl']}><i className="ti ti-pencil" /> notes (optional)</div>
+                      <textarea className={styles['pt-input']} rows={3}
+                        placeholder="e.g. thyroid issues, endometriosis..."
+                        value={editProfile.notes ?? ''}
+                        onChange={e => updateEditProfile('notes', e.target.value)}
+                        style={{ resize: 'none', marginBottom: 0 }} />
+                    </div>
+                  </div>
+
+                  <button className={styles['pt-submit']} onClick={handleSaveEditProfile}
+                    disabled={savingEditProfile}
+                    style={{ background: 'linear-gradient(135deg, #d4607a, #9b7ec8)', color: '#fff', marginTop: '20px' }}>
+                    {savingEditProfile ? 'saving...' : 'save profile ✨'}
+                  </button>
+                </motion.div>
+              </motion.div>
+            </OnboardingPortal>
+          )}
+        </AnimatePresence>
+
+        {/* ── EDIT DAILY SYMPTOM MODAL ── */}
+        <AnimatePresence>
+          {editingSymptom && (
+            <OnboardingPortal>
+              <motion.div className={styles['pt-onboard-overlay']}
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                onClick={e => { if (e.target === e.currentTarget) closeEditSymptom() }}>
+                <motion.div className={styles['pt-onboard-card']} style={{ maxWidth: 500 }}
+                  initial={{ opacity: 0, y: 32, scale: 0.97 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 24 }} transition={{ duration: 0.3 }}>
+
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+                    <div>
+                      <div className={styles['pt-onboard-step']}>
+                        <i className="ti ti-edit" style={{ color: '#9b7ec8' }} /> edit symptoms
+                      </div>
+                      <h2 className={styles['pt-onboard-title']} style={{ marginBottom: 0 }}>
+                        edit <span style={{ color: '#9b7ec8' }}>symptom log</span>
+                      </h2>
+                    </div>
+                    <button onClick={closeEditSymptom} style={{
+                      width: 36, height: 36, borderRadius: '50%', border: '1.5px solid #eddde3',
+                      background: '#fdf8fa', cursor: 'pointer', display: 'flex', alignItems: 'center',
+                      justifyContent: 'center', fontSize: 16, color: '#b09aa4', flexShrink: 0,
                     }}>
-                    <i className={`ti ${opt.icon}`} style={{ color: opt.c }} />
-                    <div><div style={{ fontWeight: 600 }}>{opt.label}</div></div>
-                  </button>
-                ))}
-              </div>
-              {editProfile.has_pcos_pcod && (
-                <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
-                  {(['pcos', 'pcod'] as const).map(t => (
-                    <button key={t} className={styles['pt-radio-btn']}
-                      onClick={() => updateEditProfile('pcos_type', t)}
-                      style={{
-                        flex: 1,
-                        background: editProfile.pcos_type === t ? '#f3edfb' : 'transparent',
-                        borderColor: editProfile.pcos_type === t ? '#c9b8e8' : 'rgba(212,96,122,0.12)',
-                        color: editProfile.pcos_type === t ? '#9b7ec8' : 'var(--ink)',
-                      }}>
-                      <i className="ti ti-ribbon" style={{ color: '#9b7ec8' }} />
-                      <div><div style={{ fontWeight: 600 }}>{t.toUpperCase()}</div></div>
+                      <i className="ti ti-x" />
                     </button>
-                  ))}
-                </div>
-              )}
-            </div>
+                  </div>
 
-            {/* Birth control */}
-            <div>
-              <div className={styles['pt-toggle-row']}>
-                <span className={styles['pt-toggle-lbl']}><i className="ti ti-pill" /> On birth control?</span>
-                <button className={`${styles['pt-toggle']} ${editProfile.on_birth_control ? styles.on : styles.off}`}
-                  onClick={() => updateEditProfile('on_birth_control', !editProfile.on_birth_control)} />
-              </div>
-              {editProfile.on_birth_control && (
-                <div className={styles['pt-checkbox-group']} style={{ marginTop: '8px' }}>
-                  {['pill','IUD (hormonal)','IUD (copper)','implant','injection','patch','ring','condoms only'].map(bc => (
-                    <button key={bc} className={styles['pt-checkbox-btn']}
-                      onClick={() => updateEditProfile('birth_control_type', bc)}
-                      style={{
-                        background: editProfile.birth_control_type === bc ? '#fde8ee' : 'transparent',
-                        borderColor: editProfile.birth_control_type === bc ? '#e8a0b0' : 'rgba(212,96,122,0.12)',
-                        color: editProfile.birth_control_type === bc ? '#7a1a35' : 'var(--ink)',
-                      }}>
-                      <i className={`ti ${editProfile.birth_control_type === bc ? 'ti-circle-check' : 'ti-circle'}`}
-                        style={{ color: editProfile.birth_control_type === bc ? '#d4607a' : '#b09aa4' }} />
-                      {bc}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', maxHeight: '65vh', overflowY: 'auto', paddingRight: '4px' }}>
+                    <div>
+                      <div className={styles['pt-input-lbl']}><i className="ti ti-calendar" /> date</div>
+                      <input type="date" className={styles['pt-input']} value={editDDate}
+                        onChange={e => setEditDDate(e.target.value)} />
+                    </div>
+                    <div>
+                      <div className={styles['pt-input-lbl']}><i className="ti ti-bolt" /> symptoms</div>
+                      <div className={styles['pt-chips']}>
+                        {symptomList.map(s => {
+                          const active = editDSymptoms.includes(s.label)
+                          return (
+                            <button key={s.label} className={styles['pt-chip']}
+                              onClick={() => toggleEditDSymptom(s.label)}
+                              style={{
+                                background: active ? '#f3edfb' : 'transparent',
+                                borderColor: active ? '#c9b8e8' : 'rgba(155,126,200,0.2)',
+                                color: active ? '#4a2a80' : '#b09aa4',
+                              }}>
+                              <i className={`ti ${s.icon}`} style={{ color: active ? '#9b7ec8' : '#b09aa4' }} />
+                              {s.label}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
+                    <div>
+                      <div className={styles['pt-input-lbl']}><i className="ti ti-mood-smile" /> mood</div>
+                      <div className={styles['pt-mood-row']}>
+                        {moodOpts.map(m => {
+                          const active = editDMood === m.label
+                          return (
+                            <button key={m.label} className={styles['pt-mood-btn']}
+                              onClick={() => setEditDMood(active ? null : m.label)}
+                              style={{
+                                background: active ? '#f3edfb' : 'transparent',
+                                borderColor: active ? '#c9b8e8' : 'rgba(155,126,200,0.15)',
+                                color: active ? m.c : '#b09aa4',
+                              }}>
+                              <i className={`ti ${m.icon}`} style={{ color: active ? m.c : '#b09aa4' }} />
+                              {m.label}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
+                    <div>
+                      <div className={styles['pt-input-lbl']}><i className="ti ti-battery" /> energy</div>
+                      <div className={styles['pt-severity']}>
+                        {[1,2,3,4,5].map(n => (
+                          <button key={n} onClick={() => setEditDEnergy(n)}
+                            style={{
+                              width: 36, height: 36, borderRadius: '10px', border: 'none',
+                              cursor: 'pointer', fontWeight: 700, fontSize: '13px', fontFamily: 'DM Sans, sans-serif',
+                              background: editDEnergy >= n ? `hsl(${140 + n * 15}, ${50 + n * 5}%, ${55 - n * 3}%)` : 'transparent',
+                              color: editDEnergy >= n ? '#fff' : '#b09aa4',
+                              outline: editDEnergy >= n ? 'none' : '1.5px solid rgba(155,126,200,0.2)',
+                            }}>
+                            {n}
+                          </button>
+                        ))}
+                        <span style={{ fontSize: '11px', color: '#b09aa4', marginLeft: '4px' }}>
+                          {['','very low','low','okay','good','great'][editDEnergy]}
+                        </span>
+                      </div>
+                    </div>
+                    <div>
+                      <div className={styles['pt-input-lbl']}><i className="ti ti-pencil" /> notes</div>
+                      <textarea className={styles['pt-input']} value={editDNotes} rows={2}
+                        onChange={e => setEditDNotes(e.target.value)}
+                        placeholder="anything on your mind..."
+                        style={{ resize: 'none', marginBottom: 0 }} />
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '20px' }}>
+                    <button className={styles['pt-submit']} onClick={handleSaveEditSymptom}
+                      disabled={savingEditSymptom}
+                      style={{ background: 'linear-gradient(135deg, #9b7ec8, #d4607a)', color: '#fff' }}>
+                      {savingEditSymptom ? 'saving...' : 'save changes ✨'}
                     </button>
-                  ))}
-                </div>
-              )}
-            </div>
+                    {!confirmDeleteSym ? (
+                      <button onClick={() => setConfirmDeleteSym(true)} style={{
+                        width: '100%', padding: '11px', borderRadius: '999px',
+                        border: '1.5px solid rgba(155,126,200,0.2)', background: 'transparent',
+                        color: '#b09aa4', fontSize: '13px', cursor: 'pointer',
+                        fontFamily: 'DM Sans, sans-serif', fontWeight: 600,
+                      }}>
+                        <i className="ti ti-trash" style={{ marginRight: '6px' }} />delete this entry
+                      </button>
+                    ) : (
+                      <motion.div initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }}
+                        style={{ padding: '14px 18px', borderRadius: '18px', background: 'rgba(155,126,200,0.06)',
+                          border: '1.5px solid rgba(155,126,200,0.2)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        <p style={{ fontSize: '13px', color: '#4a2a80', margin: 0, fontWeight: 600, textAlign: 'center' }}>
+                          are you sure? this can&apos;t be undone.
+                        </p>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <button onClick={() => setConfirmDeleteSym(false)} style={{
+                            flex: 1, padding: '10px', borderRadius: '999px', border: '1.5px solid #eddde3',
+                            background: '#fdf8fa', color: '#b09aa4', fontSize: '12px', cursor: 'pointer',
+                            fontFamily: 'DM Sans, sans-serif', fontWeight: 600,
+                          }}>cancel</button>
+                          <button onClick={handleDeleteSymptom} style={{
+                            flex: 1, padding: '10px', borderRadius: '999px', border: 'none',
+                            background: 'linear-gradient(135deg, #9b7ec8, #4a2a80)', color: 'white',
+                            fontSize: '12px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', fontWeight: 700,
+                          }}>
+                            <i className="ti ti-trash" style={{ marginRight: '4px' }} /> yes, delete
+                          </button>
+                        </div>
+                      </motion.div>
+                    )}
+                  </div>
+                </motion.div>
+              </motion.div>
+            </OnboardingPortal>
+          )}
+        </AnimatePresence>
 
-            {/* TTC + Age + Notes */}
-            <div className={styles['pt-toggle-row']}>
-              <span className={styles['pt-toggle-lbl']}><i className="ti ti-heart" /> Trying to conceive?</span>
-              <button className={`${styles['pt-toggle']} ${editProfile.trying_to_conceive ? styles.on : styles.off}`}
-                onClick={() => updateEditProfile('trying_to_conceive', !editProfile.trying_to_conceive)} />
-            </div>
-            <div>
-              <div className={styles['pt-input-lbl']}><i className="ti ti-user" /> age (optional)</div>
-              <input type="number" className={styles['pt-input']} placeholder="e.g. 26"
-                value={editProfile.age ?? ''}
-                onChange={e => updateEditProfile('age', Number(e.target.value) || null)} />
-            </div>
-            <div>
-              <div className={styles['pt-input-lbl']}><i className="ti ti-pencil" /> notes (optional)</div>
-              <textarea className={styles['pt-input']} rows={3}
-                placeholder="e.g. thyroid issues, endometriosis..."
-                value={editProfile.notes ?? ''}
-                onChange={e => updateEditProfile('notes', e.target.value)}
-                style={{ resize: 'none', marginBottom: 0 }} />
-            </div>
-          </div>
-
-          <button className={styles['pt-submit']} onClick={handleSaveEditProfile}
-            disabled={savingEditProfile}
-            style={{ background: 'linear-gradient(135deg, #d4607a, #9b7ec8)', color: '#fff', marginTop: '20px' }}>
-            {savingEditProfile ? 'saving...' : 'save profile ✨'}
-          </button>
-        </motion.div>
-      </motion.div>
-    </OnboardingPortal>
-  )}
-</AnimatePresence>
       </div>
     </>
   )
