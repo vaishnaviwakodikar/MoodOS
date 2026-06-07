@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { createClient } from '@/lib/supabase'
 import styles from './periods.module.css'
+import SharePartner from './SharePartner'
 
 type Flow = 'spotting' | 'light' | 'medium' | 'heavy' | 'very_heavy'
 type Phase = 'menstrual' | 'follicular' | 'ovulation' | 'luteal' | 'unknown'
@@ -2854,6 +2855,10 @@ export default function PeriodsPage() {
         </AnimatePresence>
 
       </div>
+      {/* Floating Share Button */}
+<div className="fixed bottom-6 right-6 z-50">
+  <SharePartner />
+</div>
     </>
   )
 }
