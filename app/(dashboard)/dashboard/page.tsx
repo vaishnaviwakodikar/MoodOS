@@ -126,6 +126,13 @@ function formatStudyTime(mins: number): string {
   return `${m}m`
 }
 
+/** Returns the actual last day string for a given YYYY-MM month string */
+function lastDayOfMonth(thisMonth: string): string {
+  const [y, m] = thisMonth.split('-').map(Number)
+  const last = new Date(y, m, 0).getDate() // day 0 of next month = last day of this month
+  return `${thisMonth}-${String(last).padStart(2, '0')}`
+}
+
 // ── Component ──────────────────────────────────────────────────────────────
 export default function DashboardPage() {
   const supabase = useMemo(() => createClient(), [])
@@ -139,6 +146,7 @@ export default function DashboardPage() {
   const fetchMetrics = useCallback(async (userId: string) => {
     const today     = new Date().toISOString().slice(0, 10)
     const thisMonth = today.slice(0, 7)
+    const monthEnd  = lastDayOfMonth(thisMonth) // ✅ real last day, no more -31
 
     // Fire all queries in parallel
     const [
@@ -178,7 +186,7 @@ export default function DashboardPage() {
         .select('status')
         .eq('user_id', userId)
         .gte('date', `${thisMonth}-01`)
-        .lte('date', `${thisMonth}-31`),
+        .lte('date', monthEnd),           // ✅ fixed
 
       supabase
         .from('study_sessions')
@@ -191,7 +199,7 @@ export default function DashboardPage() {
         .select('amount')
         .eq('user_id', userId)
         .gte('date', `${thisMonth}-01`)
-        .lte('date', `${thisMonth}-31`),
+        .lte('date', monthEnd),           // ✅ fixed
 
       supabase
         .from('habit_logs')
