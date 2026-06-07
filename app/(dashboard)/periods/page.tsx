@@ -68,6 +68,8 @@ type DailySymptom = {
   created_at: string
 }
 
+
+
 const symptomList = [
   { label: 'cramps',       icon: 'ti-bolt' },
   { label: 'bloating',     icon: 'ti-circle' },
@@ -714,6 +716,9 @@ export default function PeriodsPage() {
   const [editProfile,        setEditProfile]        = useState<Partial<CycleProfile>>({})
   const [savingEditProfile,  setSavingEditProfile]  = useState(false)
 
+
+  const [shareOpen, setShareOpen] = useState(false)
+
   useEffect(() => {
     fetchEntries()
     fetchProfile()
@@ -1159,6 +1164,21 @@ export default function PeriodsPage() {
                 <i className="ti ti-settings" style={{ color: '#d4607a' }} />
                 edit profile
               </button>
+
+              <button
+                onClick={() => setShareOpen(true)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '6px',
+                  background: 'linear-gradient(135deg, #ff3d8b, #ff6bb5)',
+                  border: 'none', borderRadius: '50px',
+                  padding: '7px 16px', fontSize: '12px', fontWeight: 500,
+                  color: 'white', cursor: 'pointer', letterSpacing: '0.03em',
+                  boxShadow: '0 4px 16px rgba(255, 61, 139, 0.35)',
+                }}>
+                <span>🔗</span>
+                share
+              </button>
+              
             </div>
           )}
         </motion.div>
@@ -2103,6 +2123,37 @@ export default function PeriodsPage() {
                       style={{ background: 'linear-gradient(135deg, #d4607a, #9b7ec8)', color: '#fff' }}>
                       edit profile
                     </button>
+
+                    <button
+                      onClick={() => setShareOpen(true)}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        background: 'linear-gradient(135deg, #ff3d8b, #ff6bb5)',
+                        border: 'none',
+                        borderRadius: '50px',
+                        padding: '10px 20px',
+                        fontSize: '13px',
+                        fontWeight: 500,
+                        color: 'white',
+                        cursor: 'pointer',
+                        letterSpacing: '0.03em',
+                        boxShadow: '0 4px 16px rgba(255, 61, 139, 0.35)',
+                        transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+                      }}
+                      onMouseEnter={e => {
+                        e.currentTarget.style.transform = 'scale(1.04)'
+                        e.currentTarget.style.boxShadow = '0 6px 22px rgba(255, 61, 139, 0.45)'
+                      }}
+                      onMouseLeave={e => {
+                        e.currentTarget.style.transform = 'scale(1)'
+                        e.currentTarget.style.boxShadow = '0 4px 16px rgba(255, 61, 139, 0.35)'
+                      }}
+                    >
+                      <span style={{ fontSize: '15px' }}>🔗</span>
+                      share with partner
+                    </button>
                   </>
                 )}
               </div>
@@ -2856,9 +2907,7 @@ export default function PeriodsPage() {
 
       </div>
       {/* Floating Share Button */}
-<div className="fixed bottom-6 right-6 z-50">
-  <SharePartner />
-</div>
+<SharePartner open={shareOpen} onOpenChange={setShareOpen} />
     </>
   )
 }
