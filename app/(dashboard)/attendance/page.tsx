@@ -202,12 +202,12 @@ export default function AttendancePage() {
         {/* Stats */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
           {[
-            { label: 'Present',  value: present, ...STATUS_CONFIG.present },
-            { label: 'Absent',   value: absent,  ...STATUS_CONFIG.absent  },
-            { label: 'Holidays', value: holiday, ...STATUS_CONFIG.holiday },
+            { title: 'Present',  value: present, ...STATUS_CONFIG.present },
+            { title: 'Absent',   value: absent,  ...STATUS_CONFIG.absent  },
+            { title: 'Holidays', value: holiday, ...STATUS_CONFIG.holiday },
           ].map(s => (
-            <div key={s.label} style={{ background: s.bg, border: `1px solid ${s.border}`, borderRadius: 12, padding: '12px 16px' }}>
-              <div style={{ fontSize: 8, letterSpacing: 2, textTransform: 'uppercase', color: s.c, opacity: 0.65, marginBottom: 4 }}>{s.label}</div>
+            <div key={s.title} style={{ background: s.bg, border: `1px solid ${s.border}`, borderRadius: 12, padding: '12px 16px' }}>
+              <div style={{ fontSize: 8, letterSpacing: 2, textTransform: 'uppercase', color: s.c, opacity: 0.65, marginBottom: 4 }}>{s.title}</div>
               <div style={{ fontFamily: 'Georgia, serif', fontSize: 28, fontWeight: 300, color: s.c, lineHeight: 1 }}>{s.value}</div>
             </div>
           ))}
