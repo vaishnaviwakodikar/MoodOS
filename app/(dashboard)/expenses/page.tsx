@@ -42,6 +42,10 @@ function fmtShort(n: number) {
   return `₹${Math.round(n)}`
 }
 
+function lastDayOfMonth(ym: string): string {
+  const [y, m] = ym.split('-').map(Number)
+  return `${ym}-${String(new Date(y, m, 0).getDate()).padStart(2, '0')}`
+}
 // ── Types ────────────────────────────────────────────────────────────────────
 
 type Expense = {
@@ -720,7 +724,7 @@ export default function ExpensesPage() {
         .select('*')
         .eq('user_id', user.id)
         .gte('date', `${viewMonth}-01`)
-        .lte('date', `${viewMonth}-31`)
+        .lte('date', lastDayOfMonth(viewMonth))
         .order('date', { ascending: false }),
       (supabase.from('expense_budgets') as any)
         .select('*')
