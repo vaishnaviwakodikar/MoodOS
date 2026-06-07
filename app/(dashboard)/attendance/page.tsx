@@ -172,56 +172,57 @@ export default function AttendancePage() {
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <div style={{ minHeight: '100vh', background: '#fdf7f0', fontFamily: 'DM Sans, sans-serif', padding: '24px 20px' }}>
-      <div style={{ maxWidth: 680, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 16 }}>
+    <div style={{ height: '100vh', overflow: 'hidden', background: '#fdf7f0', fontFamily: 'DM Sans, sans-serif', display: 'grid', gridTemplateColumns: '1fr 360px' }}>
+
+      {/* ── LEFT: Calendar ── */}
+      <div style={{ display: 'flex', flexDirection: 'column', padding: '28px 28px 28px 32px', gap: 20, overflow: 'hidden' }}>
 
         {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
           <div>
-            <h1 style={{ fontFamily: 'Georgia, serif', fontSize: 22, fontWeight: 300, fontStyle: 'italic', color: '#3d2a35', margin: 0 }}>
+            <h1 style={{ fontFamily: 'Georgia, serif', fontSize: 26, fontWeight: 300, fontStyle: 'italic', color: '#3d2a35', margin: 0 }}>
               Attendance
             </h1>
-            <p style={{ fontSize: 11, color: '#b09aa4', margin: '2px 0 0' }}>
+            <p style={{ fontSize: 12, color: '#b09aa4', margin: '3px 0 0' }}>
               {MONTHS[viewMonth.month]} {viewMonth.year} · {pct}% present
             </p>
           </div>
-
-          {/* Month nav */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
             <button onClick={() => navMonth(-1)}
-              style={{ width: 28, height: 28, borderRadius: 8, border: '1px solid rgba(61,42,53,.12)', background: '#fff', cursor: 'pointer', fontSize: 14 }}>
+              style={{ width: 30, height: 30, borderRadius: 8, border: '1px solid rgba(61,42,53,.12)', background: '#fff', cursor: 'pointer', fontSize: 15 }}>
               ‹
             </button>
-            <button onClick={() => navMonth(1)}
-              disabled={isCurrentMonth}
-              style={{ width: 28, height: 28, borderRadius: 8, border: '1px solid rgba(61,42,53,.12)', background: '#fff', cursor: isCurrentMonth ? 'not-allowed' : 'pointer', fontSize: 14, opacity: isCurrentMonth ? 0.35 : 1 }}>
+            <button onClick={() => navMonth(1)} disabled={isCurrentMonth}
+              style={{ width: 30, height: 30, borderRadius: 8, border: '1px solid rgba(61,42,53,.12)', background: '#fff', cursor: isCurrentMonth ? 'not-allowed' : 'pointer', fontSize: 15, opacity: isCurrentMonth ? 0.3 : 1 }}>
               ›
             </button>
           </div>
         </div>
 
-        {/* Stats row */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+        {/* Stats */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
           {[
-            { label: 'Present', value: present, ...STATUS_CONFIG.present },
-            { label: 'Absent',  value: absent,  ...STATUS_CONFIG.absent  },
-            { label: 'Holidays',value: holiday, ...STATUS_CONFIG.holiday },
+            { label: 'Present',  value: present, ...STATUS_CONFIG.present },
+            { label: 'Absent',   value: absent,  ...STATUS_CONFIG.absent  },
+            { label: 'Holidays', value: holiday, ...STATUS_CONFIG.holiday },
           ].map(s => (
-            <div key={s.label} style={{ background: s.bg, border: `1px solid ${s.border}`, borderRadius: 10, padding: '10px 14px' }}>
-              <div style={{ fontSize: 8, letterSpacing: 2, textTransform: 'uppercase', color: s.c, opacity: 0.7, marginBottom: 2 }}>{s.label}</div>
-              <div style={{ fontFamily: 'Georgia, serif', fontSize: 22, fontWeight: 300, color: s.c }}>{s.value}</div>
+            <div key={s.label} style={{ background: s.bg, border: `1px solid ${s.border}`, borderRadius: 12, padding: '12px 16px' }}>
+              <div style={{ fontSize: 8, letterSpacing: 2, textTransform: 'uppercase', color: s.c, opacity: 0.65, marginBottom: 4 }}>{s.label}</div>
+              <div style={{ fontFamily: 'Georgia, serif', fontSize: 28, fontWeight: 300, color: s.c, lineHeight: 1 }}>{s.value}</div>
             </div>
           ))}
         </div>
 
-        {/* Calendar */}
-        <div style={{ background: '#fff', border: '1px solid rgba(61,42,53,.09)', borderRadius: 14, padding: '14px 12px' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', marginBottom: 6 }}>
+        {/* Calendar grid — takes remaining space */}
+        <div style={{ flex: 1, background: '#fff', border: '1px solid rgba(61,42,53,.09)', borderRadius: 16, padding: '16px 14px', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+          {/* Day headers */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', marginBottom: 8 }}>
             {DAYS.map(d => (
-              <div key={d} style={{ textAlign: 'center', fontSize: 8, fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase', color: '#d4bfc5', paddingBottom: 6 }}>{d}</div>
+              <div key={d} style={{ textAlign: 'center', fontSize: 9, fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase', color: '#d4bfc5' }}>{d}</div>
             ))}
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: 4 }}>
+          {/* Day cells */}
+          <div style={{ flex: 1, display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gridTemplateRows: `repeat(6, 1fr)`, gap: 5 }}>
             {Array.from({ length: firstDay }).map((_, i) => <div key={`e${i}`} />)}
             {Array.from({ length: daysInMonth }).map((_, i) => {
               const day     = i + 1
@@ -235,48 +236,53 @@ export default function AttendancePage() {
                 <div key={day}
                   onClick={() => !isFuture && handleDayClick(dateStr)}
                   style={{
-                    height: 40, borderRadius: 8, display: 'flex', flexDirection: 'column',
-                    alignItems: 'center', justifyContent: 'center', gap: 2,
+                    borderRadius: 10, display: 'flex', flexDirection: 'column',
+                    alignItems: 'center', justifyContent: 'center', gap: 3,
                     cursor: isFuture ? 'not-allowed' : 'pointer',
                     border: `1.5px solid ${cfg ? cfg.border : isSel ? '#a8c9ae' : isToday ? '#d4bfc5' : 'transparent'}`,
                     background: cfg ? cfg.bg : isSel ? '#f0f8f0' : 'transparent',
-                    opacity: isFuture ? 0.25 : 1,
+                    opacity: isFuture ? 0.22 : 1,
+                    transition: '.12s',
                   }}>
-                  <span style={{ fontSize: 12, fontWeight: isToday ? 700 : 400, color: cfg ? cfg.c : isToday ? '#5a8c63' : '#7a5c68' }}>
+                  <span style={{ fontSize: 13, fontWeight: isToday ? 700 : 400, color: cfg ? cfg.c : isToday ? '#5a8c63' : '#7a5c68' }}>
                     {day}
                   </span>
-                  {cfg && <div style={{ width: 4, height: 4, borderRadius: '50%', background: cfg.c }} />}
+                  {cfg && <div style={{ width: 5, height: 5, borderRadius: '50%', background: cfg.c }} />}
                 </div>
               )
             })}
           </div>
         </div>
+      </div>
+
+      {/* ── RIGHT: Log + History panel ── */}
+      <div style={{ background: '#fff', borderLeft: '1px solid rgba(61,42,53,.08)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
         {/* Log form */}
-        <div style={{ background: '#fff', border: '1px solid rgba(61,42,53,.09)', borderRadius: 14, padding: 16 }}>
-          <p style={{ fontSize: 8, fontWeight: 600, letterSpacing: 2, textTransform: 'uppercase', color: '#b09aa4', marginBottom: 12, margin: '0 0 12px' }}>
+        <div style={{ padding: '28px 22px 20px', borderBottom: '1px solid rgba(61,42,53,.08)' }}>
+          <p style={{ fontSize: 8, fontWeight: 600, letterSpacing: 2, textTransform: 'uppercase', color: '#b09aa4', margin: '0 0 14px' }}>
             Log attendance
           </p>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
             <input type="date" value={selDate} max={todayIso}
               onChange={e => { setSelDate(e.target.value); setSelStatus(null) }}
-              style={{ flex: 1, padding: '7px 10px', borderRadius: 8, border: '1px solid rgba(61,42,53,.12)', fontSize: 13, fontFamily: 'inherit', outline: 'none', background: '#fdf7f0' }} />
-            <span style={{ fontSize: 11, color: '#b09aa4', whiteSpace: 'nowrap' }}>{selDateFormatted}</span>
+              style={{ flex: 1, padding: '7px 10px', borderRadius: 8, border: '1px solid rgba(61,42,53,.12)', fontSize: 13, fontFamily: 'inherit', outline: 'none', background: '#fdf7f0', color: '#3d2a35' }} />
+            <span style={{ fontSize: 10.5, color: '#b09aa4', whiteSpace: 'nowrap' }}>{selDateFormatted}</span>
           </div>
 
-          <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
+          <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
             {(Object.entries(STATUS_CONFIG) as [Status, typeof STATUS_CONFIG[Status]][]).map(([key, cfg]) => (
               <button key={key}
                 onClick={() => setSelStatus(selStatus === key ? null : key)}
                 style={{
-                  flex: 1, padding: '9px 4px', borderRadius: 9, cursor: 'pointer',
+                  flex: 1, padding: '10px 4px', borderRadius: 10, cursor: 'pointer',
                   border: `1.5px solid ${selStatus === key ? cfg.border : 'rgba(61,42,53,.09)'}`,
                   background: selStatus === key ? cfg.bg : '#fdf7f0',
-                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
                   fontFamily: 'inherit', transition: '.15s',
                 }}>
-                <span style={{ fontSize: 16, color: selStatus === key ? cfg.c : '#b09aa4' }}>{cfg.icon}</span>
+                <span style={{ fontSize: 18, color: selStatus === key ? cfg.c : '#b09aa4' }}>{cfg.icon}</span>
                 <span style={{ fontSize: 9, fontWeight: 600, color: selStatus === key ? cfg.c : '#b09aa4' }}>{cfg.label}</span>
               </button>
             ))}
@@ -286,10 +292,10 @@ export default function AttendancePage() {
             onClick={saveAttendance}
             disabled={!selStatus || saving || !user}
             style={{
-              width: '100%', padding: '9px', borderRadius: 8, border: 'none',
+              width: '100%', padding: '10px', borderRadius: 9, border: 'none',
               cursor: selStatus && !saving ? 'pointer' : 'not-allowed',
               fontFamily: 'Georgia, serif', fontSize: 13, fontStyle: 'italic',
-              background: selStatus ? '#3d2a35' : '#e8dde2', color: selStatus ? '#fff' : '#b09aa4',
+              background: selStatus ? '#3d2a35' : '#ede6e9', color: selStatus ? '#fff' : '#b09aa4',
               opacity: saving ? 0.6 : 1, transition: '.18s',
             }}>
             {saving ? 'Saving…' : saved ? 'Logged ✓' : selStatus ? `Mark as ${STATUS_CONFIG[selStatus].label}` : 'Select a status first'}
@@ -300,7 +306,6 @@ export default function AttendancePage() {
               Attendance logged — showing up matters 🌿
             </div>
           )}
-
           {error && (
             <div style={{ marginTop: 8, padding: '5px 10px', borderRadius: 6, fontSize: 11, background: '#fde8ee', border: '1px solid #e8a0b0', color: '#d4607a' }}>
               {error}
@@ -308,8 +313,8 @@ export default function AttendancePage() {
           )}
         </div>
 
-        {/* History */}
-        <div style={{ background: '#fff', border: '1px solid rgba(61,42,53,.09)', borderRadius: 14, padding: 16 }}>
+        {/* History — scrollable */}
+        <div style={{ flex: 1, overflowY: 'auto', padding: '16px 22px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
             <p style={{ fontSize: 8, fontWeight: 600, letterSpacing: 2, textTransform: 'uppercase', color: '#b09aa4', margin: 0 }}>
               {records.length} record{records.length !== 1 ? 's' : ''} · {MONTHS[viewMonth.month]}
@@ -318,19 +323,19 @@ export default function AttendancePage() {
           </div>
 
           {loading ? (
-            <div style={{ textAlign: 'center', padding: 20, color: '#d4bfc5', fontSize: 12 }}>Loading…</div>
+            <div style={{ textAlign: 'center', padding: 30, color: '#d4bfc5', fontSize: 12 }}>Loading…</div>
           ) : records.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: 20, color: '#d4bfc5', fontSize: 12, fontStyle: 'italic' }}>
+            <div style={{ textAlign: 'center', padding: 30, color: '#d4bfc5', fontSize: 12, fontStyle: 'italic' }}>
               Nothing logged for {MONTHS[viewMonth.month]} yet
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
               {records.map(rec => {
                 const cfg = STATUS_CONFIG[rec.status]
                 const d   = new Date(rec.date + 'T00:00:00')
                 return (
-                  <div key={rec.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 8px', borderRadius: 9, background: '#fdf7f0' }}>
-                    <div style={{ width: 28, height: 28, borderRadius: 7, background: cfg.bg, border: `1px solid ${cfg.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, color: cfg.c, flexShrink: 0 }}>
+                  <div key={rec.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 10px', borderRadius: 10, background: '#fdf7f0' }}>
+                    <div style={{ width: 30, height: 30, borderRadius: 8, background: cfg.bg, border: `1px solid ${cfg.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, color: cfg.c, flexShrink: 0 }}>
                       {cfg.icon}
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
@@ -345,7 +350,7 @@ export default function AttendancePage() {
                       {cfg.label}
                     </span>
                     <button onClick={() => deleteRecord(rec.id)}
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#d4bfc5', fontSize: 13, padding: '2px 4px', borderRadius: 4 }}>
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#d4bfc5', fontSize: 14, padding: '2px 4px', borderRadius: 4 }}>
                       🗑
                     </button>
                   </div>
@@ -354,8 +359,8 @@ export default function AttendancePage() {
             </div>
           )}
         </div>
-
       </div>
+
     </div>
   )
 }
