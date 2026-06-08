@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
+import { getMoodPrediction } from '@/lib/getMoodPrediction'
 
 function addDays(date: Date, n: number) {
   const d = new Date(date); d.setDate(d.getDate() + n); return d
@@ -108,7 +109,68 @@ const ViewOnlyIcon = ({ size = 12, color = '#d4607a' }: { size?: number; color?:
   </svg>
 )
 
-// ── Phase icon lookup ──────────────────────────────────────────────────────
+const BrainIcon = ({ size = 14, color = '#d4607a' }: { size?: number; color?: string }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M9.5 2a4.5 4.5 0 0 1 4.47 4H14a3 3 0 0 1 3 3 3 3 0 0 1-1.5 2.6A3.5 3.5 0 0 1 12 15v5" stroke={color} strokeWidth="1.5" strokeLinecap="round"/>
+    <path d="M9.5 2A4.5 4.5 0 0 0 5 6.5v.02A3 3 0 0 0 3 9a3 3 0 0 0 1.5 2.6A3.5 3.5 0 0 0 8 15v5" stroke={color} strokeWidth="1.5" strokeLinecap="round"/>
+    <path d="M12 20h-2" stroke={color} strokeWidth="1.5" strokeLinecap="round"/>
+    <path d="M8 9h.01M12 7h.01M16 9h.01" stroke={color} strokeWidth="2" strokeLinecap="round"/>
+  </svg>
+)
+
+// category icon for solutions
+const CategoryIcon = ({ cat, size = 14, color }: { cat: string; size?: number; color: string }) => {
+  if (cat === 'movement') return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <circle cx="12" cy="5" r="2" fill={color}/>
+      <path d="M10 22v-6l-3-4 3-3 2 2 2-2 3 3-3 4v6" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  )
+  if (cat === 'nutrition') return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <path d="M18 8c0 4-3 7-6 8s-6-4-6-8a6 6 0 0 1 12 0z" fill={color} opacity="0.8"/>
+      <path d="M12 16v5M9 21h6" stroke={color} strokeWidth="1.5" strokeLinecap="round"/>
+    </svg>
+  )
+  if (cat === 'mindset') return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <circle cx="12" cy="12" r="9" stroke={color} strokeWidth="1.5"/>
+      <path d="M12 8v4l3 3" stroke={color} strokeWidth="1.5" strokeLinecap="round"/>
+    </svg>
+  )
+  if (cat === 'social') return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <circle cx="9" cy="7" r="3" stroke={color} strokeWidth="1.5"/>
+      <circle cx="17" cy="9" r="2.5" stroke={color} strokeWidth="1.5"/>
+      <path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6" stroke={color} strokeWidth="1.5" strokeLinecap="round"/>
+      <path d="M17 14c1.7 0 4 1.3 4 4" stroke={color} strokeWidth="1.5" strokeLinecap="round"/>
+    </svg>
+  )
+  // self-care
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" stroke={color} strokeWidth="1.5" fill="none"/>
+    </svg>
+  )
+}
+
+const EnergyBar = ({ level, color }: { level: 'low' | 'medium' | 'high'; color: string }) => {
+  const bars = level === 'low' ? 1 : level === 'medium' ? 2 : 3
+  return (
+    <div style={{ display: 'flex', gap: '3px', alignItems: 'flex-end' }}>
+      {[1, 2, 3].map(n => (
+        <div key={n} style={{
+          width: 5,
+          height: 6 + n * 4,
+          borderRadius: '2px',
+          background: n <= bars ? color : `${color}28`,
+          transition: 'background 0.2s',
+        }} />
+      ))}
+    </div>
+  )
+}
+
 const PhaseIcon = ({ phase, color, size = 20 }: { phase: string; color: string; size?: number }) => {
   if (phase === 'menstrual')  return <FlowerIcon size={size} color={color} />
   if (phase === 'follicular') return <LeafIcon size={size} color={color} />
@@ -198,6 +260,19 @@ export default async function SharedPage({ params }: { params: Promise<{ code: s
     else { phase = 'luteal'; phaseTip = 'Wind down, nourish yourself, and rest.' }
   }
 
+  // ── Build context and call OpenAI ──────────────────────────────────────
+  const recentSymptoms = symptoms?.flatMap(s => s.symptoms ?? []).slice(0, 12) ?? []
+  const recentMoods = moods?.map(m => m.mood).filter(Boolean).slice(0, 8) ?? []
+  const recentPainTypes = painLogs?.map(p => p.type).filter(Boolean) ?? []
+  const maxRecentPain = painLogs?.reduce((max, p) => Math.max(max, p.severity ?? 0), 0) ?? 0
+
+  const prediction = phase !== 'unknown'
+    ? await getMoodPrediction({
+        phase, phaseDay, avgCycle, avgPeriod,
+        recentSymptoms, recentMoods, recentPainTypes, maxRecentPain,
+      })
+    : null
+
   const phaseConfig: Record<string, { label: string; c: string; bg: string; border: string; icoBg: string }> = {
     menstrual:  { label: 'menstrual phase',  c: '#d4607a', bg: '#fde8ee', border: 'rgba(212,96,122,0.2)',  icoBg: 'rgba(212,96,122,0.12)' },
     follicular: { label: 'follicular phase', c: '#5a8c63', bg: '#edf6ee', border: 'rgba(90,140,99,0.2)',   icoBg: 'rgba(90,140,99,0.12)'  },
@@ -206,6 +281,14 @@ export default async function SharedPage({ params }: { params: Promise<{ code: s
     unknown:    { label: 'phase unknown',    c: '#b09aa4', bg: '#f5f0f2', border: 'rgba(176,154,164,0.2)', icoBg: 'rgba(176,154,164,0.12)' },
   }
   const pc = phaseConfig[phase]
+
+  const categoryColors: Record<string, { c: string; bg: string; border: string }> = {
+    movement:   { c: '#5a8c63', bg: '#edf6ee', border: 'rgba(90,140,99,0.18)' },
+    nutrition:  { c: '#b8860b', bg: '#fef8e7', border: 'rgba(184,134,11,0.18)' },
+    mindset:    { c: '#9b7ec8', bg: '#f3edfb', border: 'rgba(155,126,200,0.18)' },
+    social:     { c: '#d4607a', bg: '#fde8ee', border: 'rgba(212,96,122,0.18)' },
+    'self-care':{ c: '#c17fa0', bg: '#faeef5', border: 'rgba(193,127,160,0.18)' },
+  }
 
   const flowColors: Record<string, { c: string; bg: string }> = {
     spotting:   { c: '#e8a0b0', bg: '#fff5f7' },
@@ -324,6 +407,137 @@ export default async function SharedPage({ params }: { params: Promise<{ code: s
             </div>
           ))}
         </div>
+
+        {/* ── AI Mood Prediction ── */}
+        {prediction && (
+          <>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', margin: '24px 0', opacity: 0.5 }}>
+              <div style={{ flex: 1, height: '1px', background: 'rgba(212,96,122,0.2)' }} />
+              <span style={{ fontSize: '10px', letterSpacing: '0.15em', color: '#d4607a', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                <BrainIcon size={12} color="#d4607a" />
+                TODAY&apos;S FORECAST
+              </span>
+              <div style={{ flex: 1, height: '1px', background: 'rgba(212,96,122,0.2)' }} />
+            </div>
+
+            <div style={{
+              background: 'white',
+              borderRadius: '20px',
+              padding: '20px',
+              marginBottom: '16px',
+              border: `1px solid ${pc.border}`,
+              position: 'relative',
+              overflow: 'hidden',
+            }}>
+              {/* subtle gradient wash in the phase color */}
+              <div style={{
+                position: 'absolute', inset: 0, borderRadius: '20px',
+                background: `linear-gradient(135deg, ${pc.bg} 0%, white 55%)`,
+                opacity: 0.5, pointerEvents: 'none',
+              }} />
+
+              <div style={{ position: 'relative' }}>
+                {/* headline + energy */}
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '14px', gap: '12px' }}>
+                  <div>
+                    <div style={{
+                      fontSize: '10px', letterSpacing: '0.12em', color: pc.c,
+                      textTransform: 'uppercase', fontWeight: 600, marginBottom: '5px',
+                      display: 'flex', alignItems: 'center', gap: '5px',
+                    }}>
+                      <BrainIcon size={11} color={pc.c} />
+                      AI mood forecast
+                    </div>
+                    <div style={{
+                      fontFamily: 'Fraunces, Georgia, serif',
+                      fontSize: '20px', fontWeight: 300, color: '#3d1a26', lineHeight: 1.3,
+                    }}>
+                      {prediction.headline}
+                    </div>
+                  </div>
+                  <div style={{
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px',
+                    background: pc.icoBg, borderRadius: '12px', padding: '10px 12px', flexShrink: 0,
+                  }}>
+                    <EnergyBar level={prediction.energy} color={pc.c} />
+                    <div style={{ fontSize: '9px', letterSpacing: '0.1em', color: pc.c, fontWeight: 600, textTransform: 'uppercase' }}>
+                      {prediction.energy}
+                    </div>
+                  </div>
+                </div>
+
+                {/* mood tags */}
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '18px' }}>
+                  {prediction.moods.map(mood => (
+                    <span key={mood} style={{
+                      background: pc.icoBg,
+                      border: `1px solid ${pc.border}`,
+                      borderRadius: '50px',
+                      padding: '5px 12px',
+                      fontSize: '12px',
+                      color: pc.c,
+                      fontWeight: 600,
+                      textTransform: 'capitalize',
+                    }}>
+                      {mood}
+                    </span>
+                  ))}
+                </div>
+
+                {/* solutions */}
+                <div style={{
+                  fontSize: '10px', letterSpacing: '0.12em', color: '#b09aa4',
+                  textTransform: 'uppercase', fontWeight: 600, marginBottom: '10px',
+                }}>
+                  suggested for today
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {prediction.solutions.map((sol, i) => {
+                    const cc = categoryColors[sol.category] ?? categoryColors['self-care']
+                    return (
+                      <div key={i} style={{
+                        display: 'flex', alignItems: 'flex-start', gap: '10px',
+                        padding: '11px 13px',
+                        background: cc.bg,
+                        border: `1px solid ${cc.border}`,
+                        borderRadius: '13px',
+                      }}>
+                        <div style={{
+                          width: 28, height: 28, borderRadius: '9px',
+                          background: `${cc.c}18`,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                          marginTop: '1px',
+                        }}>
+                          <CategoryIcon cat={sol.category} size={14} color={cc.c} />
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: '9px', letterSpacing: '0.12em', color: cc.c, fontWeight: 700, textTransform: 'uppercase', marginBottom: '3px' }}>
+                            {sol.category}
+                          </div>
+                          <div style={{ fontSize: '12px', color: '#3d1a26', lineHeight: 1.5 }}>
+                            {sol.tip}
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+
+                {/* disclaimer */}
+                <div style={{
+                  marginTop: '14px', fontSize: '10px', color: '#c9a0b0',
+                  display: 'flex', alignItems: 'center', gap: '5px',
+                }}>
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none">
+                    <circle cx="12" cy="12" r="10" stroke="#c9a0b0" strokeWidth="1.5"/>
+                    <path d="M12 8v4M12 16h.01" stroke="#c9a0b0" strokeWidth="1.5" strokeLinecap="round"/>
+                  </svg>
+                  AI-generated based on cycle phase · not medical advice
+                </div>
+              </div>
+            </div>
+          </>
+        )}
 
         {/* ── Divider ── */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', margin: '24px 0', opacity: 0.5 }}>
