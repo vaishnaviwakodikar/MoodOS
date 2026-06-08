@@ -3,11 +3,13 @@
 import { useState, useEffect } from 'react'
 
 export function useTheme() {
-  const [theme, setTheme] = useState<'dark' | 'light'>('dark')
+  // ✅ Default is 'light' — no dark flash on first paint
+  const [theme, setTheme] = useState<'dark' | 'light'>('light')
 
   useEffect(() => {
-    const saved = localStorage.getItem('moodos-theme') as 'dark' | 'light'
-    if (saved) setTheme(saved)
+    const saved = localStorage.getItem('moodos-theme') as 'dark' | 'light' | null
+    // ✅ Only apply saved value if it's actually valid
+    if (saved === 'dark' || saved === 'light') setTheme(saved)
   }, [])
 
   const toggle = () => {

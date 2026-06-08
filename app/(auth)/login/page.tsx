@@ -239,7 +239,7 @@ export default function LoginPage() {
       .from('profiles')
       .select('onboarded')
       .eq('id', userId)
-      .single()
+      .single() as { data: { onboarded: boolean } | null, error: unknown }
 
     if (!profile?.onboarded) {
       setOnboardingUserId(userId)
