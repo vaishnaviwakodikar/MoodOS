@@ -1,4 +1,4 @@
-/* globals.css — imports MUST be first
+globals.css — imports MUST be first
 @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;1,9..144,300;1,9..144,400&family=DM+Sans:wght@300;400;500;600&display=swap');
 @import url('https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css');
 @import "tailwindcss";
@@ -44,4 +44,4 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(127, 119, 221, 0.6);
-} */
+}
