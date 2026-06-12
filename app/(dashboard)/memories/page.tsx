@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase";
 
 const supabase = createClient();
@@ -12,7 +12,6 @@ type DailyPhoto = {
   caption: string | null;
   taken_at: string;
   created_at: string;
-  is_favorite?: boolean | null;
 };
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -34,10 +33,6 @@ function groupByMonth(arr: DailyPhoto[]) {
 function isToday(dateStr: string) {
   return dateStr === new Date().toISOString().split("T")[0];
 }
-function matchesSearch(p: DailyPhoto, q: string) {
-  if (!q.trim()) return true;
-  return (p.caption ?? "").toLowerCase().includes(q.trim().toLowerCase());
-}
 
 // ── Memory View / Edit Modal ──────────────────────────────────────────────────
 function MemoryViewModal({
@@ -45,19 +40,11 @@ function MemoryViewModal({
   onClose,
   onUpdate,
   onDelete,
-  onPrev,
-  onNext,
-  hasPrev,
-  hasNext,
 }: {
   photo: DailyPhoto;
   onClose: () => void;
   onUpdate: (updated: DailyPhoto) => void;
   onDelete: (id: string) => void;
-  onPrev: () => void;
-  onNext: () => void;
-  hasPrev: boolean;
-  hasNext: boolean;
 }) {
   const canEdit = isToday(photo.taken_at);
   const [editing, setEditing] = useState(false);
@@ -65,27 +52,6 @@ function MemoryViewModal({
   const [saving, setSaving] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [favBusy, setFavBusy] = useState(false);
-
-  // Reset local edit state when the underlying photo changes (e.g. via nav)
-  useEffect(() => {
-    setCaption(photo.caption ?? "");
-    setEditing(false);
-    setConfirmDelete(false);
-    setError(null);
-  }, [photo.id]);
-
-  // Keyboard navigation: arrows + escape
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (editing) return; // don't hijack typing
-      if (e.key === "Escape") onClose();
-      if (e.key === "ArrowLeft" && hasPrev) onPrev();
-      if (e.key === "ArrowRight" && hasNext) onNext();
-    };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [editing, hasPrev, hasNext, onPrev, onNext, onClose]);
 
   const handleSave = async () => {
     setSaving(true);
@@ -102,18 +68,6 @@ function MemoryViewModal({
     setEditing(false);
   };
 
-  const handleToggleFavorite = async () => {
-    setFavBusy(true);
-    const { data, error: err } = await (supabase as any)
-  .from("daily_photos")
-      .update({ is_favorite: !photo.is_favorite })
-      .eq("id", photo.id)
-      .select()
-      .single();
-    setFavBusy(false);
-    if (!err && data) onUpdate(data as DailyPhoto);
-  };
-
   const handleDelete = async () => {
     const urlParts = photo.photo_url.split("/daily-photos/");
     const storagePath = urlParts[1];
@@ -123,48 +77,12 @@ function MemoryViewModal({
     onClose();
   };
 
-  const handleDownload = async () => {
-    try {
-      const res = await fetch(photo.photo_url);
-      const blob = await res.blob();
-      const ext = (photo.photo_url.split(".").pop() || "jpg").split("?")[0];
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download = `memory-${photo.taken_at}.${ext}`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(a.href);
-    } catch {
-      // fallback: open in new tab
-      window.open(photo.photo_url, "_blank");
-    }
-  };
-
   return (
     <div style={styles.modalBg} onClick={onClose}>
       <div style={styles.viewModalCard} onClick={(e) => e.stopPropagation()}>
 
         {/* Close */}
         <button style={styles.viewClose} onClick={onClose}>✕</button>
-
-        {/* Favorite toggle */}
-        <button
-          style={{ ...styles.viewFav, ...(photo.is_favorite ? styles.viewFavActive : {}) }}
-          onClick={handleToggleFavorite}
-          disabled={favBusy}
-          title={photo.is_favorite ? "Remove from favorites" : "Add to favorites"}
-        >
-          {photo.is_favorite ? "♥" : "♡"}
-        </button>
-
-        {/* Prev / Next nav */}
-        {hasPrev && (
-          <button style={styles.viewNavLeft} onClick={onPrev} title="Previous memory">‹</button>
-        )}
-        {hasNext && (
-          <button style={styles.viewNavRight} onClick={onNext} title="Next memory">›</button>
-        )}
 
         {/* Photo */}
         <div style={styles.viewPhotoWrap}>
@@ -208,9 +126,6 @@ function MemoryViewModal({
                 {!canEdit && (
                   <span style={styles.lockedNote}>✦ Editable only on the day it was taken</span>
                 )}
-                <button style={styles.downloadBtn} onClick={handleDownload}>
-                  Download
-                </button>
                 {confirmDelete ? (
                   <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                     <span style={{ fontSize: 11, color: "#b08080" }}>Sure?</span>
@@ -250,7 +165,6 @@ function MemoryCard({ photo, onClick }: { photo: DailyPhoto; onClick: () => void
         <div style={styles.photoOverlay} />
         <span style={styles.photoDate}>{fmtDate(photo.taken_at)}</span>
         {isToday(photo.taken_at) && <span style={styles.todayBadge}>today</span>}
-        {photo.is_favorite && <span style={styles.favBadge}>♥</span>}
       </div>
       {photo.caption && (
         <div style={styles.cardBody}>
@@ -262,51 +176,42 @@ function MemoryCard({ photo, onClick }: { photo: DailyPhoto; onClick: () => void
 }
 
 // ── Add Memory Modal ─────────────────────────────────────────────────────────
-function AddMemoryModal({ onClose, onAdd }: { onClose: () => void; onAdd: (photos: DailyPhoto[]) => void }) {
+function AddMemoryModal({ onClose, onAdd }: { onClose: () => void; onAdd: (photo: DailyPhoto) => void }) {
   const [caption, setCaption] = useState("");
   const [takenAt, setTakenAt] = useState(new Date().toISOString().split("T")[0]);
-  const [files, setFiles] = useState<File[]>([]);
-  const [previews, setPreviews] = useState<string[]>([]);
+  const [file, setFile] = useState<File | null>(null);
+  const [preview, setPreview] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const list = Array.from(e.target.files ?? []);
-    if (!list.length) return;
-    setFiles(list);
-    setPreviews([]);
-    list.forEach((f) => {
-      const reader = new FileReader();
-      reader.onload = (ev) => setPreviews((prev) => [...prev, ev.target?.result as string]);
-      reader.readAsDataURL(f);
-    });
+    const f = e.target.files?.[0];
+    if (!f) return;
+    setFile(f);
+    const reader = new FileReader();
+    reader.onload = (ev) => setPreview(ev.target?.result as string);
+    reader.readAsDataURL(f);
   };
 
   const handleSave = async () => {
-    if (!files.length) return setError("Please select at least one photo.");
+    if (!file) return setError("Please select a photo.");
     setSaving(true);
     setError(null);
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated.");
-
-      const rows: any[] = [];
-      for (const file of files) {
-        const ext = file.name.split(".").pop();
-        const path = `${user.id}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-        const { error: uploadErr } = await supabase.storage.from("daily-photos").upload(path, file);
-        if (uploadErr) throw uploadErr;
-        const { data: { publicUrl } } = supabase.storage.from("daily-photos").getPublicUrl(path);
-        rows.push({ user_id: user.id, photo_url: publicUrl, caption: caption.trim() || null, taken_at: takenAt });
-      }
-
+      const ext = file.name.split(".").pop();
+      const path = `${user.id}/${Date.now()}.${ext}`;
+      const { error: uploadErr } = await supabase.storage.from("daily-photos").upload(path, file);
+      if (uploadErr) throw uploadErr;
+      const { data: { publicUrl } } = supabase.storage.from("daily-photos").getPublicUrl(path);
       const { data, error: insertErr } = await (supabase as any)
   .from("daily_photos")
-        .insert(rows)
-        .select();
+        .insert({ user_id: user.id, photo_url: publicUrl, caption: caption.trim() || null, taken_at: takenAt })
+        .select()
+        .single();
       if (insertErr) throw insertErr;
-
-      onAdd((data as DailyPhoto[]) ?? []);
+      onAdd(data as DailyPhoto);
       onClose();
     } catch (err: any) {
       setError(err.message ?? "Something went wrong.");
@@ -322,34 +227,25 @@ function AddMemoryModal({ onClose, onAdd }: { onClose: () => void; onAdd: (photo
           <span style={styles.modalTitle}>New memory ♡</span>
           <button style={styles.modalClose} onClick={onClose}>✕</button>
         </div>
-        <span style={styles.fieldLabel}>Photo{files.length > 1 ? "s" : ""}</span>
+        <span style={styles.fieldLabel}>Photo</span>
         <label style={styles.uploadArea}>
-          <input type="file" accept="image/*" multiple style={{ display: "none" }} onChange={handleFile} />
-          {previews.length ? (
-            <div style={styles.uploadPreviewGrid}>
-              {previews.map((src, i) => (
-                <img key={i} src={src} alt={`preview ${i + 1}`} style={styles.uploadPreviewThumb} />
-              ))}
-            </div>
+          <input type="file" accept="image/*" style={{ display: "none" }} onChange={handleFile} />
+          {preview ? (
+            <img src={preview} alt="preview" style={styles.uploadPreview} />
           ) : (
             <>
               <i className="ti ti-camera" style={{ fontSize: 22, color: "#e8c4c4" }} aria-hidden="true" />
-              <span style={{ fontSize: 11, color: "#c9a8a8" }}>Tap to add one or more photos</span>
+              <span style={{ fontSize: 11, color: "#c9a8a8" }}>Tap to add a photo</span>
             </>
           )}
         </label>
-        {files.length > 1 && (
-          <span style={{ fontSize: 11, color: "#b08080" }}>
-            {files.length} photos selected — same caption and date will apply to all.
-          </span>
-        )}
         <span style={styles.fieldLabel}>Caption</span>
         <input style={styles.fieldInput} placeholder="What happened?" value={caption} onChange={(e) => setCaption(e.target.value)} />
         <span style={styles.fieldLabel}>Date</span>
         <input type="date" style={styles.fieldInput} value={takenAt} max={new Date().toISOString().split("T")[0]} onChange={(e) => setTakenAt(e.target.value)} />
         {error && <p style={{ fontSize: 12, color: "#c0485a" }}>{error}</p>}
         <button style={{ ...styles.saveBtn, opacity: saving ? 0.7 : 1 }} onClick={handleSave} disabled={saving}>
-          {saving ? "Saving…" : `Save memor${files.length > 1 ? "ies" : "y"} ✦`}
+          {saving ? "Saving…" : "Save memory ✦"}
         </button>
       </div>
     </div>
@@ -361,10 +257,7 @@ export default function Memories() {
   const [photos, setPhotos] = useState<DailyPhoto[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [search, setSearch] = useState("");
-  const [favoritesOnly, setFavoritesOnly] = useState(false);
-  const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("newest");
+  const [selected, setSelected] = useState<DailyPhoto | null>(null);
 
   const fetchPhotos = useCallback(async () => {
     setLoading(true);
@@ -380,33 +273,14 @@ export default function Memories() {
 
   const handleUpdate = (updated: DailyPhoto) => {
     setPhotos((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
+    setSelected(updated);
   };
 
   const handleDelete = (id: string) => {
     setPhotos((prev) => prev.filter((p) => p.id !== id));
-    if (selectedId === id) setSelectedId(null);
   };
 
-  // Filter + sort, applied across the whole collection
-  const filtered = useMemo(() => {
-    return photos
-      .filter((p) => matchesSearch(p, search))
-      .filter((p) => !favoritesOnly || !!p.is_favorite)
-      .sort((a, b) =>
-        sortOrder === "newest"
-          ? b.taken_at.localeCompare(a.taken_at)
-          : a.taken_at.localeCompare(b.taken_at)
-      );
-  }, [photos, search, favoritesOnly, sortOrder]);
-
-  const grouped = useMemo(() => groupByMonth(filtered), [filtered]);
-
-  const selectedIndex = selectedId ? filtered.findIndex((p) => p.id === selectedId) : -1;
-  const selected = selectedIndex >= 0 ? filtered[selectedIndex] : null;
-
-  const totalCount = photos.length;
-  const favCount = photos.filter((p) => p.is_favorite).length;
-  const thisMonthCount = photos.filter((p) => fmtMonth(p.taken_at) === fmtMonth(new Date().toISOString())).length;
+  const grouped = groupByMonth(photos);
 
   return (
     <>
@@ -415,7 +289,6 @@ export default function Memories() {
         @import url('https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css');
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { background: #fdf6f0; }
-        ::placeholder { color: #d8b8b8; }
       `}</style>
 
       <div style={styles.shell}>
@@ -425,45 +298,13 @@ export default function Memories() {
             Your <em style={{ fontStyle: "italic", color: "#c0485a" }}>photo memories</em>
           </h1>
           <p style={styles.pageSub}>Moments and the little things worth keeping. ♡</p>
-
-          {/* Stats */}
-          <div style={styles.statsRow}>
-            <div style={styles.statPill}>{totalCount} memor{totalCount === 1 ? "y" : "ies"}</div>
-            <div style={styles.statPill}>{thisMonthCount} this month</div>
-            <div style={styles.statPill}>♥ {favCount} favorite{favCount === 1 ? "" : "s"}</div>
-          </div>
-
-          {/* Controls */}
-          <div style={styles.controlsRow}>
-            <input
-              style={styles.searchInput}
-              placeholder="Search captions…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-            <button
-              style={{ ...styles.toggleBtn, ...(favoritesOnly ? styles.toggleBtnActive : {}) }}
-              onClick={() => setFavoritesOnly((v) => !v)}
-            >
-              {favoritesOnly ? "♥ Favorites" : "♡ Favorites"}
-            </button>
-            <button
-              style={styles.toggleBtn}
-              onClick={() => setSortOrder((o) => (o === "newest" ? "oldest" : "newest"))}
-            >
-              {sortOrder === "newest" ? "Newest first" : "Oldest first"}
-            </button>
+          <div style={styles.filterRow}>
             <button style={styles.addBtn} onClick={() => setShowModal(true)}>+ Add memory</button>
           </div>
-
           {loading ? (
             <div style={styles.empty}>Loading memories…</div>
-          ) : filtered.length === 0 ? (
-            <div style={styles.empty}>
-              {photos.length === 0
-                ? "No memories here yet… ♡"
-                : "No memories match your filters… ♡"}
-            </div>
+          ) : Object.keys(grouped).length === 0 ? (
+            <div style={styles.empty}>No memories here yet… ♡</div>
           ) : (
             Object.entries(grouped).map(([month, mems]) => (
               <div key={month} style={styles.monthGroup}>
@@ -474,7 +315,7 @@ export default function Memories() {
                 </div>
                 <div style={styles.grid}>
                   {mems.map((p) => (
-                    <MemoryCard key={p.id} photo={p} onClick={() => setSelectedId(p.id)} />
+                    <MemoryCard key={p.id} photo={p} onClick={() => setSelected(p)} />
                   ))}
                 </div>
               </div>
@@ -486,20 +327,16 @@ export default function Memories() {
       {showModal && (
         <AddMemoryModal
           onClose={() => setShowModal(false)}
-          onAdd={(ps) => setPhotos((prev) => [...ps, ...prev])}
+          onAdd={(p) => setPhotos((prev) => [p, ...prev])}
         />
       )}
 
       {selected && (
         <MemoryViewModal
           photo={selected}
-          onClose={() => setSelectedId(null)}
+          onClose={() => setSelected(null)}
           onUpdate={handleUpdate}
           onDelete={handleDelete}
-          onPrev={() => selectedIndex > 0 && setSelectedId(filtered[selectedIndex - 1].id)}
-          onNext={() => selectedIndex < filtered.length - 1 && setSelectedId(filtered[selectedIndex + 1].id)}
-          hasPrev={selectedIndex > 0}
-          hasNext={selectedIndex >= 0 && selectedIndex < filtered.length - 1}
         />
       )}
     </>
@@ -513,15 +350,8 @@ const styles: Record<string, React.CSSProperties> = {
   eyebrow:          { fontSize: 10, letterSpacing: "0.16em", textTransform: "uppercase", color: "#c9a8a8", marginBottom: 10 },
   pageTitle:        { fontFamily: "'Cormorant Garamond', serif", fontSize: "clamp(32px, 5vw, 46px)", fontWeight: 300, lineHeight: 1.1, color: "#2a1a1a" },
   pageSub:          { fontSize: 13, color: "#b08080", marginTop: 8, lineHeight: 1.6 },
-  // Stats
-  statsRow:         { display: "flex", gap: 10, marginTop: 22, flexWrap: "wrap" as const },
-  statPill:         { fontSize: 11, color: "#b08080", background: "#fff", border: "1px solid #f0ddd8", borderRadius: 100, padding: "6px 14px" },
-  // Controls
-  controlsRow:      { display: "flex", alignItems: "center", gap: 10, margin: "20px 0 28px", flexWrap: "wrap" as const },
-  searchInput:      { flex: "1 1 200px", minWidth: 160, background: "#fff", border: "1px solid #f0ddd8", borderRadius: 100, color: "#2a1a1a", fontFamily: "'DM Sans', sans-serif", fontSize: 12, padding: "9px 16px", outline: "none" },
-  toggleBtn:        { background: "#fff", border: "1px solid #f0ddd8", color: "#b08080", fontFamily: "'DM Sans', sans-serif", fontSize: 12, fontWeight: 500, padding: "9px 16px", borderRadius: 100, cursor: "pointer", whiteSpace: "nowrap" as const },
-  toggleBtnActive:  { background: "#fdf0ed", border: "1px solid #f0c4c8", color: "#c0485a" },
-  addBtn:           { marginLeft: "auto", background: "#c0485a", border: "none", color: "#fff", fontFamily: "'DM Sans', sans-serif", fontSize: 12, fontWeight: 500, padding: "9px 18px", borderRadius: 100, cursor: "pointer", whiteSpace: "nowrap" as const },
+  filterRow:        { display: "flex", alignItems: "center", margin: "28px 0" },
+  addBtn:           { marginLeft: "auto", background: "#c0485a", border: "none", color: "#fff", fontFamily: "'DM Sans', sans-serif", fontSize: 12, fontWeight: 500, padding: "8px 18px", borderRadius: 100, cursor: "pointer" },
   monthGroup:       { marginBottom: 44 },
   monthLabel:       { fontFamily: "'Cormorant Garamond', serif", fontSize: 14, fontStyle: "italic", color: "#c9a8a8", marginBottom: 18, display: "flex", alignItems: "center", gap: 10 },
   monthLine:        { flex: 1, height: 1, background: "#f0e0d8" },
@@ -537,16 +367,11 @@ const styles: Record<string, React.CSSProperties> = {
   photoOverlay:     { position: "absolute", inset: 0, background: "linear-gradient(to bottom, transparent 45%, rgba(42,20,20,.45))" },
   photoDate:        { position: "absolute", bottom: 10, right: 10, fontSize: 10, color: "rgba(255,240,235,.7)", letterSpacing: "0.04em" },
   todayBadge:       { position: "absolute", top: 10, left: 10, fontSize: 9, letterSpacing: "0.1em", textTransform: "uppercase", color: "#c0485a", background: "rgba(253,246,240,.9)", border: "1px solid #f0c4c8", borderRadius: 100, padding: "3px 9px" },
-  favBadge:         { position: "absolute", top: 10, right: 10, fontSize: 13, color: "#c0485a", background: "rgba(253,246,240,.9)", borderRadius: "50%", width: 24, height: 24, display: "flex", alignItems: "center", justifyContent: "center" },
   cardBody:         { padding: "12px 16px 14px" },
   cardTitle:        { fontFamily: "'Cormorant Garamond', serif", fontSize: 15, fontWeight: 400, lineHeight: 1.3, color: "#2a1a1a" },
   // View modal
   viewModalCard:    { position: "relative", width: "100%", maxWidth: 520, background: "#fdf6f0", border: "1px solid #f0ddd8", borderRadius: 24, overflow: "hidden", maxHeight: "92vh", display: "flex", flexDirection: "column" },
   viewClose:        { position: "absolute", top: 14, right: 14, zIndex: 2, background: "rgba(253,246,240,.85)", border: "none", borderRadius: "50%", width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, color: "#b08080", cursor: "pointer" },
-  viewFav:          { position: "absolute", top: 14, left: 14, zIndex: 2, background: "rgba(253,246,240,.85)", border: "none", borderRadius: "50%", width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, color: "#c9a8a8", cursor: "pointer" },
-  viewFavActive:    { color: "#c0485a" },
-  viewNavLeft:      { position: "absolute", top: "50%", left: 10, transform: "translateY(-50%)", zIndex: 2, background: "rgba(253,246,240,.85)", border: "none", borderRadius: "50%", width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, color: "#b08080", cursor: "pointer" },
-  viewNavRight:     { position: "absolute", top: "50%", right: 10, transform: "translateY(-50%)", zIndex: 2, background: "rgba(253,246,240,.85)", border: "none", borderRadius: "50%", width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, color: "#b08080", cursor: "pointer" },
   viewPhotoWrap:    { width: "100%", aspectRatio: "4/3", overflow: "hidden", background: "#fdf0ed", flexShrink: 0 },
   viewPhoto:        { width: "100%", height: "100%", objectFit: "cover", display: "block" },
   viewBody:         { padding: "20px 24px 24px", overflowY: "auto" },
@@ -554,7 +379,6 @@ const styles: Record<string, React.CSSProperties> = {
   viewCaption:      { fontFamily: "'Cormorant Garamond', serif", fontSize: 18, fontWeight: 300, lineHeight: 1.6, color: "#2a1a1a", marginBottom: 16 },
   viewActions:      { display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" as const, marginTop: 8 },
   editBtn:          { background: "none", border: "1px solid #f0c4c8", color: "#c0485a", fontFamily: "'DM Sans', sans-serif", fontSize: 12, padding: "6px 14px", borderRadius: 100, cursor: "pointer" },
-  downloadBtn:      { background: "none", border: "1px solid #f0ddd8", color: "#b08080", fontFamily: "'DM Sans', sans-serif", fontSize: 12, padding: "6px 14px", borderRadius: 100, cursor: "pointer" },
   lockedNote:       { fontSize: 11, color: "#d0b0b0", fontStyle: "italic" },
   deleteBtn:        { background: "none", border: "1px solid #f0ddd8", color: "#c9a8a8", fontFamily: "'DM Sans', sans-serif", fontSize: 12, padding: "6px 14px", borderRadius: 100, cursor: "pointer", marginLeft: "auto" },
   deleteBtnConfirm: { background: "#c0485a", border: "none", color: "#fff", fontSize: 11, borderRadius: 6, padding: "5px 12px", cursor: "pointer" },
@@ -570,7 +394,5 @@ const styles: Record<string, React.CSSProperties> = {
   fieldInput:       { width: "100%", background: "#fff", border: "1px solid #f0ddd8", borderRadius: 10, color: "#2a1a1a", fontFamily: "'DM Sans', sans-serif", fontSize: 13, padding: "10px 14px", outline: "none" },
   uploadArea:       { width: "100%", border: "1.5px dashed #f0c4c8", borderRadius: 12, padding: 22, display: "flex", flexDirection: "column", alignItems: "center", gap: 8, cursor: "pointer", background: "#fff" },
   uploadPreview:    { width: "100%", borderRadius: 8, aspectRatio: "4/3", objectFit: "cover" },
-  uploadPreviewGrid:{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(80px, 1fr))", gap: 8, width: "100%" },
-  uploadPreviewThumb:{ width: "100%", aspectRatio: "1/1", objectFit: "cover", borderRadius: 8 },
   saveBtn:          { marginTop: 6, width: "100%", background: "#c0485a", border: "none", color: "#fff", fontFamily: "'DM Sans', sans-serif", fontSize: 13, fontWeight: 500, padding: 12, borderRadius: 12, cursor: "pointer" },
 };
