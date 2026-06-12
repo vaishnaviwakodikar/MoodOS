@@ -523,7 +523,7 @@ export default function ProfilePage() {
       .gte('created_at', sevenDaysAgo.toISOString())
 
     const loggedDays = new Set(
-      (streakData || []).map(e => new Date(e.created_at).toDateString())
+      (streakData || []).map(e => new Date(e.created_at!).toDateString())
     )
     const dots: boolean[] = []
     for (let i = 6; i >= 0; i--) {
