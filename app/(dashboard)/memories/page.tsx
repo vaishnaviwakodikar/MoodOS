@@ -66,6 +66,7 @@ function MemoryViewModal({
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [favBusy, setFavBusy] = useState(false);
+  const [favError, setFavError] = useState<string | null>(null);
 
   // Reset local edit state when the underlying photo changes (e.g. via nav)
   useEffect(() => {
@@ -73,12 +74,13 @@ function MemoryViewModal({
     setEditing(false);
     setConfirmDelete(false);
     setError(null);
+    setFavError(null);
   }, [photo.id]);
 
   // Keyboard navigation: arrows + escape
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (editing) return; // don't hijack typing
+      if (editing) return;
       if (e.key === "Escape") onClose();
       if (e.key === "ArrowLeft" && hasPrev) onPrev();
       if (e.key === "ArrowRight" && hasNext) onNext();
@@ -91,7 +93,7 @@ function MemoryViewModal({
     setSaving(true);
     setError(null);
     const { data, error: err } = await (supabase as any)
-  .from("daily_photos")
+      .from("daily_photos")
       .update({ caption: caption.trim() || null })
       .eq("id", photo.id)
       .select()
@@ -102,16 +104,38 @@ function MemoryViewModal({
     setEditing(false);
   };
 
+  // ── FIX: proper error handling + optimistic update for snappy UX ──
   const handleToggleFavorite = async () => {
+    if (favBusy) return;
     setFavBusy(true);
+    setFavError(null);
+
+    const newValue = !photo.is_favorite;
+
+    // Optimistic update so the heart flips instantly
+    onUpdate({ ...photo, is_favorite: newValue });
+
     const { data, error: err } = await (supabase as any)
-  .from("daily_photos")
-      .update({ is_favorite: !photo.is_favorite })
+      .from("daily_photos")
+      .update({ is_favorite: newValue })
       .eq("id", photo.id)
       .select()
       .single();
+
     setFavBusy(false);
-    if (!err && data) onUpdate(data as DailyPhoto);
+
+    if (err) {
+      // Roll back the optimistic update on failure
+      onUpdate({ ...photo, is_favorite: !newValue });
+      setFavError(
+        err.message.includes("column")
+          ? 'Column missing — run: ALTER TABLE daily_photos ADD COLUMN is_favorite boolean DEFAULT false;'
+          : err.message
+      );
+      return;
+    }
+
+    if (data) onUpdate(data as DailyPhoto);
   };
 
   const handleDelete = async () => {
@@ -136,7 +160,6 @@ function MemoryViewModal({
       a.remove();
       URL.revokeObjectURL(a.href);
     } catch {
-      // fallback: open in new tab
       window.open(photo.photo_url, "_blank");
     }
   };
@@ -150,7 +173,11 @@ function MemoryViewModal({
 
         {/* Favorite toggle */}
         <button
-          style={{ ...styles.viewFav, ...(photo.is_favorite ? styles.viewFavActive : {}) }}
+          style={{
+            ...styles.viewFav,
+            ...(photo.is_favorite ? styles.viewFavActive : {}),
+            opacity: favBusy ? 0.5 : 1,
+          }}
           onClick={handleToggleFavorite}
           disabled={favBusy}
           title={photo.is_favorite ? "Remove from favorites" : "Add to favorites"}
@@ -174,6 +201,14 @@ function MemoryViewModal({
         {/* Body */}
         <div style={styles.viewBody}>
           <div style={styles.viewDate}>{fmtDate(photo.taken_at)}</div>
+
+          {/* Favorite error banner */}
+          {favError && (
+            <div style={styles.favErrorBanner}>
+              <span>⚠ {favError}</span>
+              <button style={styles.favErrorDismiss} onClick={() => setFavError(null)}>✕</button>
+            </div>
+          )}
 
           {editing ? (
             <>
@@ -301,7 +336,7 @@ function AddMemoryModal({ onClose, onAdd }: { onClose: () => void; onAdd: (photo
       }
 
       const { data, error: insertErr } = await (supabase as any)
-  .from("daily_photos")
+        .from("daily_photos")
         .insert(rows)
         .select();
       if (insertErr) throw insertErr;
@@ -369,7 +404,7 @@ export default function Memories() {
   const fetchPhotos = useCallback(async () => {
     setLoading(true);
     const { data, error } = await (supabase as any)
-  .from("daily_photos")
+      .from("daily_photos")
       .select("*")
       .order("taken_at", { ascending: false });
     if (!error && data) setPhotos(data as DailyPhoto[]);
@@ -378,16 +413,15 @@ export default function Memories() {
 
   useEffect(() => { fetchPhotos(); }, [fetchPhotos]);
 
-  const handleUpdate = (updated: DailyPhoto) => {
+  const handleUpdate = useCallback((updated: DailyPhoto) => {
     setPhotos((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
-  };
+  }, []);
 
-  const handleDelete = (id: string) => {
+  const handleDelete = useCallback((id: string) => {
     setPhotos((prev) => prev.filter((p) => p.id !== id));
-    if (selectedId === id) setSelectedId(null);
-  };
+    setSelectedId((prev) => (prev === id ? null : prev));
+  }, []);
 
-  // Filter + sort, applied across the whole collection
   const filtered = useMemo(() => {
     return photos
       .filter((p) => matchesSearch(p, search))
@@ -508,69 +542,71 @@ export default function Memories() {
 
 // ── Styles ────────────────────────────────────────────────────────────────────
 const styles: Record<string, React.CSSProperties> = {
-  shell:            { display: "flex", minHeight: "100vh", background: "#fdf6f0", fontFamily: "'DM Sans', sans-serif", color: "#3a2a2a" },
-  main:             { flex: 1, padding: "36px 36px 80px", overflowY: "auto" },
-  eyebrow:          { fontSize: 10, letterSpacing: "0.16em", textTransform: "uppercase", color: "#c9a8a8", marginBottom: 10 },
-  pageTitle:        { fontFamily: "'Cormorant Garamond', serif", fontSize: "clamp(32px, 5vw, 46px)", fontWeight: 300, lineHeight: 1.1, color: "#2a1a1a" },
-  pageSub:          { fontSize: 13, color: "#b08080", marginTop: 8, lineHeight: 1.6 },
+  shell:              { display: "flex", minHeight: "100vh", background: "#fdf6f0", fontFamily: "'DM Sans', sans-serif", color: "#3a2a2a" },
+  main:               { flex: 1, padding: "36px 36px 80px", overflowY: "auto" },
+  eyebrow:            { fontSize: 10, letterSpacing: "0.16em", textTransform: "uppercase", color: "#c9a8a8", marginBottom: 10 },
+  pageTitle:          { fontFamily: "'Cormorant Garamond', serif", fontSize: "clamp(32px, 5vw, 46px)", fontWeight: 300, lineHeight: 1.1, color: "#2a1a1a" },
+  pageSub:            { fontSize: 13, color: "#b08080", marginTop: 8, lineHeight: 1.6 },
   // Stats
-  statsRow:         { display: "flex", gap: 10, marginTop: 22, flexWrap: "wrap" as const },
-  statPill:         { fontSize: 11, color: "#b08080", background: "#fff", border: "1px solid #f0ddd8", borderRadius: 100, padding: "6px 14px" },
+  statsRow:           { display: "flex", gap: 10, marginTop: 22, flexWrap: "wrap" as const },
+  statPill:           { fontSize: 11, color: "#b08080", background: "#fff", border: "1px solid #f0ddd8", borderRadius: 100, padding: "6px 14px" },
   // Controls
-  controlsRow:      { display: "flex", alignItems: "center", gap: 10, margin: "20px 0 28px", flexWrap: "wrap" as const },
-  searchInput:      { flex: "1 1 200px", minWidth: 160, background: "#fff", border: "1px solid #f0ddd8", borderRadius: 100, color: "#2a1a1a", fontFamily: "'DM Sans', sans-serif", fontSize: 12, padding: "9px 16px", outline: "none" },
-  toggleBtn:        { background: "#fff", border: "1px solid #f0ddd8", color: "#b08080", fontFamily: "'DM Sans', sans-serif", fontSize: 12, fontWeight: 500, padding: "9px 16px", borderRadius: 100, cursor: "pointer", whiteSpace: "nowrap" as const },
-  toggleBtnActive:  { background: "#fdf0ed", border: "1px solid #f0c4c8", color: "#c0485a" },
-  addBtn:           { marginLeft: "auto", background: "#c0485a", border: "none", color: "#fff", fontFamily: "'DM Sans', sans-serif", fontSize: 12, fontWeight: 500, padding: "9px 18px", borderRadius: 100, cursor: "pointer", whiteSpace: "nowrap" as const },
-  monthGroup:       { marginBottom: 44 },
-  monthLabel:       { fontFamily: "'Cormorant Garamond', serif", fontSize: 14, fontStyle: "italic", color: "#c9a8a8", marginBottom: 18, display: "flex", alignItems: "center", gap: 10 },
-  monthLine:        { flex: 1, height: 1, background: "#f0e0d8" },
-  countPill:        { fontSize: 10, color: "#c9a8a8", background: "#fdf0ed", border: "1px solid #f0ddd8", borderRadius: 100, padding: "2px 9px", fontStyle: "normal", fontFamily: "'DM Sans', sans-serif" },
-  grid:             { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(230px, 1fr))", gap: 16 },
-  empty:            { textAlign: "center", padding: "64px 0", color: "#e0c0c0", fontFamily: "'Cormorant Garamond', serif", fontStyle: "italic", fontSize: 18 },
+  controlsRow:        { display: "flex", alignItems: "center", gap: 10, margin: "20px 0 28px", flexWrap: "wrap" as const },
+  searchInput:        { flex: "1 1 200px", minWidth: 160, background: "#fff", border: "1px solid #f0ddd8", borderRadius: 100, color: "#2a1a1a", fontFamily: "'DM Sans', sans-serif", fontSize: 12, padding: "9px 16px", outline: "none" },
+  toggleBtn:          { background: "#fff", border: "1px solid #f0ddd8", color: "#b08080", fontFamily: "'DM Sans', sans-serif", fontSize: 12, fontWeight: 500, padding: "9px 16px", borderRadius: 100, cursor: "pointer", whiteSpace: "nowrap" as const },
+  toggleBtnActive:    { background: "#fdf0ed", border: "1px solid #f0c4c8", color: "#c0485a" },
+  addBtn:             { marginLeft: "auto", background: "#c0485a", border: "none", color: "#fff", fontFamily: "'DM Sans', sans-serif", fontSize: 12, fontWeight: 500, padding: "9px 18px", borderRadius: 100, cursor: "pointer", whiteSpace: "nowrap" as const },
+  monthGroup:         { marginBottom: 44 },
+  monthLabel:         { fontFamily: "'Cormorant Garamond', serif", fontSize: 14, fontStyle: "italic", color: "#c9a8a8", marginBottom: 18, display: "flex", alignItems: "center", gap: 10 },
+  monthLine:          { flex: 1, height: 1, background: "#f0e0d8" },
+  countPill:          { fontSize: 10, color: "#c9a8a8", background: "#fdf0ed", border: "1px solid #f0ddd8", borderRadius: 100, padding: "2px 9px", fontStyle: "normal", fontFamily: "'DM Sans', sans-serif" },
+  grid:               { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(230px, 1fr))", gap: 16 },
+  empty:              { textAlign: "center", padding: "64px 0", color: "#e0c0c0", fontFamily: "'Cormorant Garamond', serif", fontStyle: "italic", fontSize: 18 },
   // Card
-  card:             { borderRadius: 18, overflow: "hidden", background: "#fff", border: "1px solid #f5e4e0", cursor: "pointer", transition: "transform .22s ease, box-shadow .22s ease" },
-  cardHover:        { transform: "translateY(-3px)", boxShadow: "0 8px 28px rgba(192,72,90,.1)" },
-  photoWrap:        { position: "relative", width: "100%", aspectRatio: "4/3", overflow: "hidden", background: "#fdf0ed" },
-  photo:            { width: "100%", height: "100%", objectFit: "cover", display: "block", transition: "transform .4s ease" },
-  photoHover:       { transform: "scale(1.06)" },
-  photoOverlay:     { position: "absolute", inset: 0, background: "linear-gradient(to bottom, transparent 45%, rgba(42,20,20,.45))" },
-  photoDate:        { position: "absolute", bottom: 10, right: 10, fontSize: 10, color: "rgba(255,240,235,.7)", letterSpacing: "0.04em" },
-  todayBadge:       { position: "absolute", top: 10, left: 10, fontSize: 9, letterSpacing: "0.1em", textTransform: "uppercase", color: "#c0485a", background: "rgba(253,246,240,.9)", border: "1px solid #f0c4c8", borderRadius: 100, padding: "3px 9px" },
-  favBadge:         { position: "absolute", top: 10, right: 10, fontSize: 13, color: "#c0485a", background: "rgba(253,246,240,.9)", borderRadius: "50%", width: 24, height: 24, display: "flex", alignItems: "center", justifyContent: "center" },
-  cardBody:         { padding: "12px 16px 14px" },
-  cardTitle:        { fontFamily: "'Cormorant Garamond', serif", fontSize: 15, fontWeight: 400, lineHeight: 1.3, color: "#2a1a1a" },
+  card:               { borderRadius: 18, overflow: "hidden", background: "#fff", border: "1px solid #f5e4e0", cursor: "pointer", transition: "transform .22s ease, box-shadow .22s ease" },
+  cardHover:          { transform: "translateY(-3px)", boxShadow: "0 8px 28px rgba(192,72,90,.1)" },
+  photoWrap:          { position: "relative", width: "100%", aspectRatio: "4/3", overflow: "hidden", background: "#fdf0ed" },
+  photo:              { width: "100%", height: "100%", objectFit: "cover", display: "block", transition: "transform .4s ease" },
+  photoHover:         { transform: "scale(1.06)" },
+  photoOverlay:       { position: "absolute", inset: 0, background: "linear-gradient(to bottom, transparent 45%, rgba(42,20,20,.45))" },
+  photoDate:          { position: "absolute", bottom: 10, right: 10, fontSize: 10, color: "rgba(255,240,235,.7)", letterSpacing: "0.04em" },
+  todayBadge:         { position: "absolute", top: 10, left: 10, fontSize: 9, letterSpacing: "0.1em", textTransform: "uppercase", color: "#c0485a", background: "rgba(253,246,240,.9)", border: "1px solid #f0c4c8", borderRadius: 100, padding: "3px 9px" },
+  favBadge:           { position: "absolute", top: 10, right: 10, fontSize: 13, color: "#c0485a", background: "rgba(253,246,240,.9)", borderRadius: "50%", width: 24, height: 24, display: "flex", alignItems: "center", justifyContent: "center" },
+  cardBody:           { padding: "12px 16px 14px" },
+  cardTitle:          { fontFamily: "'Cormorant Garamond', serif", fontSize: 15, fontWeight: 400, lineHeight: 1.3, color: "#2a1a1a" },
   // View modal
-  viewModalCard:    { position: "relative", width: "100%", maxWidth: 520, background: "#fdf6f0", border: "1px solid #f0ddd8", borderRadius: 24, overflow: "hidden", maxHeight: "92vh", display: "flex", flexDirection: "column" },
-  viewClose:        { position: "absolute", top: 14, right: 14, zIndex: 2, background: "rgba(253,246,240,.85)", border: "none", borderRadius: "50%", width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, color: "#b08080", cursor: "pointer" },
-  viewFav:          { position: "absolute", top: 14, left: 14, zIndex: 2, background: "rgba(253,246,240,.85)", border: "none", borderRadius: "50%", width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, color: "#c9a8a8", cursor: "pointer" },
-  viewFavActive:    { color: "#c0485a" },
-  viewNavLeft:      { position: "absolute", top: "50%", left: 10, transform: "translateY(-50%)", zIndex: 2, background: "rgba(253,246,240,.85)", border: "none", borderRadius: "50%", width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, color: "#b08080", cursor: "pointer" },
-  viewNavRight:     { position: "absolute", top: "50%", right: 10, transform: "translateY(-50%)", zIndex: 2, background: "rgba(253,246,240,.85)", border: "none", borderRadius: "50%", width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, color: "#b08080", cursor: "pointer" },
-  viewPhotoWrap:    { width: "100%", aspectRatio: "4/3", overflow: "hidden", background: "#fdf0ed", flexShrink: 0 },
-  viewPhoto:        { width: "100%", height: "100%", objectFit: "cover", display: "block" },
-  viewBody:         { padding: "20px 24px 24px", overflowY: "auto" },
-  viewDate:         { fontSize: 10, letterSpacing: "0.12em", textTransform: "uppercase", color: "#c9a8a8", marginBottom: 10 },
-  viewCaption:      { fontFamily: "'Cormorant Garamond', serif", fontSize: 18, fontWeight: 300, lineHeight: 1.6, color: "#2a1a1a", marginBottom: 16 },
-  viewActions:      { display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" as const, marginTop: 8 },
-  editBtn:          { background: "none", border: "1px solid #f0c4c8", color: "#c0485a", fontFamily: "'DM Sans', sans-serif", fontSize: 12, padding: "6px 14px", borderRadius: 100, cursor: "pointer" },
-  downloadBtn:      { background: "none", border: "1px solid #f0ddd8", color: "#b08080", fontFamily: "'DM Sans', sans-serif", fontSize: 12, padding: "6px 14px", borderRadius: 100, cursor: "pointer" },
-  lockedNote:       { fontSize: 11, color: "#d0b0b0", fontStyle: "italic" },
-  deleteBtn:        { background: "none", border: "1px solid #f0ddd8", color: "#c9a8a8", fontFamily: "'DM Sans', sans-serif", fontSize: 12, padding: "6px 14px", borderRadius: 100, cursor: "pointer", marginLeft: "auto" },
-  deleteBtnConfirm: { background: "#c0485a", border: "none", color: "#fff", fontSize: 11, borderRadius: 6, padding: "5px 12px", cursor: "pointer" },
-  cancelBtn:        { background: "#fdf0ed", border: "1px solid #f0ddd8", color: "#b08080", fontFamily: "'DM Sans', sans-serif", fontSize: 12, padding: "6px 14px", borderRadius: 100, cursor: "pointer" },
-  editTextarea:     { width: "100%", background: "#fff", border: "1px solid #f0ddd8", borderRadius: 10, color: "#2a1a1a", fontFamily: "'Cormorant Garamond', serif", fontSize: 17, fontWeight: 300, lineHeight: 1.6, padding: "10px 14px", outline: "none", resize: "none", minHeight: 90 },
+  viewModalCard:      { position: "relative", width: "100%", maxWidth: 520, background: "#fdf6f0", border: "1px solid #f0ddd8", borderRadius: 24, overflow: "hidden", maxHeight: "92vh", display: "flex", flexDirection: "column" },
+  viewClose:          { position: "absolute", top: 14, right: 14, zIndex: 2, background: "rgba(253,246,240,.85)", border: "none", borderRadius: "50%", width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, color: "#b08080", cursor: "pointer" },
+  viewFav:            { position: "absolute", top: 14, left: 14, zIndex: 2, background: "rgba(253,246,240,.85)", border: "none", borderRadius: "50%", width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, color: "#c9a8a8", cursor: "pointer", transition: "color .15s ease, transform .15s ease" },
+  viewFavActive:      { color: "#c0485a", transform: "scale(1.15)" },
+  viewNavLeft:        { position: "absolute", top: "50%", left: 10, transform: "translateY(-50%)", zIndex: 2, background: "rgba(253,246,240,.85)", border: "none", borderRadius: "50%", width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, color: "#b08080", cursor: "pointer" },
+  viewNavRight:       { position: "absolute", top: "50%", right: 10, transform: "translateY(-50%)", zIndex: 2, background: "rgba(253,246,240,.85)", border: "none", borderRadius: "50%", width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, color: "#b08080", cursor: "pointer" },
+  viewPhotoWrap:      { width: "100%", aspectRatio: "4/3", overflow: "hidden", background: "#fdf0ed", flexShrink: 0 },
+  viewPhoto:          { width: "100%", height: "100%", objectFit: "cover", display: "block" },
+  viewBody:           { padding: "20px 24px 24px", overflowY: "auto" },
+  viewDate:           { fontSize: 10, letterSpacing: "0.12em", textTransform: "uppercase", color: "#c9a8a8", marginBottom: 10 },
+  viewCaption:        { fontFamily: "'Cormorant Garamond', serif", fontSize: 18, fontWeight: 300, lineHeight: 1.6, color: "#2a1a1a", marginBottom: 16 },
+  viewActions:        { display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" as const, marginTop: 8 },
+  editBtn:            { background: "none", border: "1px solid #f0c4c8", color: "#c0485a", fontFamily: "'DM Sans', sans-serif", fontSize: 12, padding: "6px 14px", borderRadius: 100, cursor: "pointer" },
+  downloadBtn:        { background: "none", border: "1px solid #f0ddd8", color: "#b08080", fontFamily: "'DM Sans', sans-serif", fontSize: 12, padding: "6px 14px", borderRadius: 100, cursor: "pointer" },
+  lockedNote:         { fontSize: 11, color: "#d0b0b0", fontStyle: "italic" },
+  deleteBtn:          { background: "none", border: "1px solid #f0ddd8", color: "#c9a8a8", fontFamily: "'DM Sans', sans-serif", fontSize: 12, padding: "6px 14px", borderRadius: 100, cursor: "pointer", marginLeft: "auto" },
+  deleteBtnConfirm:   { background: "#c0485a", border: "none", color: "#fff", fontSize: 11, borderRadius: 6, padding: "5px 12px", cursor: "pointer" },
+  cancelBtn:          { background: "#fdf0ed", border: "1px solid #f0ddd8", color: "#b08080", fontFamily: "'DM Sans', sans-serif", fontSize: 12, padding: "6px 14px", borderRadius: 100, cursor: "pointer" },
+  editTextarea:       { width: "100%", background: "#fff", border: "1px solid #f0ddd8", borderRadius: 10, color: "#2a1a1a", fontFamily: "'Cormorant Garamond', serif", fontSize: 17, fontWeight: 300, lineHeight: 1.6, padding: "10px 14px", outline: "none", resize: "none", minHeight: 90 },
+  // Fav error banner
+  favErrorBanner:     { display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8, background: "#fff0f2", border: "1px solid #f0c4c8", borderRadius: 10, padding: "10px 14px", fontSize: 11, color: "#c0485a", marginBottom: 12, lineHeight: 1.5 },
+  favErrorDismiss:    { background: "none", border: "none", color: "#c0485a", cursor: "pointer", fontSize: 12, flexShrink: 0, padding: 0 },
   // Add modal
-  modalBg:          { position: "fixed", inset: 0, background: "rgba(42,20,20,.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100, padding: 16 },
-  modalCard:        { width: "100%", maxWidth: 460, background: "#fdf6f0", border: "1px solid #f0ddd8", borderRadius: 24, padding: 28, display: "flex", flexDirection: "column", gap: 12, maxHeight: "90vh", overflowY: "auto" },
-  modalHeader:      { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 },
-  modalTitle:       { fontFamily: "'Cormorant Garamond', serif", fontSize: 22, fontWeight: 400, fontStyle: "italic", color: "#2a1a1a" },
-  modalClose:       { background: "none", border: "none", color: "#c9a8a8", fontSize: 15, cursor: "pointer", padding: 4 },
-  fieldLabel:       { fontSize: 10, fontWeight: 500, letterSpacing: "0.12em", textTransform: "uppercase", color: "#c9a8a8" },
-  fieldInput:       { width: "100%", background: "#fff", border: "1px solid #f0ddd8", borderRadius: 10, color: "#2a1a1a", fontFamily: "'DM Sans', sans-serif", fontSize: 13, padding: "10px 14px", outline: "none" },
-  uploadArea:       { width: "100%", border: "1.5px dashed #f0c4c8", borderRadius: 12, padding: 22, display: "flex", flexDirection: "column", alignItems: "center", gap: 8, cursor: "pointer", background: "#fff" },
-  uploadPreview:    { width: "100%", borderRadius: 8, aspectRatio: "4/3", objectFit: "cover" },
-  uploadPreviewGrid:{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(80px, 1fr))", gap: 8, width: "100%" },
-  uploadPreviewThumb:{ width: "100%", aspectRatio: "1/1", objectFit: "cover", borderRadius: 8 },
-  saveBtn:          { marginTop: 6, width: "100%", background: "#c0485a", border: "none", color: "#fff", fontFamily: "'DM Sans', sans-serif", fontSize: 13, fontWeight: 500, padding: 12, borderRadius: 12, cursor: "pointer" },
+  modalBg:            { position: "fixed", inset: 0, background: "rgba(42,20,20,.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100, padding: 16 },
+  modalCard:          { width: "100%", maxWidth: 460, background: "#fdf6f0", border: "1px solid #f0ddd8", borderRadius: 24, padding: 28, display: "flex", flexDirection: "column", gap: 12, maxHeight: "90vh", overflowY: "auto" },
+  modalHeader:        { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 },
+  modalTitle:         { fontFamily: "'Cormorant Garamond', serif", fontSize: 22, fontWeight: 400, fontStyle: "italic", color: "#2a1a1a" },
+  modalClose:         { background: "none", border: "none", color: "#c9a8a8", fontSize: 15, cursor: "pointer", padding: 4 },
+  fieldLabel:         { fontSize: 10, fontWeight: 500, letterSpacing: "0.12em", textTransform: "uppercase", color: "#c9a8a8" },
+  fieldInput:         { width: "100%", background: "#fff", border: "1px solid #f0ddd8", borderRadius: 10, color: "#2a1a1a", fontFamily: "'DM Sans', sans-serif", fontSize: 13, padding: "10px 14px", outline: "none" },
+  uploadArea:         { width: "100%", border: "1.5px dashed #f0c4c8", borderRadius: 12, padding: 22, display: "flex", flexDirection: "column", alignItems: "center", gap: 8, cursor: "pointer", background: "#fff" },
+  uploadPreviewGrid:  { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(80px, 1fr))", gap: 8, width: "100%" },
+  uploadPreviewThumb: { width: "100%", aspectRatio: "1/1", objectFit: "cover", borderRadius: 8 },
+  saveBtn:            { marginTop: 6, width: "100%", background: "#c0485a", border: "none", color: "#fff", fontFamily: "'DM Sans', sans-serif", fontSize: 13, fontWeight: 500, padding: 12, borderRadius: 12, cursor: "pointer" },
 };
