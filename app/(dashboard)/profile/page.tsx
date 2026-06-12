@@ -61,6 +61,7 @@ const css = `
     font-family: 'Playfair Display', serif; font-style: italic;
     font-size: 14px; font-weight: 400; color: #2e1f28; flex: 1;
   }
+  .pf-card-body { padding: 20px 22px 22px; }
 
   /* ── Avatar section ── */
   .pf-avatar-section {
@@ -180,13 +181,18 @@ const css = `
   }
 
   /* ── Form fields ── */
-  .pf-field { margin-bottom: 15px; position: relative; }
+  .pf-field { margin-bottom: 15px; }
   .pf-label {
     font-size: 10px; font-weight: 700; letter-spacing: 1.8px;
     text-transform: uppercase; color: rgba(46,31,40,0.38);
     display: flex; align-items: center; gap: 5px; margin-bottom: 6px;
   }
   .pf-label i { font-size: 12px; color: #c85c78; }
+  .pf-label-row {
+    display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;
+  }
+  .pf-label-row .pf-label { margin-bottom: 0; }
+  .pf-char-count { font-size: 10px; color: rgba(46,31,40,0.28); }
   .pf-input {
     width: 100%; padding: 10px 13px;
     background: rgba(200,92,120,0.05);
@@ -204,13 +210,12 @@ const css = `
   .pf-input.error { border-color: rgba(200,92,120,0.6) !important; background: rgba(200,92,120,0.08) !important; }
   .pf-input-note { font-size: 11px; color: rgba(46,31,40,0.35); margin-top: 4px; }
   .pf-field-error { font-size: 11px; color: #c85c78; margin-top: 4px; font-weight: 500; }
-  .pf-char-count { font-size: 10px; color: rgba(46,31,40,0.28); position: absolute; right: 0; top: 0; }
 
   .pf-divider { height: 1px; background: rgba(200,92,120,0.08); margin: 16px 0; }
 
   /* ── Buttons ── */
   .pf-save-btn {
-    width: 100%; padding: 11px;
+    width: 100%; padding: 11px 20px;
     background: #c85c78;
     border: none; border-radius: 11px;
     color: white; font-size: 13.5px; font-weight: 600;
@@ -482,16 +487,17 @@ export default function ProfilePage() {
       .single()
 
     if (prof) {
-      setProfile(prof)
-      setFullName(prof.full_name || user.user_metadata?.full_name || '')
-      setBio(prof.bio || '')
-      setCollege(prof.college || '')
-      setYear(prof.year || '')
-      setHandle(prof.handle || '')
-      setBirthday(prof.birthday || '')
-      setAvatarUrl(prof.avatar_url || '')
-      if (prof.preferences) {
-        setPrefs(p => ({ ...p, ...prof.preferences }))
+      const p = prof as any
+      setProfile(p)
+      setFullName(p.full_name || user.user_metadata?.full_name || '')
+      setBio(p.bio || '')
+      setCollege(p.college || '')
+      setYear(p.year || '')
+      setHandle(p.handle || '')
+      setBirthday(p.birthday || '')
+      setAvatarUrl(p.avatar_url || '')
+      if (p.preferences) {
+        setPrefs(prev => ({ ...prev, ...p.preferences }))
       }
     } else {
       setFullName(user.user_metadata?.full_name || '')
@@ -929,13 +935,11 @@ export default function ProfilePage() {
                       <p className="pf-input-note">Email cannot be changed here.</p>
                     </div>
 
-                    <div className="pf-field" style={{ position: 'relative' }}>
-                      <label className="pf-label">
-                        <i className="ti ti-writing" /> bio
-                        <span className="pf-char-count" style={{ position: 'static', marginLeft: 'auto' }}>
-                          {bio.length}/120
-                        </span>
-                      </label>
+                    <div className="pf-field">
+                      <div className="pf-label-row">
+                        <label className="pf-label"><i className="ti ti-writing" /> bio</label>
+                        <span className="pf-char-count">{bio.length}/120</span>
+                      </div>
                       <input
                         className="pf-input"
                         value={bio}
