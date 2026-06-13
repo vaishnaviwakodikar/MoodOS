@@ -771,10 +771,10 @@ export default function ProfilePage() {
     if (!user || !validateInfo()) return
     setSaving(true)
     const { error } = await supabase.from('profiles').upsert({
-      id: user.id, full_name: fullName, bio, college, year,
-      handle: handle.toLowerCase(), birthday, avatar_url: avatarUrl,
-      updated_at: new Date().toISOString(),
-    })
+  id: user.id, full_name: fullName, bio, college, year,
+  handle: handle.toLowerCase(), birthday, avatar_url: avatarUrl,
+  updated_at: new Date().toISOString(),
+} as any)
     await supabase.auth.updateUser({ data: { full_name: fullName } })
     setSaving(false)
     if (error) showToast('Failed to save. Try again.', 'error')
@@ -829,9 +829,9 @@ export default function ProfilePage() {
     const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(filePath)
     setAvatarUrl(publicUrl)
     await supabase.from('profiles').upsert({
-      id: user.id, full_name: fullName, bio, college, year,
-      avatar_url: publicUrl, updated_at: new Date().toISOString(),
-    })
+  id: user.id, full_name: fullName, bio, college, year,
+  avatar_url: publicUrl, updated_at: new Date().toISOString(),
+} as any)
     setUploading(false); showToast('Photo updated! 📸')
     if (fileInputRef.current) fileInputRef.current.value = ''
   }
