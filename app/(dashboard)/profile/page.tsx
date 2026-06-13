@@ -146,7 +146,6 @@ const css = `
     position: relative; margin-bottom: 16px; cursor: pointer;
     width: 92px; height: 92px;
   }
-  /* Animated glow ring */
   .pf-avatar-glow {
     position: absolute; inset: -5px; border-radius: 50%;
     background: conic-gradient(from 0deg, #c85c78, #8b7ac0, #e8a4b8, #c85c78);
@@ -186,6 +185,10 @@ const css = `
     display: flex; align-items: center; justify-content: center;
     font-size: 19px; color: white;
   }
+  .pf-avatar-info {
+    display: flex; flex-direction: column; align-items: center;
+  }
+
   .pf-avatar-hint {
     font-size: 10.5px; color: rgba(46,31,40,0.28); margin-bottom: 12px;
     letter-spacing: 0.3px;
@@ -455,7 +458,6 @@ const css = `
     border-radius: 14px; position: relative; overflow: hidden;
     border: 1px solid rgba(200,92,120,0.1);
   }
-  /* Shimmer border effect */
   .pf-insight::before {
     content: '';
     position: absolute; inset: 0; border-radius: 14px;
@@ -542,9 +544,86 @@ const css = `
     border-radius: 7px; height: 14px;
   }
 
-  /* ── Responsive ── */
-  @media (max-width: 880px) { .pf-grid { grid-template-columns: 1fr; } }
-  @media (max-width: 580px) { .pf { padding: 16px; } .pf-row { grid-template-columns: 1fr !important; } }
+  /* ══════════════════════════════════════
+     RESPONSIVE — tablet & mobile
+  ══════════════════════════════════════ */
+
+  @media (max-width: 880px) {
+    .pf-grid { grid-template-columns: 1fr; }
+    .pf-avatar-section {
+      flex-direction: row; text-align: left;
+      padding: 22px 20px; gap: 18px; align-items: flex-start;
+    }
+    .pf-avatar-section::before { display: none; }
+    .pf-avatar-wrap { margin-bottom: 0; flex-shrink: 0; }
+    .pf-avatar-hint { display: none; }
+    .pf-avatar-info { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+    .pf-avatar-status { align-self: flex-start; }
+    .pf-display-name { font-size: 18px; }
+    .pf-display-email { font-size: 11px; margin-bottom: 8px; }
+    .pf-badge { align-self: flex-start; }
+    .pf-stats { grid-template-columns: repeat(3, 1fr); }
+  }
+
+  @media (max-width: 600px) {
+    .pf { padding: 14px 14px 90px; }
+    .pf-header { margin-bottom: 22px; }
+    .pf-title { font-size: clamp(24px, 8vw, 32px); }
+    .pf-subtitle { font-size: 12px; }
+    .pf-grid { gap: 12px; }
+    .pf-avatar-section {
+      flex-direction: column; align-items: center;
+      text-align: center; padding: 26px 16px 20px;
+    }
+    .pf-avatar-wrap { margin-bottom: 12px; }
+    .pf-avatar-hint { display: block; }
+    .pf-avatar-info { align-items: center; }
+    .pf-avatar-status { align-self: center; }
+    .pf-display-name { font-size: 19px; }
+    .pf-badge { align-self: center; }
+    .pf-card { border-radius: 18px; }
+    .pf-card-body { padding: 16px 16px 18px; }
+    .pf-card-header { padding: 12px 16px; }
+    .pf-stat { padding: 13px 4px; }
+    .pf-stat-val { font-size: 22px; }
+    .pf-stat-lbl { font-size: 8px; letter-spacing: 1.5px; }
+    .pf-week-section { padding: 12px 16px; }
+    .pf-streak-dot { height: 22px; font-size: 9px; border-radius: 6px; }
+    .pf-quick { padding: 6px 8px; }
+    .pf-quick-btn { font-size: 12.5px; padding: 9px 10px; }
+    .pf-tabs { padding: 4px; border-radius: 13px; }
+    .pf-tab { font-size: 11.5px; padding: 8px 6px; gap: 4px; border-radius: 10px; }
+    .pf-row { grid-template-columns: 1fr !important; gap: 0 !important; }
+    .pf-input { font-size: 16px !important; }
+    .pf-field { margin-bottom: 13px; }
+    .pf-save-btn { padding: 13px 16px; font-size: 14px; border-radius: 13px; }
+    .pf-danger-btn { padding: 12px; font-size: 13px; }
+    .pf-outline-btn { padding: 11px 14px; font-size: 13px; }
+    .pf-modal-overlay { align-items: flex-end; padding: 0; }
+    .pf-modal {
+      border-radius: 22px 22px 0 0; max-width: 100%;
+      padding: 26px 22px 36px; width: 100%;
+    }
+    .pf-toast {
+      bottom: 16px; left: 14px; right: 14px; transform: none;
+      justify-content: center; white-space: normal; text-align: center;
+    }
+    .pf-insight { padding: 16px; }
+    .pf-insight-text { font-size: 13px; }
+    .pf-mood-note { max-width: 140px; }
+    .pf-pref-sub { font-size: 10.5px; }
+    .pf-orb-1 { width: 260px; height: 260px; }
+    .pf-orb-2 { width: 200px; height: 200px; }
+    .pf-orb-3 { display: none; }
+  }
+
+  @media (max-width: 380px) {
+    .pf { padding: 12px 12px 80px; }
+    .pf-title { font-size: 22px; }
+    .pf-tab i { display: none; }
+    .pf-tab { font-size: 11px; padding: 8px 4px; }
+    .pf-stat-val { font-size: 20px; }
+  }
 
   @keyframes spin { to { transform: rotate(360deg); } }
 `
@@ -809,8 +888,13 @@ export default function ProfilePage() {
         <div className="pf-orb pf-orb-2" />
         <div className="pf-orb pf-orb-3" />
 
-        {/* Header */}
-        <motion.div className="pf-header" initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
+        {/* ── Header — slides up from below ── */}
+        <motion.div
+          className="pf-header"
+          initial={{ opacity: 0, y: 60 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+        >
           <p className="pf-eyebrow">
             <span className="pf-eyebrow-line" />
             your space
@@ -826,9 +910,13 @@ export default function ProfilePage() {
           {/* ── LEFT COLUMN ── */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
 
-            {/* Avatar card */}
-            <motion.div className="pf-card"
-              initial={{ opacity: 0, y: 22 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1, duration: 0.5 }}>
+            {/* Avatar card — slides up from below */}
+            <motion.div
+              className="pf-card"
+              initial={{ opacity: 0, y: 60 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.08, duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+            >
 
               <div className="pf-avatar-section">
                 <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif"
@@ -847,27 +935,30 @@ export default function ProfilePage() {
                 </div>
 
                 <div className="pf-avatar-hint">click to change photo</div>
-                <div className="pf-avatar-status">
-                  <div className="pf-status-dot" /> online
-                </div>
-                <div className="pf-display-name">{displayName}</div>
-                {handle && <div className="pf-display-handle">@{handle}</div>}
-                <div className="pf-display-email">{email}</div>
 
-                {(college || age) && (
-                  <div style={{ fontSize: '11.5px', color: 'rgba(46,31,40,0.42)', marginBottom: '8px', lineHeight: 1.6 }}>
-                    {college && `📚 ${college}`}{year && ` · ${year}`}
-                    {age && ` · ${age} yrs`}
+                <div className="pf-avatar-info">
+                  <div className="pf-avatar-status">
+                    <div className="pf-status-dot" /> online
                   </div>
-                )}
-                {bio && (
-                  <div style={{ fontSize: '12px', color: 'rgba(46,31,40,0.5)', fontStyle: 'italic', marginBottom: '14px', maxWidth: '220px', lineHeight: 1.55, fontFamily: 'Playfair Display, serif' }}>
-                    "{bio}"
+                  <div className="pf-display-name">{displayName}</div>
+                  {handle && <div className="pf-display-handle">@{handle}</div>}
+                  <div className="pf-display-email">{email}</div>
+
+                  {(college || age) && (
+                    <div style={{ fontSize: '11.5px', color: 'rgba(46,31,40,0.42)', marginBottom: '8px', lineHeight: 1.6 }}>
+                      {college && `📚 ${college}`}{year && ` · ${year}`}
+                      {age && ` · ${age} yrs`}
+                    </div>
+                  )}
+                  {bio && (
+                    <div style={{ fontSize: '12px', color: 'rgba(46,31,40,0.5)', fontStyle: 'italic', marginBottom: '14px', maxWidth: '220px', lineHeight: 1.55, fontFamily: 'Playfair Display, serif' }}>
+                      "{bio}"
+                    </div>
+                  )}
+                  <div className="pf-badge">
+                    <i className="ti ti-sparkles" style={{ fontSize: '10px' }} />
+                    MoodOS Student
                   </div>
-                )}
-                <div className="pf-badge">
-                  <i className="ti ti-sparkles" style={{ fontSize: '10px' }} />
-                  MoodOS Student
                 </div>
               </div>
 
@@ -915,9 +1006,13 @@ export default function ProfilePage() {
               </div>
             </motion.div>
 
-            {/* Joined card */}
-            <motion.div className="pf-card"
-              initial={{ opacity: 0, y: 22 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.17, duration: 0.5 }}>
+            {/* Joined card — slides up from below */}
+            <motion.div
+              className="pf-card"
+              initial={{ opacity: 0, y: 60 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.16, duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+            >
               <div className="pf-joined">
                 <div className="pf-joined-icon"><i className="ti ti-calendar-heart" /></div>
                 <div>
@@ -928,10 +1023,13 @@ export default function ProfilePage() {
             </motion.div>
           </div>
 
-          {/* ── RIGHT COLUMN ── */}
+          {/* ── RIGHT COLUMN — slides up from below ── */}
           <motion.div
-            initial={{ opacity: 0, y: 22 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.22, duration: 0.5 }}
-            style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            initial={{ opacity: 0, y: 60 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.22, duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+            style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}
+          >
 
             {/* Tabs */}
             <div className="pf-tabs">
@@ -1136,9 +1234,13 @@ export default function ProfilePage() {
               )}
             </AnimatePresence>
 
-            {/* AI Insight card */}
-            <motion.div className="pf-card"
-              initial={{ opacity: 0, y: 22 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.28, duration: 0.5 }}>
+            {/* AI Insight card — slides up from below */}
+            <motion.div
+              className="pf-card"
+              initial={{ opacity: 0, y: 60 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.30, duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+            >
               <div className="pf-card-header">
                 <div className="pf-card-header-icon" style={{ background: 'rgba(139,122,192,0.1)' }}>
                   <i className="ti ti-sparkles" style={{ color: '#8b7ac0' }} />
@@ -1173,9 +1275,13 @@ export default function ProfilePage() {
               </div>
             </motion.div>
 
-            {/* Recent mood logs */}
-            <motion.div className="pf-card"
-              initial={{ opacity: 0, y: 22 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.33, duration: 0.5 }}>
+            {/* Recent mood logs — slides up from below */}
+            <motion.div
+              className="pf-card"
+              initial={{ opacity: 0, y: 60 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.38, duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+            >
               <div className="pf-card-header">
                 <div className="pf-card-header-icon" style={{ background: 'rgba(176,122,16,0.08)' }}>
                   <i className="ti ti-activity" style={{ color: '#b07a10' }} />
