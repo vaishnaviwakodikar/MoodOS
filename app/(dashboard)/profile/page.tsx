@@ -794,7 +794,7 @@ export default function ProfilePage() {
     if (!user) return
     const updated = { ...prefs, [key]: !prefs[key] }
     setPrefs(updated); setSavingPrefs(true)
-    await supabase.from('profiles').upsert({ id: user.id, preferences: updated, updated_at: new Date().toISOString() })
+    await supabase.from('profiles').upsert({ id: user.id, preferences: updated, updated_at: new Date().toISOString() } as any)
     setSavingPrefs(false)
   }
 
