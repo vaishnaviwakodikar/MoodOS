@@ -229,9 +229,18 @@ export default function LoginPage() {
   const [showOnboarding, setShowOnboarding] = useState(false)
   const [onboardingUserId, setOnboardingUserId] = useState<string | null>(null)
 
+  // ── Partner code state (no email/password — code is the only credential) ──
+  const [showPartnerCode, setShowPartnerCode] = useState(false)
+  const [partnerCode, setPartnerCode] = useState('')
+  const [codeLoading, setCodeLoading] = useState(false)
+  const [codeError, setCodeError] = useState('')
+
   /**
    * Check if the user has completed onboarding.
    * Called after any successful sign-in (email or Google).
+   * NOT used by the partner-code flow — partner logins skip onboarding
+   * entirely and go straight to the shared dashboard (see
+   * handlePartnerCodeSubmit below).
    * Stable reference — does not change between renders.
    */
   const checkAndStartOnboarding = useCallback(async (userId: string) => {
@@ -323,15 +332,15 @@ export default function LoginPage() {
   }, []) // empty — canvas setup runs once
 
   // ── Read onboarding params from Google redirect ───────────────────────────
-useEffect(() => {
-  const params = new URLSearchParams(window.location.search)
-  const uid = params.get('uid')
-  const onboard = params.get('onboard')
-  if (onboard === '1' && uid) {
-    setOnboardingUserId(uid)
-    setShowOnboarding(true)
-  }
-}, [])
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const uid = params.get('uid')
+    const onboard = params.get('onboard')
+    if (onboard === '1' && uid) {
+      setOnboardingUserId(uid)
+      setShowOnboarding(true)
+    }
+  }, [])
 
   // ── Auth handlers ─────────────────────────────────────────────────────────
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
@@ -369,6 +378,85 @@ useEffect(() => {
 
     setLoading(false)
   }, [mode, email, password, name, supabase, checkAndStartOnboarding])
+
+  /**
+   * Partner code sign-in — no email or password from the user, and no
+   * password-based auth call at all. We get (or reuse) an anonymous
+   * Supabase session, then redeem the code against `redeem_partner_code`
+   * to link that anonymous user to the code owner's share.
+   *
+   * `/shared/[code]/page.tsx` expects [code] to be the partner CODE
+   * STRING itself (e.g. "CYV9OS") — it calls
+   * get_partner_shared_data(p_code) and looks the share up directly by
+   * that code. It is NOT the owner's user id, so we redirect using
+   * `cleanCode` (the value the person just typed), not a uuid.
+   *
+   * On success this does NOT run onboarding — partner logins skip it
+   * entirely and go straight to /shared/[code].
+   *
+   * NOTE: requires "Anonymous Sign-ins" turned ON in Supabase
+   * (Authentication → Providers → Anonymous Sign-ins).
+   */
+  const handlePartnerCodeSubmit = useCallback(async (e: React.FormEvent) => {
+    e.preventDefault()
+    setCodeLoading(true)
+    setCodeError('')
+
+    const cleanCode = partnerCode.trim().toUpperCase()
+    if (!cleanCode) {
+      setCodeError('Please enter a code.')
+      setCodeLoading(false)
+      return
+    }
+
+    let userId: string | null = null
+
+    // Reuse an existing session if one is already present (e.g. retry,
+    // or the user already has an anonymous session from this device).
+    const { data: { session } } = await supabase.auth.getSession()
+
+    if (session?.user) {
+      userId = session.user.id
+    } else {
+      const { data: anonData, error: anonError } = await supabase.auth.signInAnonymously()
+      if (anonError) {
+        setCodeError('Something went wrong. Please try again.')
+        setCodeLoading(false)
+        return
+      }
+      userId = anonData.user?.id ?? null
+    }
+
+    if (!userId) {
+      setCodeError("That code didn't work. Double-check it and try again.")
+      setCodeLoading(false)
+      return
+    }
+
+    const { data: redeemData, error: redeemError } = await supabase.rpc('redeem_partner_code', {
+      p_code: cleanCode,
+      p_user_id: userId,
+    })
+
+    if (redeemError || redeemData?.success === false) {
+      setCodeError(redeemData?.message || 'That code is invalid or has been revoked.')
+      setCodeLoading(false)
+      return
+    }
+
+    // redeem_partner_code only links profiles.linked_share_id for the
+    // anonymous user — it doesn't return anything we need for the
+    // redirect. shared/[code]/page.tsx looks the share up by its code
+    // string directly via get_partner_shared_data(p_code), so we can
+    // redirect straight there using the code the person typed.
+    //
+    // Skip onboarding entirely for partner-code logins — go straight to
+    // the shared, read-only cycle view for the code owner.
+    router.push(`/shared/${cleanCode}`)
+    router.refresh()
+
+    setCodeLoading(false)
+  }, [partnerCode, supabase, router])
 
   const handleGoogle = useCallback(async () => {
     const { error } = await supabase.auth.signInWithOAuth({
@@ -588,6 +676,54 @@ useEffect(() => {
             </button>
           </form>
 
+          {/* Partner code toggle + form (code-only, no email/password) */}
+          <div style={{ textAlign: 'center', marginTop: '14px' }}>
+            <button
+              type="button"
+              onClick={() => setShowPartnerCode(v => !v)}
+              style={PARTNER_TOGGLE_STYLE}
+            >
+              {showPartnerCode ? 'Hide partner code ✦' : 'Have a partner code instead? ♡'}
+            </button>
+          </div>
+
+          {showPartnerCode && (
+            <form
+              onSubmit={handlePartnerCodeSubmit}
+              style={{ ...FORM_STYLE, marginTop: '14px', paddingTop: '14px', borderTop: '1px solid rgba(190,165,175,0.18)' }}
+            >
+              {codeError && <div style={ERROR_STYLE}>{codeError}</div>}
+
+              <div>
+                <label style={LABEL_STYLE}>Partner code</label>
+                <input
+                  className="moodos-input"
+                  type="text"
+                  value={partnerCode}
+                  onChange={e => setPartnerCode(e.target.value.toUpperCase())}
+                  placeholder="e.g. ABCD1234"
+                  required
+                  maxLength={14}
+                  style={{ ...INPUT_STYLE, letterSpacing: '0.08em', textTransform: 'uppercase' }}
+                />
+                <p style={PARTNER_HINT_STYLE}>She can find this in her MoodOS settings ✦</p>
+              </div>
+
+              <button
+                type="submit"
+                disabled={codeLoading}
+                className="moodos-submit"
+                style={{
+                  ...SUBMIT_BTN_BASE_STYLE,
+                  cursor: codeLoading ? 'not-allowed' : 'pointer',
+                  opacity: codeLoading ? 0.65 : 1,
+                }}
+              >
+                {codeLoading ? 'Linking...' : 'Continue with code ♡'}
+              </button>
+            </form>
+          )}
+
           {/* Footer */}
           <p style={FOOTER_P_STYLE}>
             {mode === 'signin' ? "Don't have an account?" : 'Already have an account?'}
@@ -719,4 +855,14 @@ const FOOTER_BTN_STYLE: React.CSSProperties = {
   border: 'none', background: 'none', color: '#c07090',
   marginLeft: '5px', cursor: 'pointer', fontWeight: 700,
   fontSize: '12.5px', fontFamily: 'DM Sans, sans-serif',
+}
+
+const PARTNER_TOGGLE_STYLE: React.CSSProperties = {
+  border: 'none', background: 'none', cursor: 'pointer',
+  fontSize: '12px', color: '#a584c4', fontFamily: 'DM Sans, sans-serif',
+  fontWeight: 500, textDecoration: 'underline',
+  textDecorationColor: 'rgba(165,132,196,0.35)',
+}
+const PARTNER_HINT_STYLE: React.CSSProperties = {
+  fontSize: '10.5px', color: '#b09aa6', marginTop: '5px', fontStyle: 'italic',
 }
