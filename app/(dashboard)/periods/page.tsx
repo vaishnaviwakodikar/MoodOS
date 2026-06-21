@@ -32,6 +32,7 @@ type Entry = {
   flow: Flow
   symptoms: string[]
   mood: string | null
+  cravings: string[]
   notes: string | null
   created_at: string
 }
@@ -78,13 +79,24 @@ const symptomList = [
   { label: 'backache',     icon: 'ti-accessible' },
   { label: 'nausea',       icon: 'ti-mood-sick' },
   { label: 'mood swings',  icon: 'ti-mood-crazy-happy' },
-  { label: 'cravings',     icon: 'ti-cookie' },
   { label: 'spotting',     icon: 'ti-droplet' },
   { label: 'breast pain',  icon: 'ti-heart' },
   { label: 'acne',         icon: 'ti-circle-dot' },
   { label: 'insomnia',     icon: 'ti-moon' },
   { label: 'hot flashes',  icon: 'ti-flame' },
   { label: 'discharge',    icon: 'ti-droplets' },
+]
+
+const cravingOpts: { label: string; icon: string; c: string }[] = [
+  { label: 'sweet',     icon: 'ti-candy',        c: '#d4607a' },
+  { label: 'salty',     icon: 'ti-grain',        c: '#b8860b' },
+  { label: 'chocolate', icon: 'ti-cookie',       c: '#7a4a2a' },
+  { label: 'carbs',     icon: 'ti-bread',        c: '#c08850' },
+  { label: 'spicy',     icon: 'ti-pepper',       c: '#c0503a' },
+  { label: 'fried',     icon: 'ti-soup',         c: '#b8860b' },
+  { label: 'fruity',    icon: 'ti-apple',        c: '#5a8c63' },
+  { label: 'dairy',     icon: 'ti-milk',         c: '#7a8cb8' },
+  { label: 'none',      icon: 'ti-circle-off',   c: '#b09aa4' },
 ]
 
 const flows: { key: Flow; label: string; c: string; bg: string; border: string; dots: number }[] = [
@@ -655,6 +667,7 @@ export default function PeriodsPage() {
   const [selectedFlow, setSelectedFlow] = useState<Flow | null>(null)
   const [selSymptoms,  setSelSymptoms]  = useState<string[]>([])
   const [selMood,      setSelMood]      = useState<string | null>(null)
+  const [selCravings,  setSelCravings]  = useState<string[]>([])
   const [startDate,    setStartDate]    = useState(toYMD(new Date()))
   const [endDate,      setEndDate]      = useState('')
   const [notes,        setNotes]        = useState('')
@@ -686,6 +699,7 @@ export default function PeriodsPage() {
   const [editFlow,      setEditFlow]      = useState<Flow | null>(null)
   const [editSymptoms,  setEditSymptoms]  = useState<string[]>([])
   const [editMood,      setEditMood]      = useState<string | null>(null)
+  const [editCravings,  setEditCravings]  = useState<string[]>([])
   const [editStart,     setEditStart]     = useState('')
   const [editEnd,       setEditEnd]       = useState('')
   const [editNotes,     setEditNotes]     = useState('')
@@ -836,6 +850,13 @@ export default function PeriodsPage() {
   const toggleSymptom = (s: string) =>
     setSelSymptoms(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s])
 
+  const toggleCraving = (c: string) =>
+    setSelCravings(prev => {
+      if (c === 'none') return prev.includes('none') ? [] : ['none']
+      const withoutNone = prev.filter(x => x !== 'none')
+      return withoutNone.includes(c) ? withoutNone.filter(x => x !== c) : [...withoutNone, c]
+    })
+
   const toggleRelief = (r: string) =>
     setPainRelief(prev => prev.includes(r) ? prev.filter(x => x !== r) : [...prev, r])
 
@@ -847,10 +868,10 @@ export default function PeriodsPage() {
     await supabase.from('period_entries').insert({
       user_id: user.id, start_date: startDate,
       end_date: endDate || null, flow: selectedFlow,
-      symptoms: selSymptoms, mood: selMood, notes: notes.trim() || null,
+      symptoms: selSymptoms, mood: selMood, cravings: selCravings, notes: notes.trim() || null,
     })
     setSuccess(true)
-    setSelectedFlow(null); setSelSymptoms([]); setSelMood(null); setEndDate(''); setNotes('')
+    setSelectedFlow(null); setSelSymptoms([]); setSelMood(null); setSelCravings([]); setEndDate(''); setNotes('')
     setTimeout(() => setSuccess(false), 3000)
     setSaving(false); fetchEntries()
   }
@@ -860,7 +881,7 @@ export default function PeriodsPage() {
     if (!user) return
     await supabase.from('period_entries').insert({
       user_id: user.id, start_date: date, end_date: null,
-      flow, symptoms: [], mood: null, notes: null,
+      flow, symptoms: [], mood: null, cravings: [], notes: null,
     })
     setArrivalSnoozed(true)
     fetchEntries()
@@ -912,6 +933,7 @@ export default function PeriodsPage() {
     setEditFlow(e.flow)
     setEditSymptoms(e.symptoms ?? [])
     setEditMood(e.mood ?? null)
+    setEditCravings(e.cravings ?? [])
     setEditStart(e.start_date)
     setEditEnd(e.end_date ?? '')
     setEditNotes(e.notes ?? '')
@@ -928,7 +950,7 @@ export default function PeriodsPage() {
     setSavingEdit(true)
     await supabase.from('period_entries').update({
       start_date: editStart, end_date: editEnd || null,
-      flow: editFlow, symptoms: editSymptoms, mood: editMood,
+      flow: editFlow, symptoms: editSymptoms, mood: editMood, cravings: editCravings,
       notes: editNotes.trim() || null,
     }).eq('id', editingEntry.id)
     setSavingEdit(false)
@@ -945,6 +967,13 @@ export default function PeriodsPage() {
 
   const toggleEditSymptom = (s: string) =>
     setEditSymptoms(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s])
+
+  const toggleEditCraving = (c: string) =>
+    setEditCravings(prev => {
+      if (c === 'none') return prev.includes('none') ? [] : ['none']
+      const withoutNone = prev.filter(x => x !== 'none')
+      return withoutNone.includes(c) ? withoutNone.filter(x => x !== c) : [...withoutNone, c]
+    })
 
   // ── Pain edit handlers ──
 
@@ -1408,6 +1437,27 @@ export default function PeriodsPage() {
                           }}>
                           <i className={`ti ${s.icon}`} style={{ color: active ? '#d4607a' : '#b09aa4' }} />
                           {s.label}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                <div className={styles['pt-card']}>
+                  <p className={styles['pt-card-lbl']}><i className="ti ti-cookie" /> any cravings?</p>
+                  <div className={styles['pt-chips']}>
+                    {cravingOpts.map(c => {
+                      const active = selCravings.includes(c.label)
+                      return (
+                        <button key={c.label} className={styles['pt-chip']}
+                          onClick={() => toggleCraving(c.label)}
+                          style={{
+                            background: active ? '#fef8e7' : 'transparent',
+                            borderColor: active ? '#f5ddb4' : 'rgba(212,96,122,0.15)',
+                            color: active ? c.c : '#b09aa4',
+                          }}>
+                          <i className={`ti ${c.icon}`} style={{ color: active ? c.c : '#b09aa4' }} />
+                          {c.label}
                         </button>
                       )
                     })}
@@ -2044,6 +2094,37 @@ export default function PeriodsPage() {
                 })()}
               </div>
 
+              {entries.length > 0 && (() => {
+                const cfreq: Record<string, number> = {}
+                entries.forEach(e => e.cravings?.forEach(c => { if (c !== 'none') cfreq[c] = (cfreq[c] || 0) + 1 }))
+                const csorted = Object.entries(cfreq).sort((a, b) => b[1] - a[1]).slice(0, 6)
+                if (!csorted.length) return null
+                return (
+                  <div className={styles['pt-card']}>
+                    <p className={styles['pt-card-lbl']}><i className="ti ti-cookie" /> common cravings</p>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      {csorted.map(([cr, count]) => {
+                        const c = cravingOpts.find(x => x.label === cr)
+                        const pct = Math.round((count / entries.length) * 100)
+                        return (
+                          <div key={cr} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <i className={`ti ${c?.icon || 'ti-cookie'}`} style={{ fontSize: '15px', color: c?.c ?? '#b8860b', flexShrink: 0, width: '18px' }} />
+                            <span style={{ fontSize: '13px', color: 'var(--ink)', minWidth: '80px' }}>{cr}</span>
+                            <div style={{ flex: 1, height: '6px', borderRadius: '999px', background: 'rgba(184,134,11,0.1)', overflow: 'hidden' }}>
+                              <motion.div
+                                initial={{ width: 0 }} animate={{ width: `${pct}%` }}
+                                transition={{ delay: 0.2, duration: 0.6 }}
+                                style={{ height: '100%', borderRadius: '999px', background: `linear-gradient(90deg, ${c?.c ?? '#b8860b'}, #d4607a)` }} />
+                            </div>
+                            <span style={{ fontSize: '11px', color: '#b09aa4', minWidth: '32px', textAlign: 'right' }}>{pct}%</span>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )
+              })()}
+
               {painLogs.length > 0 && (
                 <div className={styles['pt-card']}>
                   <p className={styles['pt-card-lbl']}><i className="ti ti-bolt" style={{ color: '#b8860b' }} /> pain patterns</p>
@@ -2254,6 +2335,27 @@ export default function PeriodsPage() {
                               }}>
                               <i className={`ti ${s.icon}`} style={{ color: active ? '#d4607a' : '#b09aa4' }} />
                               {s.label}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className={styles['pt-input-lbl']}><i className="ti ti-cookie" /> cravings</div>
+                      <div className={styles['pt-chips']}>
+                        {cravingOpts.map(c => {
+                          const active = editCravings.includes(c.label)
+                          return (
+                            <button key={c.label} className={styles['pt-chip']}
+                              onClick={() => toggleEditCraving(c.label)}
+                              style={{
+                                background: active ? '#fef8e7' : 'transparent',
+                                borderColor: active ? '#f5ddb4' : 'rgba(212,96,122,0.15)',
+                                color: active ? c.c : '#b09aa4',
+                              }}>
+                              <i className={`ti ${c.icon}`} style={{ color: active ? c.c : '#b09aa4' }} />
+                              {c.label}
                             </button>
                           )
                         })}
