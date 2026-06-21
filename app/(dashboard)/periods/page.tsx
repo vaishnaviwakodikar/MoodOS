@@ -69,34 +69,32 @@ type DailySymptom = {
   created_at: string
 }
 
-
-
 const symptomList = [
-  { label: 'cramps',       icon: 'ti-bolt' },
-  { label: 'bloating',     icon: 'ti-circle' },
-  { label: 'headache',     icon: 'ti-brain' },
-  { label: 'fatigue',      icon: 'ti-zzz' },
-  { label: 'backache',     icon: 'ti-accessible' },
-  { label: 'nausea',       icon: 'ti-mood-sick' },
-  { label: 'mood swings',  icon: 'ti-mood-crazy-happy' },
-  { label: 'spotting',     icon: 'ti-droplet' },
-  { label: 'breast pain',  icon: 'ti-heart' },
-  { label: 'acne',         icon: 'ti-circle-dot' },
-  { label: 'insomnia',     icon: 'ti-moon' },
-  { label: 'hot flashes',  icon: 'ti-flame' },
-  { label: 'discharge',    icon: 'ti-droplets' },
+  { label: 'cramps',      icon: 'ti-bolt' },
+  { label: 'bloating',    icon: 'ti-circle' },
+  { label: 'headache',    icon: 'ti-brain' },
+  { label: 'fatigue',     icon: 'ti-zzz' },
+  { label: 'backache',    icon: 'ti-accessible' },
+  { label: 'nausea',      icon: 'ti-mood-sick' },
+  { label: 'mood swings', icon: 'ti-mood-crazy-happy' },
+  { label: 'spotting',    icon: 'ti-droplet' },
+  { label: 'breast pain', icon: 'ti-heart' },
+  { label: 'acne',        icon: 'ti-circle-dot' },
+  { label: 'insomnia',    icon: 'ti-moon' },
+  { label: 'hot flashes', icon: 'ti-flame' },
+  { label: 'discharge',   icon: 'ti-droplets' },
 ]
 
 const cravingOpts: { label: string; icon: string; c: string }[] = [
-  { label: 'sweet',     icon: 'ti-candy',        c: '#d4607a' },
-  { label: 'salty',     icon: 'ti-grain',        c: '#b8860b' },
-  { label: 'chocolate', icon: 'ti-cookie',       c: '#7a4a2a' },
-  { label: 'carbs',     icon: 'ti-bread',        c: '#c08850' },
-  { label: 'spicy',     icon: 'ti-pepper',       c: '#c0503a' },
-  { label: 'fried',     icon: 'ti-soup',         c: '#b8860b' },
-  { label: 'fruity',    icon: 'ti-apple',        c: '#5a8c63' },
-  { label: 'dairy',     icon: 'ti-milk',         c: '#7a8cb8' },
-  { label: 'none',      icon: 'ti-circle-off',   c: '#b09aa4' },
+  { label: 'sweet',     icon: 'ti-candy',      c: '#d4607a' },
+  { label: 'salty',     icon: 'ti-grain',      c: '#b8860b' },
+  { label: 'chocolate', icon: 'ti-cookie',     c: '#7a4a2a' },
+  { label: 'carbs',     icon: 'ti-bread',      c: '#c08850' },
+  { label: 'spicy',     icon: 'ti-pepper',     c: '#c0503a' },
+  { label: 'fried',     icon: 'ti-soup',       c: '#b8860b' },
+  { label: 'fruity',    icon: 'ti-apple',      c: '#5a8c63' },
+  { label: 'dairy',     icon: 'ti-milk',       c: '#7a8cb8' },
+  { label: 'none',      icon: 'ti-circle-off', c: '#b09aa4' },
 ]
 
 const flows: { key: Flow; label: string; c: string; bg: string; border: string; dots: number }[] = [
@@ -108,13 +106,13 @@ const flows: { key: Flow; label: string; c: string; bg: string; border: string; 
 ]
 
 const moodOpts = [
-  { label: 'great',     icon: 'ti-star',           c: '#d4607a' },
-  { label: 'okay',      icon: 'ti-minus',           c: '#b8860b' },
-  { label: 'low',       icon: 'ti-mood-sad',        c: '#7a8cb8' },
-  { label: 'anxious',   icon: 'ti-alert-triangle',  c: '#c07840' },
-  { label: 'irritable', icon: 'ti-flame',           c: '#c05878' },
-  { label: 'emotional', icon: 'ti-heart',           c: '#9b7ec8' },
-  { label: 'foggy',     icon: 'ti-cloud',           c: '#8899aa' },
+  { label: 'great',     icon: 'ti-star',          c: '#d4607a' },
+  { label: 'okay',      icon: 'ti-minus',          c: '#b8860b' },
+  { label: 'low',       icon: 'ti-mood-sad',       c: '#7a8cb8' },
+  { label: 'anxious',   icon: 'ti-alert-triangle', c: '#c07840' },
+  { label: 'irritable', icon: 'ti-flame',          c: '#c05878' },
+  { label: 'emotional', icon: 'ti-heart',          c: '#9b7ec8' },
+  { label: 'foggy',     icon: 'ti-cloud',          c: '#8899aa' },
 ]
 
 const painTypes = [
@@ -127,7 +125,7 @@ const painTypes = [
 
 const reliefOptions = ['ibuprofen', 'paracetamol', 'heat pad', 'rest', 'yoga', 'massage', 'ice pack', 'nothing']
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function addDays(date: Date, n: number) {
   const d = new Date(date); d.setDate(d.getDate() + n); return d
@@ -151,20 +149,20 @@ function getPhase(lastStart: Date | null, cycleLen: number, profile: CycleProfil
   const periodLen = profile?.period_length ?? 5
   const hasPcos = profile?.has_pcos_pcod ?? false
   if (d <= periodLen)
-    return { phase: 'menstrual' as Phase,  day: d, tip: hasPcos ? 'Rest, hydrate & heat pad — PCOS cramps can be stronger.' : 'Rest well, hydrate, and be gentle with yourself.' }
+    return { phase: 'menstrual' as Phase, day: d, tip: hasPcos ? 'Rest, hydrate & heat pad — PCOS cramps can be stronger.' : 'Rest well, hydrate, and be gentle with yourself.' }
   if (d <= cycleLen - 15)
     return { phase: 'follicular' as Phase, day: d, tip: 'Energy rising — great time to start new things.' }
   if (d >= cycleLen - 14 && d <= cycleLen - 12)
-    return { phase: 'ovulation' as Phase,  day: d, tip: "Peak energy & confidence — you're glowing." }
+    return { phase: 'ovulation' as Phase, day: d, tip: "Peak energy & confidence — you're glowing." }
   return { phase: 'luteal' as Phase, day: d, tip: hasPcos ? 'Luteal phase with PCOS can bring stronger symptoms — be extra gentle.' : 'Wind down, nourish yourself, and rest more.' }
 }
 
 const phaseConfig = {
   menstrual:  { label: 'menstrual phase',  c: '#d4607a', bg: '#fde8ee', border: 'rgba(212,96,122,0.2)',  ico: 'ti-droplet',        icoBg: 'rgba(212,96,122,0.12)' },
   follicular: { label: 'follicular phase', c: '#5a8c63', bg: '#edf6ee', border: 'rgba(90,140,99,0.2)',   ico: 'ti-leaf',           icoBg: 'rgba(90,140,99,0.12)'  },
-  ovulation:  { label: 'ovulation phase',  c: '#9b7ec8', bg: '#f3edfb', border: 'rgba(155,126,200,0.2)', ico: 'ti-sparkles',       icoBg: 'rgba(155,126,200,0.12)'},
+  ovulation:  { label: 'ovulation phase',  c: '#9b7ec8', bg: '#f3edfb', border: 'rgba(155,126,200,0.2)', ico: 'ti-sparkles',       icoBg: 'rgba(155,126,200,0.12)' },
   luteal:     { label: 'luteal phase',     c: '#b8860b', bg: '#fef8e7', border: 'rgba(184,134,11,0.2)',  ico: 'ti-moon',           icoBg: 'rgba(184,134,11,0.12)' },
-  unknown:    { label: 'phase unknown',    c: '#b09aa4', bg: '#f5f0f2', border: 'rgba(176,154,164,0.2)', ico: 'ti-calendar-heart', icoBg: 'rgba(176,154,164,0.12)'},
+  unknown:    { label: 'phase unknown',    c: '#b09aa4', bg: '#f5f0f2', border: 'rgba(176,154,164,0.2)', ico: 'ti-calendar-heart', icoBg: 'rgba(176,154,164,0.12)' },
 }
 
 const validRegularity = ['regular', 'irregular', 'very_irregular'] as const
@@ -172,7 +170,7 @@ function isValidRegularity(v: unknown): v is CycleProfile['cycle_regularity'] {
   return (validRegularity as readonly unknown[]).includes(v)
 }
 
-// ─── Onboarding Portal ───────────────────────────────────────────────────────
+// ─── Onboarding Portal ────────────────────────────────────────────────────────
 
 const ONBOARD_STEPS = 6
 
@@ -453,24 +451,25 @@ function OnboardingFlow({ onComplete }: { onComplete: (profile: CycleProfile) =>
 type ArrivalBannerProps = {
   daysUntilNext: number | null
   predictedDate: Date | null
-  onConfirm: (flow: Flow, date: string) => Promise<void>
+  onConfirm: (flow: Flow, date: string, symptoms: string[], mood: string | null, cravings: string[]) => Promise<void>
   onSnooze: () => void
   snoozed: boolean
 }
 
 function PeriodArrivalBanner({ daysUntilNext, predictedDate, onConfirm, onSnooze, snoozed }: ArrivalBannerProps) {
+  const [step, setStep] = useState<'idle' | 'flow' | 'details' | 'done'>('idle')
   const [quickFlow, setQuickFlow] = useState<Flow | null>(null)
+  const [bannerSymptoms, setBannerSymptoms] = useState<string[]>([])
+  const [bannerMood, setBannerMood] = useState<string | null>(null)
+  const [bannerCravings, setBannerCravings] = useState<string[]>([])
   const [confirming, setConfirming] = useState(false)
-  const [confirmed, setConfirmed] = useState(false)
-  const [expanded, setExpanded] = useState(false)
 
   if (daysUntilNext === null || predictedDate === null) return null
   if (daysUntilNext > 2 || daysUntilNext < -14) return null
-  if (snoozed || confirmed) return null
+  if (snoozed || step === 'done') return null
 
-  const isOverdue = daysUntilNext < 0
+  const isOverdue  = daysUntilNext < 0
   const isDueToday = daysUntilNext === 0
-
   const overdueDays = Math.abs(daysUntilNext)
 
   const bannerBg     = isOverdue ? '#fde0e7' : isDueToday ? '#fde8ee' : '#fff5f7'
@@ -479,54 +478,57 @@ function PeriodArrivalBanner({ daysUntilNext, predictedDate, onConfirm, onSnooze
 
   const headline = isOverdue
     ? `your period is ${overdueDays} day${overdueDays > 1 ? 's' : ''} late`
-    : isDueToday
-    ? 'your period is due today'
+    : isDueToday ? 'your period is due today'
     : `your period is due in ${daysUntilNext} day${daysUntilNext > 1 ? 's' : ''}`
 
-  const sub = isOverdue
-    ? 'Did it arrive? Let us know so we can keep your predictions accurate.'
-    : 'Did it start? A quick tap keeps your cycle data on track.'
+  const toggleBannerSymptom = (s: string) =>
+    setBannerSymptoms(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s])
+
+  const toggleBannerCraving = (c: string) =>
+    setBannerCravings(prev => {
+      if (c === 'none') return prev.includes('none') ? [] : ['none']
+      const withoutNone = prev.filter(x => x !== 'none')
+      return withoutNone.includes(c) ? withoutNone.filter(x => x !== c) : [...withoutNone, c]
+    })
 
   const handleConfirm = async () => {
     if (!quickFlow) return
     setConfirming(true)
-    const date = toYMD(new Date())
-    await onConfirm(quickFlow, date)
-    setConfirmed(true)
+    await onConfirm(quickFlow, toYMD(new Date()), bannerSymptoms, bannerMood, bannerCravings)
+    setStep('done')
     setConfirming(false)
+  }
+
+  const btnBase: React.CSSProperties = {
+    borderRadius: '999px', fontSize: '12px', fontWeight: 700,
+    border: 'none', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif',
+    transition: 'all 0.15s ease',
   }
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: -10 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -10 }}
+      initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
       style={{
-        borderRadius: '18px',
-        background: bannerBg,
+        borderRadius: '18px', background: bannerBg,
         border: `1.5px solid ${bannerBorder}`,
-        padding: '16px 18px',
-        marginBottom: '16px',
-        position: 'relative',
+        padding: '16px 18px', marginBottom: '16px', position: 'relative',
       }}>
 
-      <button
-        onClick={onSnooze}
-        style={{
-          position: 'absolute', top: 12, right: 12,
-          width: 26, height: 26, borderRadius: '50%',
-          border: '1px solid rgba(212,96,122,0.18)',
-          background: 'rgba(255,255,255,0.7)',
-          cursor: 'pointer', display: 'flex', alignItems: 'center',
-          justifyContent: 'center', fontSize: 12, color: '#b09aa4',
-        }}>
+      <button onClick={onSnooze} style={{
+        position: 'absolute', top: 12, right: 12,
+        width: 26, height: 26, borderRadius: '50%',
+        border: '1px solid rgba(212,96,122,0.18)',
+        background: 'rgba(255,255,255,0.7)', cursor: 'pointer',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: 12, color: '#b09aa4',
+      }}>
         <i className="ti ti-x" />
       </button>
 
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
         <div style={{
           width: 38, height: 38, borderRadius: '12px', flexShrink: 0,
-          background: `rgba(212,96,122,0.12)`,
+          background: 'rgba(212,96,122,0.12)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>
           <i className="ti ti-droplet" style={{ color: bannerColor, fontSize: '17px' }} />
@@ -536,94 +538,166 @@ function PeriodArrivalBanner({ daysUntilNext, predictedDate, onConfirm, onSnooze
           <div style={{ fontSize: '13px', fontWeight: 700, color: bannerColor, marginBottom: '2px' }}>
             {headline}
           </div>
-          <div style={{ fontSize: '12px', color: '#b09aa4', lineHeight: 1.5, marginBottom: expanded ? '14px' : 0 }}>
-            {sub}
-          </div>
 
-          {!expanded && (
-            <div style={{ display: 'flex', gap: '8px', marginTop: '12px', flexWrap: 'wrap' }}>
-              <button
-                onClick={() => setExpanded(true)}
-                style={{
-                  padding: '7px 14px', borderRadius: '999px', fontSize: '12px', fontWeight: 700,
+          {/* ── IDLE ── */}
+          {step === 'idle' && (
+            <>
+              <div style={{ fontSize: '12px', color: '#b09aa4', lineHeight: 1.5, marginBottom: '12px' }}>
+                {isOverdue
+                  ? 'Did it arrive? Let us know so we can keep your predictions accurate.'
+                  : 'Did it start? A quick tap keeps your cycle data on track.'}
+              </div>
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                <button onClick={() => setStep('flow')} style={{
+                  ...btnBase, padding: '7px 14px',
                   background: 'linear-gradient(135deg, #d4607a, #9b7ec8)', color: '#fff',
-                  border: 'none', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif',
                 }}>
-                <i className="ti ti-droplet" style={{ marginRight: '5px' }} />
-                yes, it arrived
-              </button>
-              <button
-                onClick={onSnooze}
-                style={{
-                  padding: '7px 14px', borderRadius: '999px', fontSize: '12px', fontWeight: 600,
+                  <i className="ti ti-droplet" style={{ marginRight: '5px' }} />yes, it arrived
+                </button>
+                <button onClick={onSnooze} style={{
+                  ...btnBase, padding: '7px 14px', fontWeight: 600,
                   background: 'transparent', color: '#b09aa4',
-                  border: '1.5px solid rgba(212,96,122,0.18)', cursor: 'pointer',
-                  fontFamily: 'DM Sans, sans-serif',
+                  border: '1.5px solid rgba(212,96,122,0.18)',
                 }}>
-                not yet
-              </button>
-            </div>
+                  not yet
+                </button>
+              </div>
+            </>
           )}
 
+          {/* ── STEP 1: flow ── */}
           <AnimatePresence>
-            {expanded && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}
+            {step === 'flow' && (
+              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}
                 exit={{ opacity: 0, height: 0 }} style={{ overflow: 'hidden' }}>
                 <div style={{ fontSize: '12px', color: '#b09aa4', marginBottom: '8px', fontWeight: 600 }}>
-                  <i className="ti ti-droplet" style={{ marginRight: '4px' }} />
-                  how&apos;s the flow?
+                  <i className="ti ti-droplet" style={{ marginRight: '4px' }} />how&apos;s the flow?
                 </div>
                 <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '12px' }}>
                   {flows.map(f => (
-                    <button key={f.key}
-                      onClick={() => setQuickFlow(quickFlow === f.key ? null : f.key)}
+                    <button key={f.key} onClick={() => setQuickFlow(quickFlow === f.key ? null : f.key)}
                       style={{
-                        padding: '6px 12px', borderRadius: '999px', fontSize: '11px', fontWeight: 600,
+                        ...btnBase, padding: '6px 12px', fontSize: '11px',
                         background: quickFlow === f.key ? f.bg : 'rgba(255,255,255,0.6)',
                         border: `1.5px solid ${quickFlow === f.key ? f.border : 'rgba(212,96,122,0.15)'}`,
                         color: quickFlow === f.key ? f.c : '#b09aa4',
-                        cursor: 'pointer', fontFamily: 'DM Sans, sans-serif',
-                        transition: 'all 0.15s ease',
                       }}>
                       {f.label}
                     </button>
                   ))}
                 </div>
                 <div style={{ display: 'flex', gap: '8px' }}>
-                  <button
-                    onClick={handleConfirm}
-                    disabled={!quickFlow || confirming}
-                    style={{
-                      flex: 1, padding: '9px', borderRadius: '999px', fontSize: '12px', fontWeight: 700,
-                      background: quickFlow ? 'linear-gradient(135deg, #d4607a, #9b7ec8)' : 'rgba(212,96,122,0.08)',
-                      color: quickFlow ? '#fff' : '#b09aa4',
-                      border: 'none', cursor: quickFlow ? 'pointer' : 'not-allowed',
-                      fontFamily: 'DM Sans, sans-serif',
-                    }}>
-                    {confirming ? 'logging...' : 'confirm & log 🌸'}
+                  <button onClick={() => quickFlow && setStep('details')} disabled={!quickFlow} style={{
+                    ...btnBase, flex: 1, padding: '9px',
+                    background: quickFlow ? 'linear-gradient(135deg, #d4607a, #9b7ec8)' : 'rgba(212,96,122,0.08)',
+                    color: quickFlow ? '#fff' : '#b09aa4',
+                    cursor: quickFlow ? 'pointer' : 'not-allowed',
+                  }}>
+                    next → symptoms &amp; more
                   </button>
-                  <button
-                    onClick={() => { setExpanded(false); setQuickFlow(null) }}
-                    style={{
-                      padding: '9px 14px', borderRadius: '999px', fontSize: '12px', fontWeight: 600,
-                      background: 'transparent', color: '#b09aa4',
-                      border: '1.5px solid rgba(212,96,122,0.18)', cursor: 'pointer',
-                      fontFamily: 'DM Sans, sans-serif',
-                    }}>
-                    back
-                  </button>
+                  <button onClick={() => setStep('idle')} style={{
+                    ...btnBase, padding: '9px 14px', fontWeight: 600,
+                    background: 'transparent', color: '#b09aa4',
+                    border: '1.5px solid rgba(212,96,122,0.18)',
+                  }}>back</button>
                 </div>
               </motion.div>
             )}
           </AnimatePresence>
+
+          {/* ── STEP 2: symptoms + mood + cravings ── */}
+          <AnimatePresence>
+            {step === 'details' && (
+              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }} style={{ overflow: 'hidden' }}>
+
+                {/* symptoms */}
+                <div style={{ fontSize: '12px', color: '#b09aa4', marginBottom: '6px', fontWeight: 600 }}>
+                  <i className="ti ti-stethoscope" style={{ marginRight: '4px' }} />any symptoms? (optional)
+                </div>
+                <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap', marginBottom: '12px' }}>
+                  {symptomList.map(s => {
+                    const active = bannerSymptoms.includes(s.label)
+                    return (
+                      <button key={s.label} onClick={() => toggleBannerSymptom(s.label)} style={{
+                        ...btnBase, padding: '5px 10px', fontSize: '11px', fontWeight: 600,
+                        background: active ? '#fde8ee' : 'rgba(255,255,255,0.6)',
+                        border: `1.5px solid ${active ? '#e8a0b0' : 'rgba(212,96,122,0.15)'}`,
+                        color: active ? '#7a1a35' : '#b09aa4',
+                      }}>
+                        <i className={`ti ${s.icon}`} style={{ color: active ? '#d4607a' : '#b09aa4', marginRight: '3px' }} />
+                        {s.label}
+                      </button>
+                    )
+                  })}
+                </div>
+
+                {/* mood */}
+                <div style={{ fontSize: '12px', color: '#b09aa4', marginBottom: '6px', fontWeight: 600 }}>
+                  <i className="ti ti-mood-smile" style={{ marginRight: '4px' }} />how are you feeling? (optional)
+                </div>
+                <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap', marginBottom: '12px' }}>
+                  {moodOpts.map(m => {
+                    const active = bannerMood === m.label
+                    return (
+                      <button key={m.label} onClick={() => setBannerMood(active ? null : m.label)} style={{
+                        ...btnBase, padding: '5px 10px', fontSize: '11px', fontWeight: 600,
+                        background: active ? '#fde8ee' : 'rgba(255,255,255,0.6)',
+                        border: `1.5px solid ${active ? '#e8a0b0' : 'rgba(212,96,122,0.15)'}`,
+                        color: active ? m.c : '#b09aa4',
+                      }}>
+                        <i className={`ti ${m.icon}`} style={{ color: active ? m.c : '#b09aa4', marginRight: '3px' }} />
+                        {m.label}
+                      </button>
+                    )
+                  })}
+                </div>
+
+                {/* cravings */}
+                <div style={{ fontSize: '12px', color: '#b09aa4', marginBottom: '6px', fontWeight: 600 }}>
+                  <i className="ti ti-cookie" style={{ marginRight: '4px' }} />any cravings? (optional)
+                </div>
+                <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap', marginBottom: '14px' }}>
+                  {cravingOpts.map(c => {
+                    const active = bannerCravings.includes(c.label)
+                    return (
+                      <button key={c.label} onClick={() => toggleBannerCraving(c.label)} style={{
+                        ...btnBase, padding: '5px 10px', fontSize: '11px', fontWeight: 600,
+                        background: active ? '#fef8e7' : 'rgba(255,255,255,0.6)',
+                        border: `1.5px solid ${active ? '#f5ddb4' : 'rgba(212,96,122,0.15)'}`,
+                        color: active ? c.c : '#b09aa4',
+                      }}>
+                        <i className={`ti ${c.icon}`} style={{ color: active ? c.c : '#b09aa4', marginRight: '3px' }} />
+                        {c.label}
+                      </button>
+                    )
+                  })}
+                </div>
+
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button onClick={handleConfirm} disabled={confirming} style={{
+                    ...btnBase, flex: 1, padding: '9px',
+                    background: 'linear-gradient(135deg, #d4607a, #9b7ec8)', color: '#fff',
+                  }}>
+                    {confirming ? 'logging...' : 'confirm & log 🌸'}
+                  </button>
+                  <button onClick={() => setStep('flow')} style={{
+                    ...btnBase, padding: '9px 14px', fontWeight: 600,
+                    background: 'transparent', color: '#b09aa4',
+                    border: '1.5px solid rgba(212,96,122,0.18)',
+                  }}>back</button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
         </div>
       </div>
     </motion.div>
   )
 }
 
-// ─── Main Page ───────────────────────────────────────────────────────────────
+// ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function PeriodsPage() {
   const supabase = createClient()
@@ -638,14 +712,14 @@ export default function PeriodsPage() {
   const [painLogs, setPainLogs] = useState<PainLog[]>([])
 
   // ── Daily symptom log state ──
-  const [dailySymptoms,     setDailySymptoms]     = useState<DailySymptom[]>([])
-  const [symptomDate,       setSymptomDate]       = useState(toYMD(new Date()))
-  const [dailySelSymptoms,  setDailySelSymptoms]  = useState<string[]>([])
-  const [dailyMood,         setDailyMood]         = useState<string | null>(null)
-  const [dailyEnergy,       setDailyEnergy]       = useState<number>(3)
-  const [dailyNotes,        setDailyNotes]        = useState('')
-  const [savingSymptom,     setSavingSymptom]     = useState(false)
-  const [successSymptom,    setSuccessSymptom]    = useState(false)
+  const [dailySymptoms,    setDailySymptoms]    = useState<DailySymptom[]>([])
+  const [symptomDate,      setSymptomDate]      = useState(toYMD(new Date()))
+  const [dailySelSymptoms, setDailySelSymptoms] = useState<string[]>([])
+  const [dailyMood,        setDailyMood]        = useState<string | null>(null)
+  const [dailyEnergy,      setDailyEnergy]      = useState<number>(3)
+  const [dailyNotes,       setDailyNotes]       = useState('')
+  const [savingSymptom,    setSavingSymptom]    = useState(false)
+  const [successSymptom,   setSuccessSymptom]   = useState(false)
 
   // ── Edit daily symptom state ──
   const [editingSymptom,    setEditingSymptom]    = useState<DailySymptom | null>(null)
@@ -694,7 +768,7 @@ export default function PeriodsPage() {
   // ── calendar ──
   const [calMonth, setCalMonth] = useState(new Date())
 
-  // ── edit modal state ──
+  // ── edit period modal state ──
   const [editingEntry,  setEditingEntry]  = useState<Entry | null>(null)
   const [editFlow,      setEditFlow]      = useState<Flow | null>(null)
   const [editSymptoms,  setEditSymptoms]  = useState<string[]>([])
@@ -708,7 +782,7 @@ export default function PeriodsPage() {
 
   // ── Edit Pain Log state ──
   const [editingPain,       setEditingPain]       = useState<PainLog | null>(null)
-  const [editPainType,      setEditPainType]      = useState<string | null>(null)
+  const [editPainType,      setEditPainType]       = useState<string | null>(null)
   const [editPainSeverity,  setEditPainSeverity]  = useState<number>(3)
   const [editPainDuration,  setEditPainDuration]  = useState('')
   const [editPainRelief,    setEditPainRelief]    = useState<string[]>([])
@@ -726,10 +800,9 @@ export default function PeriodsPage() {
   const [confirmDeleteSex, setConfirmDeleteSex] = useState(false)
 
   // ── Edit Profile state ──
-  const [editingProfile,     setEditingProfile]     = useState(false)
-  const [editProfile,        setEditProfile]        = useState<Partial<CycleProfile>>({})
-  const [savingEditProfile,  setSavingEditProfile]  = useState(false)
-
+  const [editingProfile,    setEditingProfile]    = useState(false)
+  const [editProfile,       setEditProfile]       = useState<Partial<CycleProfile>>({})
+  const [savingEditProfile, setSavingEditProfile] = useState(false)
 
   const [shareOpen, setShareOpen] = useState(false)
 
@@ -775,11 +848,7 @@ export default function PeriodsPage() {
   }
 
   const fetchDailySymptoms = async () => {
-    const { data } = await supabase
-      .from('daily_symptoms')
-      .select('*')
-      .order('date', { ascending: false })
-      .limit(30)
+    const { data } = await supabase.from('daily_symptoms').select('*').order('date', { ascending: false }).limit(30)
     if (data) setDailySymptoms(data as DailySymptom[])
   }
 
@@ -876,12 +945,12 @@ export default function PeriodsPage() {
     setSaving(false); fetchEntries()
   }
 
-  const handleArrivalConfirm = async (flow: Flow, date: string) => {
+  const handleArrivalConfirm = async (flow: Flow, date: string, symptoms: string[], mood: string | null, cravings: string[]) => {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
     await supabase.from('period_entries').insert({
       user_id: user.id, start_date: date, end_date: null,
-      flow, symptoms: [], mood: null, cravings: [], notes: null,
+      flow, symptoms, mood, cravings, notes: null,
     })
     setArrivalSnoozed(true)
     fetchEntries()
@@ -926,7 +995,7 @@ export default function PeriodsPage() {
     }
   }
 
-  // ── Edit modal handlers ──────────────────────────────────────────────────
+  // ── Edit modal handlers ────────────────────────────────────────────────────
 
   const openEdit = (e: Entry) => {
     setEditingEntry(e)
@@ -940,10 +1009,7 @@ export default function PeriodsPage() {
     setConfirmDelete(false)
   }
 
-  const closeEdit = () => {
-    setEditingEntry(null)
-    setConfirmDelete(false)
-  }
+  const closeEdit = () => { setEditingEntry(null); setConfirmDelete(false) }
 
   const handleSaveEdit = async () => {
     if (!editingEntry || !editFlow) return
@@ -1123,13 +1189,13 @@ export default function PeriodsPage() {
   // ─── UI config ────────────────────────────────────────────────────────────
 
   const tabs = [
-    { key: 'log'      as const, label: 'period',  icon: 'ti-droplet' },
-    { key: 'pain'     as const, label: 'pain',     icon: 'ti-bolt' },
-    { key: 'sex'      as const, label: 'intimacy', icon: 'ti-heart' },
-    { key: 'calendar' as const, label: 'calendar', icon: 'ti-calendar-heart' },
-    { key: 'insights' as const, label: 'insights', icon: 'ti-chart-bar' },
-    { key: 'profile'  as const, label: 'profile',  icon: 'ti-settings' },
-    { key: 'symptoms' as const, label: 'symptoms', icon: 'ti-stethoscope' },
+    { key: 'log'      as const, label: 'period',   icon: 'ti-droplet' },
+    { key: 'pain'     as const, label: 'pain',      icon: 'ti-bolt' },
+    { key: 'sex'      as const, label: 'intimacy',  icon: 'ti-heart' },
+    { key: 'calendar' as const, label: 'calendar',  icon: 'ti-calendar-heart' },
+    { key: 'insights' as const, label: 'insights',  icon: 'ti-chart-bar' },
+    { key: 'profile'  as const, label: 'profile',   icon: 'ti-settings' },
+    { key: 'symptoms' as const, label: 'symptoms',  icon: 'ti-stethoscope' },
   ]
 
   const tabColors: Record<string, { bg: string; border: string; color: string }> = {
@@ -1193,21 +1259,16 @@ export default function PeriodsPage() {
                 <i className="ti ti-settings" style={{ color: '#d4607a' }} />
                 edit profile
               </button>
-
-              <button
-                onClick={() => setShareOpen(true)}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: '6px',
-                  background: 'linear-gradient(135deg, #ff3d8b, #ff6bb5)',
-                  border: 'none', borderRadius: '50px',
-                  padding: '7px 16px', fontSize: '12px', fontWeight: 500,
-                  color: 'white', cursor: 'pointer', letterSpacing: '0.03em',
-                  boxShadow: '0 4px 16px rgba(255, 61, 139, 0.35)',
-                }}>
-                <span>🔗</span>
-                share
+              <button onClick={() => setShareOpen(true)} style={{
+                display: 'flex', alignItems: 'center', gap: '6px',
+                background: 'linear-gradient(135deg, #ff3d8b, #ff6bb5)',
+                border: 'none', borderRadius: '50px',
+                padding: '7px 16px', fontSize: '12px', fontWeight: 500,
+                color: 'white', cursor: 'pointer', letterSpacing: '0.03em',
+                boxShadow: '0 4px 16px rgba(255, 61, 139, 0.35)',
+              }}>
+                <span>🔗</span>share
               </button>
-              
             </div>
           )}
         </motion.div>
@@ -1226,8 +1287,7 @@ export default function PeriodsPage() {
         </AnimatePresence>
 
         {/* Phase banner */}
-        <motion.div
-          className={styles['pt-phase']}
+        <motion.div className={styles['pt-phase']}
           style={{ background: pc.bg, border: `1px solid ${pc.border}` }}
           initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
           <div className={styles['pt-phase-ico']} style={{ background: pc.icoBg }}>
@@ -1255,18 +1315,17 @@ export default function PeriodsPage() {
           )}
         </motion.div>
 
-        {/* ── Phase timeline ── */}
+        {/* Phase timeline */}
         {phase !== 'unknown' && (() => {
           const periodLen = cycleProfile?.period_length ?? avgPeriod
           const phases = [
-            { key: 'menstrual'  as Phase, label: 'menstrual',  startDay: 1,               endDay: periodLen,     icon: 'ti-droplet'  },
-            { key: 'follicular' as Phase, label: 'follicular', startDay: periodLen + 1,   endDay: avgCycle - 15, icon: 'ti-leaf'     },
-            { key: 'ovulation'  as Phase, label: 'ovulation',  startDay: avgCycle - 14,   endDay: avgCycle - 12, icon: 'ti-sparkles' },
-            { key: 'luteal'     as Phase, label: 'luteal',     startDay: avgCycle - 11,   endDay: avgCycle,      icon: 'ti-moon'     },
+            { key: 'menstrual'  as Phase, label: 'menstrual',  startDay: 1,             endDay: periodLen,     icon: 'ti-droplet'  },
+            { key: 'follicular' as Phase, label: 'follicular', startDay: periodLen + 1, endDay: avgCycle - 15, icon: 'ti-leaf'     },
+            { key: 'ovulation'  as Phase, label: 'ovulation',  startDay: avgCycle - 14, endDay: avgCycle - 12, icon: 'ti-sparkles' },
+            { key: 'luteal'     as Phase, label: 'luteal',     startDay: avgCycle - 11, endDay: avgCycle,      icon: 'ti-moon'     },
           ]
           return (
-            <motion.div
-              initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.22 }}
+            <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.22 }}
               style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', marginBottom: '4px' }}>
               {phases.map(ph => {
                 const cfg2 = phaseConfig[ph.key]
@@ -1688,7 +1747,7 @@ export default function PeriodsPage() {
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                 <div className={styles['pt-card']}>
-                  <p className={styles['pt-card-lbl']}><i className="ti ti-stethoscope" style={{ color: '#9b7ec8' }} /> log today's symptoms</p>
+                  <p className={styles['pt-card-lbl']}><i className="ti ti-stethoscope" style={{ color: '#9b7ec8' }} /> log today&apos;s symptoms</p>
                   <p style={{ fontSize: '12px', color: '#b09aa4', marginBottom: '16px', lineHeight: 1.5 }}>
                     Track how your body feels each day — unlinked from your period. Spot patterns over time.
                   </p>
@@ -1760,8 +1819,7 @@ export default function PeriodsPage() {
                     onChange={e => setDailyNotes(e.target.value)}
                     placeholder="anything on your mind..." style={{ resize: 'none' }} />
 
-                  <button className={styles['pt-submit']}
-                    onClick={handleLogDailySymptom}
+                  <button className={styles['pt-submit']} onClick={handleLogDailySymptom}
                     disabled={(!dailySelSymptoms.length && !dailyMood) || savingSymptom}
                     style={{
                       background: (dailySelSymptoms.length || dailyMood)
@@ -1783,7 +1841,6 @@ export default function PeriodsPage() {
                 </div>
               </div>
 
-              {/* History */}
               <div className={styles['pt-card']}>
                 <p className={styles['pt-card-lbl']}><i className="ti ti-history" style={{ color: '#9b7ec8' }} /> symptom history</p>
                 {dailySymptoms.length === 0 ? (
@@ -1864,11 +1921,9 @@ export default function PeriodsPage() {
 
                   <div className={styles['pt-toggle-row']}>
                     <span className={styles['pt-toggle-lbl']}>
-                      <i className="ti ti-shield-check" style={{ color: '#5a8c63' }} />
-                      protected?
+                      <i className="ti ti-shield-check" style={{ color: '#5a8c63' }} />protected?
                     </span>
-                    <button
-                      className={`${styles['pt-toggle']} ${sexProtected ? styles.on : styles.off}`}
+                    <button className={`${styles['pt-toggle']} ${sexProtected ? styles.on : styles.off}`}
                       style={{ background: sexProtected ? '#5a8c63' : undefined }}
                       onClick={() => setSexProtected(p => !p)} />
                   </div>
@@ -1995,14 +2050,14 @@ export default function PeriodsPage() {
 
                     const cls = [
                       styles['pt-cal-day'],
-                      iPS               ? styles['period-start'] : '',
-                      !iPS && iPE       ? styles['period-end']   : '',
-                      !iPS && !iPE && iP  ? styles.period        : '',
-                      !iP  && iPr       ? styles.predicted       : '',
-                      !iP  && !iPr && iOv ? styles.ovulation     : '',
-                      isT               ? styles.today           : '',
-                      iSex              ? styles['sex-day']      : '',
-                      iPain             ? styles['pain-day']     : '',
+                      iPS                     ? styles['period-start'] : '',
+                      !iPS && iPE             ? styles['period-end']   : '',
+                      !iPS && !iPE && iP      ? styles.period          : '',
+                      !iP  && iPr             ? styles.predicted       : '',
+                      !iP  && !iPr && iOv     ? styles.ovulation       : '',
+                      isT                     ? styles.today           : '',
+                      iSex                    ? styles['sex-day']      : '',
+                      iPain                   ? styles['pain-day']     : '',
                     ].filter(Boolean).join(' ')
 
                     return (
@@ -2016,12 +2071,12 @@ export default function PeriodsPage() {
 
                 <div className={styles['pt-legend']}>
                   {[
-                    { color: '#d4607a',              label: 'period start' },
-                    { color: 'rgba(212,96,122,0.3)',  label: 'period days' },
-                    { color: 'rgba(212,96,122,0.1)',  label: 'predicted', border: '1px dashed rgba(212,96,122,0.4)' },
-                    { color: 'rgba(155,126,200,0.2)', label: 'ovulation', border: '1px solid rgba(155,126,200,0.5)' },
-                    { color: '#5a8c63',              label: 'intimacy (dot)' },
-                    { color: '#b8860b',              label: 'pain (dot)' },
+                    { color: '#d4607a',               label: 'period start' },
+                    { color: 'rgba(212,96,122,0.3)',   label: 'period days' },
+                    { color: 'rgba(212,96,122,0.1)',   label: 'predicted', border: '1px dashed rgba(212,96,122,0.4)' },
+                    { color: 'rgba(155,126,200,0.2)',  label: 'ovulation', border: '1px solid rgba(155,126,200,0.5)' },
+                    { color: '#5a8c63',                label: 'intimacy (dot)' },
+                    { color: '#b8860b',                label: 'pain (dot)' },
                   ].map(l => (
                     <div key={l.label} className={styles['pt-legend-item']}>
                       <div className={styles['pt-legend-dot']} style={{ background: l.color, border: (l as any).border }} />
@@ -2041,12 +2096,12 @@ export default function PeriodsPage() {
 
               <div className={styles['pt-insights']}>
                 {[
-                  { label: 'avg cycle',     value: `${avgCycle} days`,  c: '#d4607a', bg: '#fde8ee', border: '#f2b3c0', icon: 'ti-rotate-clockwise' },
-                  { label: 'avg period',    value: `${avgPeriod} days`, c: '#9b7ec8', bg: '#f3edfb', border: '#c9b8e8', icon: 'ti-droplet' },
-                  { label: 'next period',   value: nextPredicted ? nextPredicted.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : '—', c: '#b8860b', bg: '#fef8e7', border: '#f5ddb4', icon: 'ti-clock' },
+                  { label: 'avg cycle',      value: `${avgCycle} days`,  c: '#d4607a', bg: '#fde8ee', border: '#f2b3c0', icon: 'ti-rotate-clockwise' },
+                  { label: 'avg period',     value: `${avgPeriod} days`, c: '#9b7ec8', bg: '#f3edfb', border: '#c9b8e8', icon: 'ti-droplet' },
+                  { label: 'next period',    value: nextPredicted ? nextPredicted.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : '—', c: '#b8860b', bg: '#fef8e7', border: '#f5ddb4', icon: 'ti-clock' },
                   { label: 'ovulation est.', value: lastStart ? addDays(lastStart, avgCycle - 14).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : '—', c: '#5a8c63', bg: '#edf6ee', border: '#a8c9ae', icon: 'ti-sparkles' },
-                  { label: 'pain logs',     value: String(painLogs.length), c: '#b8860b', bg: '#fef8e7', border: '#f5ddb4', icon: 'ti-bolt' },
-                  { label: 'intimacy logs', value: String(sexLogs.length),  c: '#5a8c63', bg: '#edf6ee', border: '#a8c9ae', icon: 'ti-heart' },
+                  { label: 'pain logs',      value: String(painLogs.length), c: '#b8860b', bg: '#fef8e7', border: '#f5ddb4', icon: 'ti-bolt' },
+                  { label: 'intimacy logs',  value: String(sexLogs.length),  c: '#5a8c63', bg: '#edf6ee', border: '#a8c9ae', icon: 'ti-heart' },
                 ].map((ins, i) => (
                   <motion.div key={ins.label} className={styles['pt-insight']}
                     style={{ background: ins.bg, border: `1px solid ${ins.border}` }}
@@ -2080,8 +2135,7 @@ export default function PeriodsPage() {
                             <i className={`ti ${s?.icon || 'ti-circle'}`} style={{ fontSize: '15px', color: '#d4607a', flexShrink: 0, width: '18px' }} />
                             <span style={{ fontSize: '13px', color: 'var(--ink)', minWidth: '80px' }}>{sym}</span>
                             <div style={{ flex: 1, height: '6px', borderRadius: '999px', background: 'rgba(212,96,122,0.1)', overflow: 'hidden' }}>
-                              <motion.div
-                                initial={{ width: 0 }} animate={{ width: `${pct}%` }}
+                              <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }}
                                 transition={{ delay: 0.2, duration: 0.6 }}
                                 style={{ height: '100%', borderRadius: '999px', background: 'linear-gradient(90deg, #d4607a, #9b7ec8)' }} />
                             </div>
@@ -2111,8 +2165,7 @@ export default function PeriodsPage() {
                             <i className={`ti ${c?.icon || 'ti-cookie'}`} style={{ fontSize: '15px', color: c?.c ?? '#b8860b', flexShrink: 0, width: '18px' }} />
                             <span style={{ fontSize: '13px', color: 'var(--ink)', minWidth: '80px' }}>{cr}</span>
                             <div style={{ flex: 1, height: '6px', borderRadius: '999px', background: 'rgba(184,134,11,0.1)', overflow: 'hidden' }}>
-                              <motion.div
-                                initial={{ width: 0 }} animate={{ width: `${pct}%` }}
+                              <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }}
                                 transition={{ delay: 0.2, duration: 0.6 }}
                                 style={{ height: '100%', borderRadius: '999px', background: `linear-gradient(90deg, ${c?.c ?? '#b8860b'}, #d4607a)` }} />
                             </div>
@@ -2138,8 +2191,7 @@ export default function PeriodsPage() {
                           <i className={`ti ${pt2.icon}`} style={{ fontSize: '15px', color: pt2.c, flexShrink: 0, width: '18px' }} />
                           <span style={{ fontSize: '13px', color: 'var(--ink)', minWidth: '80px' }}>{pt2.label}</span>
                           <div style={{ flex: 1, height: '6px', borderRadius: '999px', background: 'rgba(184,134,11,0.1)', overflow: 'hidden' }}>
-                            <motion.div
-                              initial={{ width: 0 }} animate={{ width: `${(Number(avgSev) / 5) * 100}%` }}
+                            <motion.div initial={{ width: 0 }} animate={{ width: `${(Number(avgSev) / 5) * 100}%` }}
                               transition={{ delay: 0.2, duration: 0.6 }}
                               style={{ height: '100%', borderRadius: '999px', background: `linear-gradient(90deg, ${pt2.c}, #d4607a)` }} />
                           </div>
@@ -2173,12 +2225,12 @@ export default function PeriodsPage() {
                   <>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '16px' }}>
                       {[
-                        { label: 'Cycle length',      value: `${cycleProfile.cycle_length} days`,                                               icon: 'ti-rotate-clockwise', c: '#d4607a', bg: '#fde8ee' },
-                        { label: 'Period length',      value: `${cycleProfile.period_length} days`,                                              icon: 'ti-droplet',          c: '#9b7ec8', bg: '#f3edfb' },
-                        { label: 'Regularity',         value: cycleProfile.cycle_regularity?.replace('_', ' ') ?? '—',                          icon: 'ti-activity',         c: '#5a8c63', bg: '#edf6ee' },
-                        { label: 'PCOS/PCOD',          value: cycleProfile.has_pcos_pcod ? (cycleProfile.pcos_type?.toUpperCase() ?? 'yes') : 'no', icon: 'ti-ribbon',        c: '#b8860b', bg: '#fef8e7' },
-                        { label: 'Birth control',      value: cycleProfile.on_birth_control ? (cycleProfile.birth_control_type ?? 'yes') : 'no', icon: 'ti-pill',             c: '#c05878', bg: '#fde4ec' },
-                        { label: 'Trying to conceive', value: cycleProfile.trying_to_conceive ? 'yes' : 'no',                                   icon: 'ti-heart',            c: '#9b7ec8', bg: '#f3edfb' },
+                        { label: 'Cycle length',      value: `${cycleProfile.cycle_length} days`,                                                  icon: 'ti-rotate-clockwise', c: '#d4607a', bg: '#fde8ee' },
+                        { label: 'Period length',      value: `${cycleProfile.period_length} days`,                                                 icon: 'ti-droplet',          c: '#9b7ec8', bg: '#f3edfb' },
+                        { label: 'Regularity',         value: cycleProfile.cycle_regularity?.replace('_', ' ') ?? '—',                             icon: 'ti-activity',         c: '#5a8c63', bg: '#edf6ee' },
+                        { label: 'PCOS/PCOD',          value: cycleProfile.has_pcos_pcod ? (cycleProfile.pcos_type?.toUpperCase() ?? 'yes') : 'no', icon: 'ti-ribbon',           c: '#b8860b', bg: '#fef8e7' },
+                        { label: 'Birth control',      value: cycleProfile.on_birth_control ? (cycleProfile.birth_control_type ?? 'yes') : 'no',    icon: 'ti-pill',             c: '#c05878', bg: '#fde4ec' },
+                        { label: 'Trying to conceive', value: cycleProfile.trying_to_conceive ? 'yes' : 'no',                                      icon: 'ti-heart',            c: '#9b7ec8', bg: '#f3edfb' },
                         ...(cycleProfile.age ? [{ label: 'Age', value: String(cycleProfile.age), icon: 'ti-user', c: '#7a8cb8', bg: '#edf0fb' }] : []),
                       ].map(row => (
                         <div key={row.label} style={{
@@ -2204,36 +2256,17 @@ export default function PeriodsPage() {
                       style={{ background: 'linear-gradient(135deg, #d4607a, #9b7ec8)', color: '#fff' }}>
                       edit profile
                     </button>
-
-                    <button
-                      onClick={() => setShareOpen(true)}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        background: 'linear-gradient(135deg, #ff3d8b, #ff6bb5)',
-                        border: 'none',
-                        borderRadius: '50px',
-                        padding: '10px 20px',
-                        fontSize: '13px',
-                        fontWeight: 500,
-                        color: 'white',
-                        cursor: 'pointer',
-                        letterSpacing: '0.03em',
-                        boxShadow: '0 4px 16px rgba(255, 61, 139, 0.35)',
-                        transition: 'transform 0.2s ease, box-shadow 0.2s ease',
-                      }}
-                      onMouseEnter={e => {
-                        e.currentTarget.style.transform = 'scale(1.04)'
-                        e.currentTarget.style.boxShadow = '0 6px 22px rgba(255, 61, 139, 0.45)'
-                      }}
-                      onMouseLeave={e => {
-                        e.currentTarget.style.transform = 'scale(1)'
-                        e.currentTarget.style.boxShadow = '0 4px 16px rgba(255, 61, 139, 0.35)'
-                      }}
-                    >
-                      <span style={{ fontSize: '15px' }}>🔗</span>
-                      share with partner
+                    <button onClick={() => setShareOpen(true)} style={{
+                      display: 'flex', alignItems: 'center', gap: '8px',
+                      background: 'linear-gradient(135deg, #ff3d8b, #ff6bb5)',
+                      border: 'none', borderRadius: '50px', padding: '10px 20px',
+                      fontSize: '13px', fontWeight: 500, color: 'white', cursor: 'pointer',
+                      letterSpacing: '0.03em', boxShadow: '0 4px 16px rgba(255, 61, 139, 0.35)',
+                      transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+                    }}
+                      onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.04)'; e.currentTarget.style.boxShadow = '0 6px 22px rgba(255, 61, 139, 0.45)' }}
+                      onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.boxShadow = '0 4px 16px rgba(255, 61, 139, 0.35)' }}>
+                      <span style={{ fontSize: '15px' }}>🔗</span>share with partner
                     </button>
                   </>
                 )}
@@ -2257,9 +2290,7 @@ export default function PeriodsPage() {
 
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
                     <div>
-                      <div className={styles['pt-onboard-step']}>
-                        <i className="ti ti-edit" style={{ color: '#d4607a' }} /> edit entry
-                      </div>
+                      <div className={styles['pt-onboard-step']}><i className="ti ti-edit" style={{ color: '#d4607a' }} /> edit entry</div>
                       <h2 className={styles['pt-onboard-title']} style={{ marginBottom: 0 }}>
                         edit <span className={styles.accent}>cycle entry</span>
                       </h2>
@@ -2268,9 +2299,7 @@ export default function PeriodsPage() {
                       width: 36, height: 36, borderRadius: '50%', border: '1.5px solid #eddde3',
                       background: '#fdf8fa', cursor: 'pointer', display: 'flex', alignItems: 'center',
                       justifyContent: 'center', fontSize: 16, color: '#b09aa4', flexShrink: 0,
-                    }}>
-                      <i className="ti ti-x" />
-                    </button>
+                    }}><i className="ti ti-x" /></button>
                   </div>
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', maxHeight: '65vh', overflowY: 'auto', paddingRight: '4px' }}>
@@ -2279,13 +2308,11 @@ export default function PeriodsPage() {
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                         <div>
                           <div className={styles['pt-input-lbl']} style={{ marginBottom: '4px' }}><i className="ti ti-circle-dot" /> start</div>
-                          <input type="date" className={styles['pt-input']} value={editStart}
-                            onChange={e => setEditStart(e.target.value)} style={{ marginBottom: 0 }} />
+                          <input type="date" className={styles['pt-input']} value={editStart} onChange={e => setEditStart(e.target.value)} style={{ marginBottom: 0 }} />
                         </div>
                         <div>
                           <div className={styles['pt-input-lbl']} style={{ marginBottom: '4px' }}><i className="ti ti-circle-check" /> end (opt.)</div>
-                          <input type="date" className={styles['pt-input']} value={editEnd}
-                            onChange={e => setEditEnd(e.target.value)} style={{ marginBottom: 0 }} />
+                          <input type="date" className={styles['pt-input']} value={editEnd} onChange={e => setEditEnd(e.target.value)} style={{ marginBottom: 0 }} />
                         </div>
                       </div>
                     </div>
@@ -2401,7 +2428,6 @@ export default function PeriodsPage() {
                       }}>
                       {savingEdit ? 'saving...' : 'save changes ✨'}
                     </button>
-
                     {!confirmDelete ? (
                       <button onClick={() => setConfirmDelete(true)} style={{
                         width: '100%', padding: '11px', borderRadius: '999px',
@@ -2455,9 +2481,7 @@ export default function PeriodsPage() {
 
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
                     <div>
-                      <div className={styles['pt-onboard-step']}>
-                        <i className="ti ti-edit" style={{ color: '#b8860b' }} /> edit pain entry
-                      </div>
+                      <div className={styles['pt-onboard-step']}><i className="ti ti-edit" style={{ color: '#b8860b' }} /> edit pain entry</div>
                       <h2 className={styles['pt-onboard-title']} style={{ marginBottom: 0 }}>
                         edit <span style={{ color: '#b8860b' }}>pain log</span>
                       </h2>
@@ -2466,16 +2490,13 @@ export default function PeriodsPage() {
                       width: 36, height: 36, borderRadius: '50%', border: '1.5px solid #eddde3',
                       background: '#fdf8fa', cursor: 'pointer', display: 'flex', alignItems: 'center',
                       justifyContent: 'center', fontSize: 16, color: '#b09aa4', flexShrink: 0,
-                    }}>
-                      <i className="ti ti-x" />
-                    </button>
+                    }}><i className="ti ti-x" /></button>
                   </div>
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', maxHeight: '65vh', overflowY: 'auto', paddingRight: '4px' }}>
                     <div>
                       <div className={styles['pt-input-lbl']}><i className="ti ti-calendar" /> date</div>
-                      <input type="date" className={styles['pt-input']} value={editPainDate}
-                        onChange={e => setEditPainDate(e.target.value)} />
+                      <input type="date" className={styles['pt-input']} value={editPainDate} onChange={e => setEditPainDate(e.target.value)} />
                     </div>
                     <div>
                       <div className={styles['pt-input-lbl']}><i className="ti ti-stethoscope" /> type of pain</div>
@@ -2609,9 +2630,7 @@ export default function PeriodsPage() {
 
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
                     <div>
-                      <div className={styles['pt-onboard-step']}>
-                        <i className="ti ti-edit" style={{ color: '#5a8c63' }} /> edit intimacy entry
-                      </div>
+                      <div className={styles['pt-onboard-step']}><i className="ti ti-edit" style={{ color: '#5a8c63' }} /> edit intimacy entry</div>
                       <h2 className={styles['pt-onboard-title']} style={{ marginBottom: 0 }}>
                         edit <span style={{ color: '#5a8c63' }}>intimacy log</span>
                       </h2>
@@ -2620,23 +2639,19 @@ export default function PeriodsPage() {
                       width: 36, height: 36, borderRadius: '50%', border: '1.5px solid #eddde3',
                       background: '#fdf8fa', cursor: 'pointer', display: 'flex', alignItems: 'center',
                       justifyContent: 'center', fontSize: 16, color: '#b09aa4', flexShrink: 0,
-                    }}>
-                      <i className="ti ti-x" />
-                    </button>
+                    }}><i className="ti ti-x" /></button>
                   </div>
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                     <div>
                       <div className={styles['pt-input-lbl']}><i className="ti ti-calendar" /> date</div>
-                      <input type="date" className={styles['pt-input']} value={editSexDate}
-                        onChange={e => setEditSexDate(e.target.value)} />
+                      <input type="date" className={styles['pt-input']} value={editSexDate} onChange={e => setEditSexDate(e.target.value)} />
                     </div>
                     <div className={styles['pt-toggle-row']}>
                       <span className={styles['pt-toggle-lbl']}>
                         <i className="ti ti-shield-check" style={{ color: '#5a8c63' }} />protected?
                       </span>
-                      <button
-                        className={`${styles['pt-toggle']} ${editSexProtected ? styles.on : styles.off}`}
+                      <button className={`${styles['pt-toggle']} ${editSexProtected ? styles.on : styles.off}`}
                         style={{ background: editSexProtected ? '#5a8c63' : undefined }}
                         onClick={() => setEditSexProtected(p => !p)} />
                     </div>
@@ -2708,9 +2723,7 @@ export default function PeriodsPage() {
 
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
                     <div>
-                      <div className={styles['pt-onboard-step']}>
-                        <i className="ti ti-user" style={{ color: '#d4607a' }} /> edit profile
-                      </div>
+                      <div className={styles['pt-onboard-step']}><i className="ti ti-user" style={{ color: '#d4607a' }} /> edit profile</div>
                       <h2 className={styles['pt-onboard-title']} style={{ marginBottom: 0 }}>
                         your <span className={styles.accent}>cycle profile</span>
                       </h2>
@@ -2719,9 +2732,7 @@ export default function PeriodsPage() {
                       width: 36, height: 36, borderRadius: '50%', border: '1.5px solid #eddde3',
                       background: '#fdf8fa', cursor: 'pointer', display: 'flex', alignItems: 'center',
                       justifyContent: 'center', fontSize: 16, color: '#b09aa4', flexShrink: 0,
-                    }}>
-                      <i className="ti ti-x" />
-                    </button>
+                    }}><i className="ti ti-x" /></button>
                   </div>
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxHeight: '65vh', overflowY: 'auto', paddingRight: '4px' }}>
@@ -2739,13 +2750,12 @@ export default function PeriodsPage() {
                         onChange={e => updateEditProfile('period_length', Number(e.target.value))} />
                       <div className={styles['pt-range-labels']}><span>2</span><span style={{ color: '#d4607a', fontWeight: 600 }}>{editProfile.period_length}d</span><span>10</span></div>
                     </div>
-
                     <div>
                       <div className={styles['pt-input-lbl']}><i className="ti ti-activity" /> regularity</div>
                       <div className={styles['pt-radio-group']}>
                         {[
-                          { key: 'regular',       label: 'Pretty regular',      icon: 'ti-clock',     c: '#5a8c63', bg: '#edf6ee', border: 'rgba(90,140,99,0.25)' },
-                          { key: 'irregular',     label: 'Somewhat irregular',  icon: 'ti-clock-off', c: '#b8860b', bg: '#fef8e7', border: 'rgba(184,134,11,0.25)' },
+                          { key: 'regular',        label: 'Pretty regular',     icon: 'ti-clock',     c: '#5a8c63', bg: '#edf6ee', border: 'rgba(90,140,99,0.25)' },
+                          { key: 'irregular',      label: 'Somewhat irregular', icon: 'ti-clock-off', c: '#b8860b', bg: '#fef8e7', border: 'rgba(184,134,11,0.25)' },
                           { key: 'very_irregular', label: 'Very irregular',     icon: 'ti-help',      c: '#9b7ec8', bg: '#f3edfb', border: 'rgba(155,126,200,0.25)' },
                         ].map(opt => (
                           <button key={opt.key} className={styles['pt-radio-btn']}
@@ -2761,7 +2771,6 @@ export default function PeriodsPage() {
                         ))}
                       </div>
                     </div>
-
                     <div>
                       <div className={styles['pt-input-lbl']}><i className="ti ti-ribbon" /> PCOS / PCOD</div>
                       <div className={styles['pt-radio-group']}>
@@ -2799,7 +2808,6 @@ export default function PeriodsPage() {
                         </div>
                       )}
                     </div>
-
                     <div>
                       <div className={styles['pt-toggle-row']}>
                         <span className={styles['pt-toggle-lbl']}><i className="ti ti-pill" /> On birth control?</span>
@@ -2824,7 +2832,6 @@ export default function PeriodsPage() {
                         </div>
                       )}
                     </div>
-
                     <div className={styles['pt-toggle-row']}>
                       <span className={styles['pt-toggle-lbl']}><i className="ti ti-heart" /> Trying to conceive?</span>
                       <button className={`${styles['pt-toggle']} ${editProfile.trying_to_conceive ? styles.on : styles.off}`}
@@ -2871,9 +2878,7 @@ export default function PeriodsPage() {
 
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
                     <div>
-                      <div className={styles['pt-onboard-step']}>
-                        <i className="ti ti-edit" style={{ color: '#9b7ec8' }} /> edit symptoms
-                      </div>
+                      <div className={styles['pt-onboard-step']}><i className="ti ti-edit" style={{ color: '#9b7ec8' }} /> edit symptoms</div>
                       <h2 className={styles['pt-onboard-title']} style={{ marginBottom: 0 }}>
                         edit <span style={{ color: '#9b7ec8' }}>symptom log</span>
                       </h2>
@@ -2882,16 +2887,13 @@ export default function PeriodsPage() {
                       width: 36, height: 36, borderRadius: '50%', border: '1.5px solid #eddde3',
                       background: '#fdf8fa', cursor: 'pointer', display: 'flex', alignItems: 'center',
                       justifyContent: 'center', fontSize: 16, color: '#b09aa4', flexShrink: 0,
-                    }}>
-                      <i className="ti ti-x" />
-                    </button>
+                    }}><i className="ti ti-x" /></button>
                   </div>
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', maxHeight: '65vh', overflowY: 'auto', paddingRight: '4px' }}>
                     <div>
                       <div className={styles['pt-input-lbl']}><i className="ti ti-calendar" /> date</div>
-                      <input type="date" className={styles['pt-input']} value={editDDate}
-                        onChange={e => setEditDDate(e.target.value)} />
+                      <input type="date" className={styles['pt-input']} value={editDDate} onChange={e => setEditDDate(e.target.value)} />
                     </div>
                     <div>
                       <div className={styles['pt-input-lbl']}><i className="ti ti-bolt" /> symptoms</div>
@@ -3008,8 +3010,8 @@ export default function PeriodsPage() {
         </AnimatePresence>
 
       </div>
-      {/* Floating Share Button */}
-<SharePartner open={shareOpen} onOpenChange={setShareOpen} />
+
+      <SharePartner open={shareOpen} onOpenChange={setShareOpen} />
     </>
   )
 }
