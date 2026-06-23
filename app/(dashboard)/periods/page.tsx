@@ -539,7 +539,6 @@ function PeriodArrivalBanner({ daysUntilNext, predictedDate, onConfirm, onSnooze
             {headline}
           </div>
 
-          {/* ── IDLE ── */}
           {step === 'idle' && (
             <>
               <div style={{ fontSize: '12px', color: '#b09aa4', lineHeight: 1.5, marginBottom: '12px' }}>
@@ -565,7 +564,6 @@ function PeriodArrivalBanner({ daysUntilNext, predictedDate, onConfirm, onSnooze
             </>
           )}
 
-          {/* ── STEP 1: flow ── */}
           <AnimatePresence>
             {step === 'flow' && (
               <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}
@@ -605,13 +603,10 @@ function PeriodArrivalBanner({ daysUntilNext, predictedDate, onConfirm, onSnooze
             )}
           </AnimatePresence>
 
-          {/* ── STEP 2: symptoms + mood + cravings ── */}
           <AnimatePresence>
             {step === 'details' && (
               <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}
                 exit={{ opacity: 0, height: 0 }} style={{ overflow: 'hidden' }}>
-
-                {/* symptoms */}
                 <div style={{ fontSize: '12px', color: '#b09aa4', marginBottom: '6px', fontWeight: 600 }}>
                   <i className="ti ti-stethoscope" style={{ marginRight: '4px' }} />any symptoms? (optional)
                 </div>
@@ -631,8 +626,6 @@ function PeriodArrivalBanner({ daysUntilNext, predictedDate, onConfirm, onSnooze
                     )
                   })}
                 </div>
-
-                {/* mood */}
                 <div style={{ fontSize: '12px', color: '#b09aa4', marginBottom: '6px', fontWeight: 600 }}>
                   <i className="ti ti-mood-smile" style={{ marginRight: '4px' }} />how are you feeling? (optional)
                 </div>
@@ -652,8 +645,6 @@ function PeriodArrivalBanner({ daysUntilNext, predictedDate, onConfirm, onSnooze
                     )
                   })}
                 </div>
-
-                {/* cravings */}
                 <div style={{ fontSize: '12px', color: '#b09aa4', marginBottom: '6px', fontWeight: 600 }}>
                   <i className="ti ti-cookie" style={{ marginRight: '4px' }} />any cravings? (optional)
                 </div>
@@ -673,7 +664,6 @@ function PeriodArrivalBanner({ daysUntilNext, predictedDate, onConfirm, onSnooze
                     )
                   })}
                 </div>
-
                 <div style={{ display: 'flex', gap: '8px' }}>
                   <button onClick={handleConfirm} disabled={confirming} style={{
                     ...btnBase, flex: 1, padding: '9px',
@@ -690,8 +680,217 @@ function PeriodArrivalBanner({ daysUntilNext, predictedDate, onConfirm, onSnooze
               </motion.div>
             )}
           </AnimatePresence>
-
         </div>
+      </div>
+    </motion.div>
+  )
+}
+
+// ─── Period Cravings Card ─────────────────────────────────────────────────────
+
+const cravingFoods = [
+  {
+    img: 'https://images.unsplash.com/photo-1548907040-4d42bde4e6ab?w=300&q=80',
+    label: 'chocolate',
+    emoji: '🍫',
+    vibe: 'serotonin boost bestie',
+    c: '#7a3a1a',
+    bg: 'rgba(122,58,26,0.08)',
+    border: 'rgba(122,58,26,0.15)',
+  },
+  {
+    img: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?w=300&q=80',
+    label: 'pizza',
+    emoji: '🍕',
+    vibe: 'cheesy comfort, always',
+    c: '#c05828',
+    bg: 'rgba(192,88,40,0.08)',
+    border: 'rgba(192,88,40,0.15)',
+  },
+  {
+    img: 'https://images.unsplash.com/photo-1551024506-0bccd828d307?w=300&q=80',
+    label: 'ice cream',
+    emoji: '🍨',
+    vibe: 'cold + sweet = therapy',
+    c: '#9b5ec8',
+    bg: 'rgba(155,94,200,0.08)',
+    border: 'rgba(155,94,200,0.15)',
+  },
+  {
+    img: 'https://images.unsplash.com/photo-1612203985729-70726954388c?w=300&q=80',
+    label: 'ramen',
+    emoji: '🍜',
+    vibe: 'warm hug in a bowl',
+    c: '#c08020',
+    bg: 'rgba(192,128,32,0.08)',
+    border: 'rgba(192,128,32,0.15)',
+  },
+  {
+    img: 'https://images.unsplash.com/photo-1562376552-0d160a2f238d?w=300&q=80',
+    label: 'fries',
+    emoji: '🍟',
+    vibe: 'salty & satisfying',
+    c: '#b8860b',
+    bg: 'rgba(184,134,11,0.08)',
+    border: 'rgba(184,134,11,0.15)',
+  },
+  {
+    img: 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=300&q=80',
+    label: 'cake',
+    emoji: '🎂',
+    vibe: 'because you deserve it',
+    c: '#d4607a',
+    bg: 'rgba(212,96,122,0.08)',
+    border: 'rgba(212,96,122,0.15)',
+  },
+]
+
+function PeriodCravingsCard() {
+  const [clicked, setClicked] = useState<string[]>([])
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('craving_foods_clicked')
+      if (stored) setClicked(JSON.parse(stored))
+    } catch {}
+  }, [])
+
+  const handleFoodClick = (label: string) => {
+    setClicked(prev => {
+      if (prev.includes(label)) return prev // already marked, no-op
+      const next = [...prev, label]
+      try { localStorage.setItem('craving_foods_clicked', JSON.stringify(next)) } catch {}
+      return next
+    })
+  }
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 14 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -6 }}
+      transition={{ duration: 0.4, delay: 0.15 }}
+      style={{
+        borderRadius: '20px',
+        background: 'linear-gradient(145deg, #fff5f7 0%, #f8f3fc 100%)',
+        border: '1.5px solid rgba(212,96,122,0.15)',
+        padding: '18px 16px',
+        marginTop: '6px',
+        overflow: 'hidden',
+      }}>
+
+      {/* header */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
+        <span style={{ fontSize: '24px' }}>🫶</span>
+        <div>
+          <div style={{ fontSize: '13px', fontWeight: 700, color: '#d4607a', lineHeight: 1.2 }}>
+            your body is craving…
+          </div>
+          <div style={{ fontSize: '11px', color: '#b09aa4', marginTop: '2px' }}>
+            tap whichever you reach for 🌸
+          </div>
+        </div>
+      </div>
+
+      {/* food grid */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(3, 1fr)',
+        gap: '10px',
+        marginBottom: '14px',
+      }}>
+        {cravingFoods.map((food) => {
+          const isClicked = clicked.includes(food.label)
+          return (
+            <button
+              key={food.label}
+              onClick={() => handleFoodClick(food.label)}
+              style={{
+                borderRadius: '16px',
+                overflow: 'hidden',
+                border: `1.5px solid ${isClicked ? food.c : food.border}`,
+                background: food.bg,
+                display: 'flex',
+                flexDirection: 'column',
+                width: '100%',
+                padding: 0,
+                margin: 0,
+                cursor: 'pointer',
+                textAlign: 'left',
+                fontFamily: 'inherit',
+                position: 'relative',
+                opacity: isClicked ? 0.88 : 1,
+                transform: isClicked ? 'scale(0.98)' : 'scale(1)',
+                transition: 'all 0.2s ease',
+              }}>
+              {/* image */}
+              <div style={{ position: 'relative', width: '100%', paddingTop: '85%', overflow: 'hidden' }}>
+                <img
+                  src={food.img}
+                  alt={food.label}
+                  style={{
+                    position: 'absolute',
+                    inset: 0,
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover',
+                    display: 'block',
+                  }}
+                />
+                {/* emoji badge */}
+                <div style={{
+                  position: 'absolute',
+                  top: 6, right: 6,
+                  fontSize: '15px',
+                  background: 'rgba(255,255,255,0.88)',
+                  backdropFilter: 'blur(4px)',
+                  borderRadius: '50%',
+                  width: 26, height: 26,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                }}>
+                  {food.emoji}
+                </div>
+                {/* clicked checkmark badge */}
+                {isClicked && (
+                  <motion.div
+                    initial={{ scale: 0, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    style={{
+                      position: 'absolute',
+                      top: 6, left: 6,
+                      width: 24, height: 24,
+                      background: food.c,
+                      borderRadius: '50%',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.18)',
+                    }}>
+                    <i className="ti ti-check" style={{ color: '#fff', fontSize: '13px' }} />
+                  </motion.div>
+                )}
+              </div>
+              {/* label */}
+              <div style={{ padding: '8px 10px 9px' }}>
+                <div style={{ fontSize: '11px', fontWeight: 700, color: food.c, lineHeight: 1.2 }}>{food.label}</div>
+                <div style={{ fontSize: '9.5px', color: '#b09aa4', marginTop: '2px', lineHeight: 1.4 }}>
+                  {isClicked ? 'craved it ✓' : food.vibe}
+                </div>
+              </div>
+            </button>
+          )
+        })}
+      </div>
+
+      {/* footer note */}
+      <div style={{
+        padding: '10px 12px', borderRadius: '12px',
+        background: 'rgba(155,126,200,0.07)',
+        border: '1px solid rgba(155,126,200,0.15)',
+        fontSize: '11px', color: '#9b7ec8', lineHeight: 1.6,
+        textAlign: 'center',
+      }}>
+        <i className="ti ti-sparkles" style={{ marginRight: '5px' }} />
+        you&apos;re doing amazing — treat yourself 💜
       </div>
     </motion.div>
   )
@@ -702,16 +901,13 @@ function PeriodArrivalBanner({ daysUntilNext, predictedDate, onConfirm, onSnooze
 export default function PeriodsPage() {
   const supabase = createClient()
 
-  // ── onboarding & profile ──
   const [showOnboarding, setShowOnboarding] = useState(false)
   const [cycleProfile,   setCycleProfile]   = useState<CycleProfile | null>(null)
 
-  // ── data ──
   const [entries,  setEntries]  = useState<Entry[]>([])
   const [sexLogs,  setSexLogs]  = useState<SexLog[]>([])
   const [painLogs, setPainLogs] = useState<PainLog[]>([])
 
-  // ── Daily symptom log state ──
   const [dailySymptoms,    setDailySymptoms]    = useState<DailySymptom[]>([])
   const [symptomDate,      setSymptomDate]      = useState(toYMD(new Date()))
   const [dailySelSymptoms, setDailySelSymptoms] = useState<string[]>([])
@@ -721,7 +917,6 @@ export default function PeriodsPage() {
   const [savingSymptom,    setSavingSymptom]    = useState(false)
   const [successSymptom,   setSuccessSymptom]   = useState(false)
 
-  // ── Edit daily symptom state ──
   const [editingSymptom,    setEditingSymptom]    = useState<DailySymptom | null>(null)
   const [editDSymptoms,     setEditDSymptoms]     = useState<string[]>([])
   const [editDMood,         setEditDMood]         = useState<string | null>(null)
@@ -731,13 +926,10 @@ export default function PeriodsPage() {
   const [savingEditSymptom, setSavingEditSymptom] = useState(false)
   const [confirmDeleteSym,  setConfirmDeleteSym]  = useState(false)
 
-  // ── navigation ──
   const [activeTab, setActiveTab] = useState<'log' | 'pain' | 'symptoms' | 'sex' | 'calendar' | 'insights' | 'profile'>('log')
 
-  // ── period arrival banner ──
   const [arrivalSnoozed, setArrivalSnoozed] = useState(false)
 
-  // ── period log state ──
   const [selectedFlow, setSelectedFlow] = useState<Flow | null>(null)
   const [selSymptoms,  setSelSymptoms]  = useState<string[]>([])
   const [selMood,      setSelMood]      = useState<string | null>(null)
@@ -748,7 +940,6 @@ export default function PeriodsPage() {
   const [saving,       setSaving]       = useState(false)
   const [success,      setSuccess]      = useState(false)
 
-  // ── pain log state ──
   const [painDate,     setPainDate]     = useState(toYMD(new Date()))
   const [painType,     setPainType]     = useState<string | null>(null)
   const [painSeverity, setPainSeverity] = useState<number>(3)
@@ -758,17 +949,14 @@ export default function PeriodsPage() {
   const [savingPain,   setSavingPain]   = useState(false)
   const [successPain,  setSuccessPain]  = useState(false)
 
-  // ── sex log state ──
   const [sexDate,      setSexDate]      = useState(toYMD(new Date()))
   const [sexProtected, setSexProtected] = useState(true)
   const [sexNotes,     setSexNotes]     = useState('')
   const [savingSex,    setSavingSex]    = useState(false)
   const [successSex,   setSuccessSex]   = useState(false)
 
-  // ── calendar ──
   const [calMonth, setCalMonth] = useState(new Date())
 
-  // ── edit period modal state ──
   const [editingEntry,  setEditingEntry]  = useState<Entry | null>(null)
   const [editFlow,      setEditFlow]      = useState<Flow | null>(null)
   const [editSymptoms,  setEditSymptoms]  = useState<string[]>([])
@@ -780,7 +968,6 @@ export default function PeriodsPage() {
   const [savingEdit,    setSavingEdit]    = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
 
-  // ── Edit Pain Log state ──
   const [editingPain,       setEditingPain]       = useState<PainLog | null>(null)
   const [editPainType,      setEditPainType]       = useState<string | null>(null)
   const [editPainSeverity,  setEditPainSeverity]  = useState<number>(3)
@@ -791,7 +978,6 @@ export default function PeriodsPage() {
   const [savingEditPain,    setSavingEditPain]    = useState(false)
   const [confirmDeletePain, setConfirmDeletePain] = useState(false)
 
-  // ── Edit Sex Log state ──
   const [editingSex,       setEditingSex]       = useState<SexLog | null>(null)
   const [editSexDate,      setEditSexDate]      = useState('')
   const [editSexProtected, setEditSexProtected] = useState(true)
@@ -799,7 +985,6 @@ export default function PeriodsPage() {
   const [savingEditSex,    setSavingEditSex]    = useState(false)
   const [confirmDeleteSex, setConfirmDeleteSex] = useState(false)
 
-  // ── Edit Profile state ──
   const [editingProfile,    setEditingProfile]    = useState(false)
   const [editProfile,       setEditProfile]       = useState<Partial<CycleProfile>>({})
   const [savingEditProfile, setSavingEditProfile] = useState(false)
@@ -941,7 +1126,7 @@ export default function PeriodsPage() {
     })
     setSuccess(true)
     setSelectedFlow(null); setSelSymptoms([]); setSelMood(null); setSelCravings([]); setEndDate(''); setNotes('')
-    setTimeout(() => setSuccess(false), 3000)
+    setTimeout(() => setSuccess(false), 8000)
     setSaving(false); fetchEntries()
   }
 
@@ -1041,8 +1226,6 @@ export default function PeriodsPage() {
       return withoutNone.includes(c) ? withoutNone.filter(x => x !== c) : [...withoutNone, c]
     })
 
-  // ── Pain edit handlers ──
-
   const openEditPain = (p: PainLog) => {
     setEditingPain(p)
     setEditPainType(p.type)
@@ -1077,8 +1260,6 @@ export default function PeriodsPage() {
     fetchPainLogs()
   }
 
-  // ── Sex edit handlers ──
-
   const openEditSex = (s: SexLog) => {
     setEditingSex(s)
     setEditSexDate(s.date)
@@ -1105,8 +1286,6 @@ export default function PeriodsPage() {
     closeEditSex()
     fetchSexLogs()
   }
-
-  // ── Profile edit handlers ──
 
   const openEditProfile = () => {
     setEditProfile({ ...cycleProfile })
@@ -1273,7 +1452,7 @@ export default function PeriodsPage() {
           )}
         </motion.div>
 
-        {/* ── Period Arrival Banner ── */}
+        {/* Period Arrival Banner */}
         <AnimatePresence>
           {lastStart && (
             <PeriodArrivalBanner
@@ -1468,13 +1647,18 @@ export default function PeriodsPage() {
                     }}>
                     {saving ? 'saving...' : success ? 'logged, lovely 🌸' : selectedFlow ? 'log this cycle' : 'pick a flow first'}
                   </button>
+
+                  {/* ── SUCCESS: toast + cravings card ── */}
                   <AnimatePresence>
                     {success && (
-                      <motion.div className={styles['pt-toast']}
-                        initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-                        style={{ background: '#edf6ee', border: '1px solid #a8c9ae', color: '#2a5c33' }}>
-                        your cycle has been logged 🌸
-                      </motion.div>
+                      <>
+                        <motion.div className={styles['pt-toast']}
+                          initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                          style={{ background: '#edf6ee', border: '1px solid #a8c9ae', color: '#2a5c33' }}>
+                          your cycle has been logged 🌸
+                        </motion.div>
+                        <PeriodCravingsCard />
+                      </>
                     )}
                   </AnimatePresence>
                 </div>
