@@ -433,7 +433,7 @@ export default function LoginPage() {
       return
     }
 
-    const { data: redeemData, error: redeemError } = await supabase.rpc('redeem_partner_code', {
+    const { data: redeemData, error: redeemError } = await (supabase as any).rpc('redeem_partner_code', {
       p_code: cleanCode,
       p_user_id: userId,
     })
