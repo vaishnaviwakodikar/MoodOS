@@ -1067,7 +1067,7 @@ export default function PeriodsPage() {
       logSupabaseError('fetchEntries failed:', error)
       return
     }
-    if (data) setEntries(data as Entry[])
+    if (data) setEntries(data as unknown as Entry[])
   }
 
   const fetchSexLogs = async () => {
