@@ -792,7 +792,7 @@ function PeriodCravingsCard() {
       return
     }
 
-    const { error } = await (supabase.from('craving_clicks') as any).upsert(
+    const { error } = await (supabase as any).from('craving_clicks').upsert(
       { user_id: user.id, food_label: label, clicked_at: new Date().toISOString() },
       { onConflict: 'user_id,food_label' }
     )
