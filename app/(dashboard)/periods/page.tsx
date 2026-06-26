@@ -770,7 +770,7 @@ function PeriodCravingsCard() {
   const [clicked, setClicked] = useState<string[]>([])
 
   const fetchCravingClicks = async () => {
-    const { data, error } = await supabase.from('craving_clicks').select('food_label')
+    const { data, error } = await (supabase as any).from('craving_clicks').select('food_label')
     if (error) {
       logSupabaseError('fetchCravingClicks failed:', error)
       return
