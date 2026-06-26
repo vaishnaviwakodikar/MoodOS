@@ -125,6 +125,25 @@ const painTypes = [
 
 const reliefOptions = ['ibuprofen', 'paracetamol', 'heat pad', 'rest', 'yoga', 'massage', 'ice pack', 'nothing']
 
+// ─── Error logging helper ───────────────────────────────────────────────────
+// Supabase/PostgREST errors don't serialize well with plain console.error
+// (they often render as `{}` in Next's overlay). This pulls out the fields
+// that actually matter so they show up in the console.
+function logSupabaseError(label: string, error: any) {
+  if (!error) {
+    console.error(label, error)
+    return
+  }
+  console.error(label, {
+    message: error.message,
+    details: error.details,
+    hint: error.hint,
+    code: error.code,
+    status: error.status,
+    name: error.name,
+  })
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function addDays(date: Date, n: number) {
@@ -746,22 +765,38 @@ const cravingFoods = [
 ]
 
 function PeriodCravingsCard() {
+  const supabase = createClient()
+
   const [clicked, setClicked] = useState<string[]>([])
 
+  const fetchCravingClicks = async () => {
+    const { data, error } = await supabase.from('craving_clicks').select('food_label')
+    if (error) {
+      logSupabaseError('fetchCravingClicks failed:', error)
+      return
+    }
+    if (data) setClicked(data.map((d: { food_label: string }) => d.food_label))
+  }
+
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem('craving_foods_clicked')
-      if (stored) setClicked(JSON.parse(stored))
-    } catch {}
+    fetchCravingClicks()
   }, [])
 
-  const handleFoodClick = (label: string) => {
-    setClicked(prev => {
-      if (prev.includes(label)) return prev // already marked, no-op
-      const next = [...prev, label]
-      try { localStorage.setItem('craving_foods_clicked', JSON.stringify(next)) } catch {}
-      return next
-    })
+  const handleFoodClick = async (label: string) => {
+    if (clicked.includes(label)) return
+    setClicked(prev => [...prev, label])
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) {
+      logSupabaseError('handleFoodClick: no authenticated user', authError)
+      return
+    }
+
+    const { error } = await (supabase.from('craving_clicks') as any).upsert(
+      { user_id: user.id, food_label: label, clicked_at: new Date().toISOString() },
+      { onConflict: 'user_id,food_label' }
+    )
+    if (error) logSupabaseError('handleFoodClick: upsert failed:', error)
   }
 
   return (
@@ -1002,7 +1037,11 @@ export default function PeriodsPage() {
   // ─── Fetch functions ───────────────────────────────────────────────────────
 
   const fetchProfile = async () => {
-    const { data } = await supabase.from('cycle_profiles').select('*').single()
+    const { data, error } = await supabase.from('cycle_profiles').select('*').single()
+    if (error) {
+      logSupabaseError('fetchProfile failed:', error)
+      return
+    }
     if (data) {
       setCycleProfile({
         ...data,
@@ -1018,22 +1057,43 @@ export default function PeriodsPage() {
   }
 
   const fetchEntries = async () => {
-    const { data } = await supabase.from('period_entries').select('*').order('start_date', { ascending: false }).limit(12)
+    const { data, error } = await supabase
+      .from('period_entries')
+      .select('*')
+      .order('start_date', { ascending: false })
+      .limit(12)
+
+    if (error) {
+      logSupabaseError('fetchEntries failed:', error)
+      return
+    }
     if (data) setEntries(data as Entry[])
   }
 
   const fetchSexLogs = async () => {
-    const { data } = await supabase.from('sex_log').select('*').order('date', { ascending: false }).limit(30)
+    const { data, error } = await supabase.from('sex_log').select('*').order('date', { ascending: false }).limit(30)
+    if (error) {
+      logSupabaseError('fetchSexLogs failed:', error)
+      return
+    }
     if (data) setSexLogs(data)
   }
 
   const fetchPainLogs = async () => {
-    const { data } = await supabase.from('pain_logs').select('*').order('date', { ascending: false }).limit(30)
+    const { data, error } = await supabase.from('pain_logs').select('*').order('date', { ascending: false }).limit(30)
+    if (error) {
+      logSupabaseError('fetchPainLogs failed:', error)
+      return
+    }
     if (data) setPainLogs(data as PainLog[])
   }
 
   const fetchDailySymptoms = async () => {
-    const { data } = await supabase.from('daily_symptoms').select('*').order('date', { ascending: false }).limit(30)
+    const { data, error } = await supabase.from('daily_symptoms').select('*').order('date', { ascending: false }).limit(30)
+    if (error) {
+      logSupabaseError('fetchDailySymptoms failed:', error)
+      return
+    }
     if (data) setDailySymptoms(data as DailySymptom[])
   }
 
@@ -1042,12 +1102,20 @@ export default function PeriodsPage() {
   const handleLogDailySymptom = async () => {
     if (!dailySelSymptoms.length && !dailyMood) return
     setSavingSymptom(true)
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) { setSavingSymptom(false); return }
-    await (supabase.from('daily_symptoms') as any).upsert(
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) {
+      logSupabaseError('handleLogDailySymptom: no authenticated user', authError)
+      setSavingSymptom(false); return
+    }
+    const { error } = await (supabase.from('daily_symptoms') as any).upsert(
       { user_id: user.id, date: symptomDate, symptoms: dailySelSymptoms, mood: dailyMood, energy: dailyEnergy, notes: dailyNotes.trim() || null },
       { onConflict: 'user_id,date' }
     )
+    if (error) {
+      logSupabaseError('handleLogDailySymptom: upsert failed:', error)
+      setSavingSymptom(false)
+      return
+    }
     setDailySelSymptoms([]); setDailyMood(null); setDailyEnergy(3); setDailyNotes('')
     setSuccessSymptom(true)
     setTimeout(() => setSuccessSymptom(false), 3000)
@@ -1074,10 +1142,11 @@ export default function PeriodsPage() {
   const handleSaveEditSymptom = async () => {
     if (!editingSymptom) return
     setSavingEditSymptom(true)
-    await (supabase.from('daily_symptoms') as any).update({
+    const { error } = await (supabase.from('daily_symptoms') as any).update({
       date: editDDate, symptoms: editDSymptoms, mood: editDMood,
       energy: editDEnergy, notes: editDNotes.trim() || null,
     }).eq('id', editingSymptom.id)
+    if (error) logSupabaseError('handleSaveEditSymptom failed:', error)
     setSavingEditSymptom(false)
     closeEditSymptom()
     fetchDailySymptoms()
@@ -1085,7 +1154,8 @@ export default function PeriodsPage() {
 
   const handleDeleteSymptom = async () => {
     if (!editingSymptom) return
-    await (supabase.from('daily_symptoms') as any).delete().eq('id', editingSymptom.id)
+    const { error } = await (supabase.from('daily_symptoms') as any).delete().eq('id', editingSymptom.id)
+    if (error) logSupabaseError('handleDeleteSymptom failed:', error)
     closeEditSymptom()
     fetchDailySymptoms()
   }
@@ -1093,9 +1163,16 @@ export default function PeriodsPage() {
   // ─── Handlers ─────────────────────────────────────────────────────────────
 
   const handleOnboardingComplete = async (profile: CycleProfile) => {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
-    await (supabase as any).from('cycle_profiles').upsert({ ...profile, user_id: user.id })
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) {
+      logSupabaseError('handleOnboardingComplete: no authenticated user', authError)
+      return
+    }
+    const { error } = await (supabase as any).from('cycle_profiles').upsert({ ...profile, user_id: user.id })
+    if (error) {
+      logSupabaseError('handleOnboardingComplete: upsert failed:', error)
+      return
+    }
     setCycleProfile(profile)
     localStorage.setItem('cycle_onboarded', '1')
     setShowOnboarding(false)
@@ -1117,26 +1194,54 @@ export default function PeriodsPage() {
   const handleLog = async () => {
     if (!selectedFlow || !startDate) return
     setSaving(true)
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) { setSaving(false); return }
-    await supabase.from('period_entries').insert({
-      user_id: user.id, start_date: startDate,
-      end_date: endDate || null, flow: selectedFlow,
-      symptoms: selSymptoms, mood: selMood, cravings: selCravings, notes: notes.trim() || null,
-    })
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) {
+      logSupabaseError('handleLog: no authenticated user', authError)
+      setSaving(false)
+      return
+    }
+
+    const { data, error } = await supabase.from('period_entries').insert({
+      user_id: user.id,
+      start_date: startDate,
+      end_date: endDate || null,
+      flow: selectedFlow,
+      symptoms: selSymptoms,
+      mood: selMood,
+      cravings: selCravings,
+      notes: notes.trim() || null,
+    }).select()
+
+    if (error) {
+      logSupabaseError('handleLog: insert failed:', error)
+      setSaving(false)
+      return
+    }
+
+    console.log('handleLog: inserted entry:', data)
+
     setSuccess(true)
     setSelectedFlow(null); setSelSymptoms([]); setSelMood(null); setSelCravings([]); setEndDate(''); setNotes('')
     setTimeout(() => setSuccess(false), 8000)
-    setSaving(false); fetchEntries()
+    setSaving(false)
+    fetchEntries()
   }
 
   const handleArrivalConfirm = async (flow: Flow, date: string, symptoms: string[], mood: string | null, cravings: string[]) => {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
-    await supabase.from('period_entries').insert({
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) {
+      logSupabaseError('handleArrivalConfirm: no authenticated user', authError)
+      return
+    }
+    const { error } = await supabase.from('period_entries').insert({
       user_id: user.id, start_date: date, end_date: null,
       flow, symptoms, mood, cravings, notes: null,
     })
+    if (error) {
+      logSupabaseError('handleArrivalConfirm: insert failed:', error)
+      return
+    }
     setArrivalSnoozed(true)
     fetchEntries()
   }
@@ -1144,15 +1249,23 @@ export default function PeriodsPage() {
   const handleLogPain = async () => {
     if (!painType) return
     setSavingPain(true)
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) { setSavingPain(false); return }
-    await supabase.from('pain_logs').insert({
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) {
+      logSupabaseError('handleLogPain: no authenticated user', authError)
+      setSavingPain(false); return
+    }
+    const { error } = await supabase.from('pain_logs').insert({
       user_id: user.id, date: painDate, type: painType,
       severity: painSeverity,
       duration_hours: painDuration ? Number(painDuration) : null,
       relief_used: painRelief.join(', ') || null,
       notes: painNotes.trim() || null,
     })
+    if (error) {
+      logSupabaseError('handleLogPain: insert failed:', error)
+      setSavingPain(false)
+      return
+    }
     setSuccessPain(true)
     setPainType(null); setPainSeverity(3); setPainDuration(''); setPainRelief([]); setPainNotes('')
     setTimeout(() => setSuccessPain(false), 3000)
@@ -1168,13 +1281,13 @@ export default function PeriodsPage() {
       const { error } = await supabase.from('sex_log').insert({
         user_id: user.id, date: sexDate, protected: sexProtected, notes: sexNotes.trim() || null,
       })
-      if (error) { setSavingSex(false); return }
+      if (error) { logSupabaseError('handleLogSex: insert failed:', error); setSavingSex(false); return }
       setSuccessSex(true)
       setSexNotes(''); setSexDate(toYMD(new Date()))
       setTimeout(() => setSuccessSex(false), 3000)
       fetchSexLogs()
     } catch (err) {
-      console.error('Unexpected error:', err)
+      logSupabaseError('Unexpected error:', err)
     } finally {
       setSavingSex(false)
     }
@@ -1199,11 +1312,12 @@ export default function PeriodsPage() {
   const handleSaveEdit = async () => {
     if (!editingEntry || !editFlow) return
     setSavingEdit(true)
-    await supabase.from('period_entries').update({
+    const { error } = await supabase.from('period_entries').update({
       start_date: editStart, end_date: editEnd || null,
       flow: editFlow, symptoms: editSymptoms, mood: editMood, cravings: editCravings,
       notes: editNotes.trim() || null,
     }).eq('id', editingEntry.id)
+    if (error) logSupabaseError('handleSaveEdit failed:', error)
     setSavingEdit(false)
     closeEdit()
     fetchEntries()
@@ -1211,7 +1325,8 @@ export default function PeriodsPage() {
 
   const handleDeleteEntry = async () => {
     if (!editingEntry) return
-    await supabase.from('period_entries').delete().eq('id', editingEntry.id)
+    const { error } = await supabase.from('period_entries').delete().eq('id', editingEntry.id)
+    if (error) logSupabaseError('handleDeleteEntry failed:', error)
     closeEdit()
     fetchEntries()
   }
@@ -1243,19 +1358,21 @@ export default function PeriodsPage() {
   const handleSaveEditPain = async () => {
     if (!editingPain || !editPainType) return
     setSavingEditPain(true)
-    await supabase.from('pain_logs').update({
+    const { error } = await supabase.from('pain_logs').update({
       date: editPainDate, type: editPainType, severity: editPainSeverity,
       duration_hours: editPainDuration ? Number(editPainDuration) : null,
       relief_used: editPainRelief.join(', ') || null,
       notes: editPainNotes.trim() || null,
     }).eq('id', editingPain.id)
+    if (error) logSupabaseError('handleSaveEditPain failed:', error)
     setSavingEditPain(false)
     closeEditPain()
     fetchPainLogs()
   }
   const handleDeletePain = async () => {
     if (!editingPain) return
-    await supabase.from('pain_logs').delete().eq('id', editingPain.id)
+    const { error } = await supabase.from('pain_logs').delete().eq('id', editingPain.id)
+    if (error) logSupabaseError('handleDeletePain failed:', error)
     closeEditPain()
     fetchPainLogs()
   }
@@ -1272,17 +1389,19 @@ export default function PeriodsPage() {
   const handleSaveEditSex = async () => {
     if (!editingSex) return
     setSavingEditSex(true)
-    await supabase.from('sex_log').update({
+    const { error } = await supabase.from('sex_log').update({
       date: editSexDate, protected: editSexProtected,
       notes: editSexNotes.trim() || null,
     }).eq('id', editingSex.id)
+    if (error) logSupabaseError('handleSaveEditSex failed:', error)
     setSavingEditSex(false)
     closeEditSex()
     fetchSexLogs()
   }
   const handleDeleteSex = async () => {
     if (!editingSex) return
-    await supabase.from('sex_log').delete().eq('id', editingSex.id)
+    const { error } = await supabase.from('sex_log').delete().eq('id', editingSex.id)
+    if (error) logSupabaseError('handleDeleteSex failed:', error)
     closeEditSex()
     fetchSexLogs()
   }
@@ -1298,9 +1417,17 @@ export default function PeriodsPage() {
   const handleSaveEditProfile = async () => {
     if (!editProfile) return
     setSavingEditProfile(true)
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) { setSavingEditProfile(false); return }
-    await (supabase as any).from('cycle_profiles').upsert({ ...editProfile, user_id: user.id })
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) {
+      logSupabaseError('handleSaveEditProfile: no authenticated user', authError)
+      setSavingEditProfile(false); return
+    }
+    const { error } = await (supabase as any).from('cycle_profiles').upsert({ ...editProfile, user_id: user.id })
+    if (error) {
+      logSupabaseError('handleSaveEditProfile: upsert failed:', error)
+      setSavingEditProfile(false)
+      return
+    }
     setCycleProfile(editProfile as CycleProfile)
     setSavingEditProfile(false)
     closeEditProfile()
