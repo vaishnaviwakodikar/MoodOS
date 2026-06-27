@@ -1023,7 +1023,10 @@ export default function PeriodsPage() {
   }
   const closeEdit = () => { setEditingEntry(null); setConfirmDelete(false) }
 
- const handleSaveEdit = async () => {
+  const handleSaveEdit = async () => {
+    if (!editingEntry || !editFlow) return
+    setSavingEdit(true)
+const handleSaveEdit = async () => {
     if (!editingEntry || !editFlow) return
     setSavingEdit(true)
     const { error } = await (supabase.from('period_entries') as any).update({
@@ -1036,6 +1039,11 @@ export default function PeriodsPage() {
   }
 
   const handleDeleteEntry = async () => {
+    if (!editingEntry) return
+    const { error } = await supabase.from('period_entries').delete().eq('id', editingEntry.id)
+    if (error) logSupabaseError('handleDeleteEntry failed:', error)
+    closeEdit(); fetchEntries()
+  }
 
   const toggleEditSymptom = (s: string) =>
     setEditSymptoms(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s])
