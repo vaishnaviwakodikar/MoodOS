@@ -412,8 +412,8 @@ export default function SharedCyclePage() {
                       style={{ background: pc.bg, border: `1px solid ${pc.border}` }}
                     >
                       <div className="ps-phase-ico" style={{ background: pc.icoBg }}>
-                        {/* @ts-ignore emoji fallback not in phaseConfig type, ico class used instead */}
-                        <i className={`ti ${pc.ico}`} style={{ color: pc.c }} />
+                        {/* @ts-ignore */}
+<i className={`ti ${(pc as any).ico}`} style={{ color: pc.c }} />
                       </div>
                       <div>
                         <div className="ps-phase-name" style={{ color: pc.c }}>{pc.label}</div>
