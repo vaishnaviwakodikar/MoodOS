@@ -1026,15 +1026,11 @@ export default function PeriodsPage() {
   const handleSaveEdit = async () => {
     if (!editingEntry || !editFlow) return
     setSavingEdit(true)
-    const { error } = await supabase.from('period_entries').update({
-      start_date: editStart, end_date: editEnd || null,
-      flow: editFlow, symptoms: editSymptoms, mood: editMood, cravings: editCravings,
-      notes: editNotes.trim() || null,
-    }).eq('id', editingEntry.id)
-    if (error) logSupabaseError('handleSaveEdit failed:', error)
-    setSavingEdit(false); closeEdit(); fetchEntries()
-  }
-
+const { error } = await (supabase.from('period_entries') as any).update({
+  start_date: editStart, end_date: editEnd || null,
+  flow: editFlow, symptoms: editSymptoms, mood: editMood, cravings: editCravings,
+  notes: editNotes.trim() || null,
+}).eq('id', editingEntry.id)
   const handleDeleteEntry = async () => {
     if (!editingEntry) return
     const { error } = await supabase.from('period_entries').delete().eq('id', editingEntry.id)
