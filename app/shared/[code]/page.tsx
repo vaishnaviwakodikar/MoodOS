@@ -200,7 +200,7 @@ export default function SharedCyclePage() {
     let cancelled = false
 
     ;(async () => {
-      const { data: result, error } = await supabase.rpc('get_partner_shared_data', {
+      const { data: result, error } = await (supabase as any).rpc('get_partner_shared_data', {
         p_code: code,
       })
       if (cancelled) return
