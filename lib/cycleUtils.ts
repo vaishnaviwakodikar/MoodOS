@@ -56,15 +56,15 @@ export function getPhase(
   }
 }
 
-export const phaseConfig: Record<
+export const phaseConfig: Record
   Phase,
-  { label: string; c: string; bg: string; border: string; icoBg: string; emoji: string }
+  { label: string; c: string; bg: string; border: string; icoBg: string; emoji: string; ico: string }
 > = {
-  menstrual:  { label: 'menstrual phase',  c: '#d4607a', bg: '#fde8ee', border: 'rgba(212,96,122,0.2)',  icoBg: 'rgba(212,96,122,0.12)', emoji: '🩸' },
-  follicular: { label: 'follicular phase', c: '#5a8c63', bg: '#edf6ee', border: 'rgba(90,140,99,0.2)',   icoBg: 'rgba(90,140,99,0.12)',  emoji: '🌱' },
-  ovulation:  { label: 'ovulation phase',  c: '#9b7ec8', bg: '#f3edfb', border: 'rgba(155,126,200,0.2)', icoBg: 'rgba(155,126,200,0.12)', emoji: '✨' },
-  luteal:     { label: 'luteal phase',     c: '#b8860b', bg: '#fef8e7', border: 'rgba(184,134,11,0.2)',  icoBg: 'rgba(184,134,11,0.12)', emoji: '🌙' },
-  unknown:    { label: 'phase unknown',    c: '#b09aa4', bg: '#f5f0f2', border: 'rgba(176,154,164,0.2)', icoBg: 'rgba(176,154,164,0.12)', emoji: '❔' },
+  menstrual:  { label: 'menstrual phase',  c: '#d4607a', bg: '#fde8ee', border: 'rgba(212,96,122,0.2)',  icoBg: 'rgba(212,96,122,0.12)', emoji: '🩸', ico: 'ti-droplet' },
+  follicular: { label: 'follicular phase', c: '#5a8c63', bg: '#edf6ee', border: 'rgba(90,140,99,0.2)',   icoBg: 'rgba(90,140,99,0.12)',  emoji: '🌱', ico: 'ti-leaf' },
+  ovulation:  { label: 'ovulation phase',  c: '#9b7ec8', bg: '#f3edfb', border: 'rgba(155,126,200,0.2)', icoBg: 'rgba(155,126,200,0.12)', emoji: '✨', ico: 'ti-sparkles' },
+  luteal:     { label: 'luteal phase',     c: '#b8860b', bg: '#fef8e7', border: 'rgba(184,134,11,0.2)',  icoBg: 'rgba(184,134,11,0.12)', emoji: '🌙', ico: 'ti-moon' },
+  unknown:    { label: 'phase unknown',    c: '#b09aa4', bg: '#f5f0f2', border: 'rgba(176,154,164,0.2)', icoBg: 'rgba(176,154,164,0.12)', emoji: '❓', ico: 'ti-calendar-heart' },
 }
 
 export const flowMeta: Record<Flow, { label: string; c: string; bg: string; dots: number }> = {
