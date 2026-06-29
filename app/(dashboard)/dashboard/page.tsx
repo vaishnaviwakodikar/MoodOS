@@ -443,11 +443,11 @@ export default function DashboardPage() {
               {m.label === 'periods' && metrics.periodActive ? (
   <p className="sg-card-val" style={{ color: m.c }}>
     <img
-      src="/blood-drop.jpg"
+      src="/blood-drop.png"
       alt="Period active"
-      width={28}
-      height={28}
-      style={{ display: 'inline-block', objectFit: 'contain', borderRadius: '4px' }}
+      width={56}
+      height={56}
+      style={{ display: 'inline-block', objectFit: 'contain', borderRadius: '6px' }}
     />
   </p>
 ) : (
