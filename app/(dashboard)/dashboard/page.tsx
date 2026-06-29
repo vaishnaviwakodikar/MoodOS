@@ -22,6 +22,49 @@ const actions = [
   { label: 'periods',    href: '/periods',    iconC: '#9b7ec8', icon: 'ti-calendar-heart' },
 ]
 
+// ── Inline SVG icons (replaces all emoji) ─────────────────────────────────
+
+function LeafIcon({ size = 14, color = '#5a8c63' }: { size?: number; color?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke={color}
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      style={{ display: 'inline', verticalAlign: 'middle', flexShrink: 0 }}
+    >
+      <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10z" />
+      <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12" />
+    </svg>
+  )
+}
+
+function DropIcon({ size = 20, color = '#d4607a' }: { size?: number; color?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill={color}
+      stroke={color}
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      style={{ display: 'inline', verticalAlign: 'middle' }}
+    >
+      <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" />
+    </svg>
+  )
+}
+
 const css = `
   @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;1,9..144,300;1,9..144,400&family=DM+Sans:wght@300;400;500&display=swap');
   @import url('https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css');
@@ -61,7 +104,7 @@ const css = `
   .sg-card-lbl { font-size: 9px; font-weight: 500; letter-spacing: 2.5px; text-transform: uppercase; color: var(--ink3); margin-bottom: 10px; display: flex; align-items: center; gap: 5px; }
   .sg-card-lbl-dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
   .sg-card-val { font-family: 'Fraunces', serif; font-size: clamp(24px,3.5vw,32px); font-weight: 300; letter-spacing: -0.5px; line-height: 1; margin-bottom: 5px; }
-  .sg-card-sub { font-size: 11px; color: var(--ink3); }
+  .sg-card-sub { font-size: 11px; color: var(--ink3); display: flex; align-items: center; gap: 5px; }
   .sg-card-ico { position: absolute; top: 14px; right: 14px; font-size: 16px; opacity: 0.22; }
   .sg-acts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 16px; }
   .sg-act { display: flex; flex-direction: column; align-items: flex-start; gap: 7px; padding: clamp(10px,1.5vw,14px) clamp(10px,1.5vw,12px); border-radius: 18px; border: 1px solid rgba(212,96,122,0.1); background: var(--card); text-decoration: none; color: var(--ink2); font-size: 11px; font-weight: 500; letter-spacing: 0.2px; font-family: 'DM Sans', sans-serif; transition: all 0.17s ease; }
@@ -92,24 +135,28 @@ interface MetricState {
   mood: string
   habits: string
   habitSub: string
+  habitsDone: boolean   // true when all habits completed
   studyTime: string
   attendance: string
   expenses: string
   streak: string
   period: string
   periodSub: string
+  periodActive: boolean // true when currently on period
 }
 
 const DEFAULT_METRICS: MetricState = {
   mood: '—',
   habits: '0 / 0',
   habitSub: 'none added yet',
+  habitsDone: false,
   studyTime: '0min',
   attendance: '—%',
   expenses: '₹0',
   streak: '0',
   period: '—',
   periodSub: 'not tracked yet',
+  periodActive: false,
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -129,7 +176,7 @@ function formatStudyTime(mins: number): string {
 /** Returns the actual last day string for a given YYYY-MM month string */
 function lastDayOfMonth(thisMonth: string): string {
   const [y, m] = thisMonth.split('-').map(Number)
-  const last = new Date(y, m, 0).getDate() // day 0 of next month = last day of this month
+  const last = new Date(y, m, 0).getDate()
   return `${thisMonth}-${String(last).padStart(2, '0')}`
 }
 
@@ -146,9 +193,8 @@ export default function DashboardPage() {
   const fetchMetrics = useCallback(async (userId: string) => {
     const today     = new Date().toISOString().slice(0, 10)
     const thisMonth = today.slice(0, 7)
-    const monthEnd  = lastDayOfMonth(thisMonth) // ✅ real last day, no more -31
+    const monthEnd  = lastDayOfMonth(thisMonth)
 
-    // Fire all queries in parallel
     const [
       moodRes,
       habitsRes,
@@ -186,7 +232,7 @@ export default function DashboardPage() {
         .select('status')
         .eq('user_id', userId)
         .gte('date', `${thisMonth}-01`)
-        .lte('date', monthEnd),           // ✅ fixed
+        .lte('date', monthEnd),
 
       supabase
         .from('study_sessions')
@@ -199,7 +245,7 @@ export default function DashboardPage() {
         .select('amount')
         .eq('user_id', userId)
         .gte('date', `${thisMonth}-01`)
-        .lte('date', monthEnd),           // ✅ fixed
+        .lte('date', monthEnd),
 
       supabase
         .from('habit_logs')
@@ -220,7 +266,6 @@ export default function DashboardPage() {
         .limit(2),
     ])
 
-    // ── Compute all metrics from resolved data ─────────────────────────────
     const next: MetricState = { ...DEFAULT_METRICS }
 
     // mood
@@ -232,8 +277,9 @@ export default function DashboardPage() {
     const totalHabits = habitsRes.data?.length ?? 0
     const doneHabits  = logsRes.data?.length ?? 0
     if (totalHabits > 0) {
-      next.habits   = `${doneHabits} / ${totalHabits}`
-      next.habitSub = doneHabits === totalHabits ? 'all done! 🌿' : `${totalHabits - doneHabits} remaining`
+      next.habits     = `${doneHabits} / ${totalHabits}`
+      next.habitsDone = doneHabits === totalHabits
+      next.habitSub   = doneHabits === totalHabits ? 'all done!' : `${totalHabits - doneHabits} remaining`
     }
 
     // attendance
@@ -259,7 +305,7 @@ export default function DashboardPage() {
       next.expenses = formatExpenses(total)
     }
 
-    // streak — count consecutive days backwards that have at least one habit log
+    // streak
     if (streakRes.data && streakRes.data.length > 0) {
       const loggedDates = new Set(
         (streakRes.data as { date: string }[]).map(l => l.date)
@@ -293,14 +339,16 @@ export default function DashboardPage() {
       const end   = latest.end_date ? new Date(latest.end_date) : null
 
       if (end && now >= start && now <= end) {
-        next.period    = '🩸'
-        next.periodSub = 'currently on your period'
+        next.period       = 'active'
+        next.periodActive = true
+        next.periodSub    = 'currently on your period'
       } else {
         const nextDate = new Date(latest.start_date)
         nextDate.setDate(nextDate.getDate() + cycleLength)
         const daysLeft = Math.ceil((nextDate.getTime() - now.getTime()) / 86_400_000)
-        next.period    = daysLeft > 0 ? `${daysLeft}d` : 'due'
-        next.periodSub = daysLeft > 0 ? `next in ${daysLeft} days` : 'period due today'
+        next.period       = daysLeft > 0 ? `${daysLeft}d` : 'due'
+        next.periodActive = false
+        next.periodSub    = daysLeft > 0 ? `next in ${daysLeft} days` : 'period due today'
       }
     }
 
@@ -390,11 +438,23 @@ export default function DashboardPage() {
                 <span className="sg-card-lbl-dot" style={{ background: m.dotC }} />
                 {m.label}
               </p>
-              {m.label === 'mood today' && metrics.mood !== '—'
-                ? <i className={`ti ${metrics.mood} sg-card-val`} aria-hidden="true" style={{ color: m.c, fontSize: 28 }} />
-                : <p className="sg-card-val" style={{ color: m.c }}>{m.value}</p>
-              }
-              <p className="sg-card-sub">{m.sub}</p>
+
+              {/* Periods card: show drop SVG when active */}
+              {m.label === 'periods' && metrics.periodActive ? (
+                <p className="sg-card-val" style={{ color: m.c }}>
+                  <DropIcon size={28} color={m.c} />
+                </p>
+              ) : (
+                <p className="sg-card-val" style={{ color: m.c }}>{m.value}</p>
+              )}
+
+              {/* Sub-text: habits card gets a leaf SVG when all done */}
+              <p className="sg-card-sub">
+                {m.label === 'habits' && metrics.habitsDone
+                  ? <><LeafIcon size={12} color="#5a8c63" />{m.sub}</>
+                  : m.sub
+                }
+              </p>
             </motion.div>
           ))}
         </div>
