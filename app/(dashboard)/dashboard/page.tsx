@@ -441,18 +441,18 @@ export default function DashboardPage() {
 
               {/* Periods card: show drop SVG when active */}
               {m.label === 'periods' && metrics.periodActive ? (
-  <p className="sg-card-val" style={{ color: m.c }}>
-    <img
-      src="/blood-drop.png"
-      alt="Period active"
-      width={56}
-      height={56}
-      style={{ display: 'inline-block', objectFit: 'contain', borderRadius: '6px' }}
-    />
-  </p>
-) : (
-  <p className="sg-card-val" style={{ color: m.c }}>{m.value}</p>
-)}
+               <p className="sg-card-val" style={{ color: m.c }}>
+                <img
+                 src="/blood-drop.png"
+                 alt="Period active"
+                 width={56}
+                 height={56}
+                 style={{ display: 'inline-block', objectFit: 'contain', borderRadius: '6px' }}
+               />
+              </p>
+              ) : (
+              <p className="sg-card-val" style={{ color: m.c }}>{m.value}</p>
+          )}
 
               {/* Sub-text: habits card gets a leaf SVG when all done */}
               <p className="sg-card-sub">
