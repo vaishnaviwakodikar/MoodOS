@@ -3,6 +3,7 @@
 import { motion } from 'framer-motion'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase'
+import styles from './dashboard.module.css'
 
 const vibes = [
   "you're blooming so beautifully",
@@ -21,12 +22,12 @@ const periodVibes = [
 ]
 
 const actions = [
-  { label: 'log mood',   href: '/mood',       iconC: '#d4607a', periodIconC: '#c0394f', icon: 'ti-mood-smile' },
-  { label: 'study',      href: '/study',      iconC: '#b8860b', periodIconC: '#a05030', icon: 'ti-clock-play' },
-  { label: 'expenses',   href: '/expenses',   iconC: '#d4607a', periodIconC: '#c0394f', icon: 'ti-cash' },
+  { label: 'log mood',   href: '/mood',       iconC: '#d4607a', periodIconC: '#c0394f', icon: 'ti-mood-smile'     },
+  { label: 'study',      href: '/study',      iconC: '#b8860b', periodIconC: '#a05030', icon: 'ti-clock-play'     },
+  { label: 'expenses',   href: '/expenses',   iconC: '#d4607a', periodIconC: '#c0394f', icon: 'ti-cash'           },
   { label: 'attendance', href: '/attendance', iconC: '#5a8c63', periodIconC: '#8c5a6a', icon: 'ti-calendar-check' },
-  { label: 'habits',     href: '/habits',     iconC: '#9b7ec8', periodIconC: '#9b4a5f', icon: 'ti-checks' },
-  { label: 'insights',   href: '/insights',   iconC: '#d4607a', periodIconC: '#c0394f', icon: 'ti-chart-bar' },
+  { label: 'habits',     href: '/habits',     iconC: '#9b7ec8', periodIconC: '#9b4a5f', icon: 'ti-checks'         },
+  { label: 'insights',   href: '/insights',   iconC: '#d4607a', periodIconC: '#c0394f', icon: 'ti-chart-bar'      },
   { label: 'periods',    href: '/periods',    iconC: '#9b7ec8', periodIconC: '#c0394f', icon: 'ti-calendar-heart' },
 ]
 
@@ -34,14 +35,20 @@ const actions = [
 
 function LeafIcon({ size = 14, color = '#5a8c63' }: { size?: number; color?: string }) {
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ display: 'inline', verticalAlign: 'middle', flexShrink: 0 }}>
+    <svg
+      xmlns="http://www.w3.org/2000/svg" width={size} height={size}
+      viewBox="0 0 24 24" fill="none" stroke={color}
+      strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+      aria-hidden="true"
+      style={{ display: 'inline', verticalAlign: 'middle', flexShrink: 0 }}
+    >
       <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10z" />
       <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12" />
     </svg>
   )
 }
 
-// ── Styles ─────────────────────────────────────────────────────────────────
+// ── Styles — normal palette only, NO period-mode block here ───────────────
 
 const baseCss = `
   @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;1,9..144,300;1,9..144,400&family=DM+Sans:wght@300;400;500&display=swap');
@@ -49,7 +56,6 @@ const baseCss = `
 
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-  /* ── Normal palette ── */
   .sg {
     --blush: #f2c4ce; --blush2: #e8a0b0; --rose: #d4607a; --petal: #fde8ee;
     --lavender: #e8daf5; --lav2: #c9b8e8; --butter: #fef3e2; --butter2: #f5ddb4;
@@ -69,35 +75,6 @@ const baseCss = `
     transition: background 0.6s ease, color 0.6s ease;
   }
 
-  /* ── Period palette — everything shifts to deep crimson-dusk tones ── */
-  .sg.period-mode {
-    --blush: #e8b4bc; --blush2: #c97080; --rose: #b03050;
-    --petal: #2a1018; /* used as card dark bg tint base */
-    --lavender: #2e1825; --lav2: #8c4060;
-    --butter: #1e1210; --butter2: #6b3030;
-    --sage: #2a1820; --sage2: #7a4555;
-    --cream: #160c10;
-    --ink: #f5e6ea; --ink2: #d4a8b4; --ink3: #8c6070; --card: #1e1015;
-    --divider-line: rgba(176,48,80,0.2); --divider-flower: #7a3848;
-    --act-border: rgba(176,48,80,0.2); --act-bg: #1e1015;
-    --act-hover-bg: #2e1420; --act-hover-border: rgba(176,48,80,0.4); --act-hover-text: #e8a0b0;
-    --footer-grad-a: #2e1220; --footer-grad-b: #1e0e18;
-    --footer-border: rgba(176,48,80,0.2); --footer-ico: #9b4a60;
-    --vibe-bg: rgba(176,48,80,0.12); --vibe-border: rgba(176,48,80,0.25); --vibe-text: #e8a0b0;
-    --clock-bg: #2e1825; --clock-border: rgba(140,64,96,0.4);
-    background: var(--cream);
-  }
-
-  /* ── Period mode: warm ambient glow on the page ── */
-  .sg.period-mode::before {
-    content: '';
-    position: fixed; inset: 0; pointer-events: none; z-index: 0;
-    background:
-      radial-gradient(ellipse 70% 50% at 15% 0%, rgba(160,30,50,0.18) 0%, transparent 70%),
-      radial-gradient(ellipse 50% 40% at 90% 100%, rgba(100,20,40,0.14) 0%, transparent 60%);
-  }
-  .sg.period-mode > * { position: relative; z-index: 1; }
-
   .sg-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 24px; gap: 16px; flex-wrap: wrap; }
   .sg-header-left { flex: 1; min-width: 0; }
   .sg-eyebrow { font-size: 10px; font-weight: 400; letter-spacing: 3px; text-transform: uppercase; color: var(--ink3); margin-bottom: 8px; display: flex; align-items: center; gap: 7px; }
@@ -108,27 +85,19 @@ const baseCss = `
   .sg-vibe-heart { font-size: 12px; color: var(--blush2); animation: hbeat 2.4s ease-in-out infinite; display: inline-block; }
   @keyframes hbeat { 0%, 100% { transform: scale(1); } 45% { transform: scale(1.3); } 55% { transform: scale(1.1); } }
 
-  /* Period eyebrow badge */
-  .sg-period-badge {
-    display: inline-flex; align-items: center; gap: 6px;
-    background: rgba(176,48,80,0.15); border: 1px solid rgba(176,48,80,0.3);
-    border-radius: 999px; padding: 4px 12px;
-    font-size: 9px; font-weight: 500; letter-spacing: 2px; text-transform: uppercase;
-    color: #e8a0b0; margin-bottom: 10px;
-  }
-  .sg-period-badge-dot {
-    width: 6px; height: 6px; border-radius: 50%; background: #c0394f;
-    animation: pulse-dot 1.8s ease-in-out infinite;
-  }
+  .sg-period-badge { display: inline-flex; align-items: center; gap: 6px; background: rgba(176,48,80,0.15); border: 1px solid rgba(176,48,80,0.3); border-radius: 999px; padding: 4px 12px; font-size: 9px; font-weight: 500; letter-spacing: 2px; text-transform: uppercase; color: #e8a0b0; margin-bottom: 10px; }
+  .sg-period-badge-dot { width: 6px; height: 6px; border-radius: 50%; background: #c0394f; animation: pulse-dot 1.8s ease-in-out infinite; }
   @keyframes pulse-dot { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(0.7)} }
 
   .sg-clock-card { background: var(--clock-bg); border: 1px solid var(--clock-border); border-radius: 18px; padding: 14px 18px; text-align: right; flex-shrink: 0; transition: background 0.5s, border-color 0.5s; }
   .sg-clock-val { font-family: 'Fraunces', serif; font-size: clamp(18px,3vw,26px); font-weight: 300; color: var(--ink); letter-spacing: -0.5px; line-height: 1; }
   .sg-clock-sub { font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: var(--ink3); margin-top: 4px; }
+
   .sg-divider { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
-  .sg-divider-line { flex: 1; height: 1px; background: var(--divider-line); transition: background 0.5s; }
+  .sg-divider-line { flex: 1; height: 1px; background: var(--divider-line); }
   .sg-divider-label { font-size: 9px; font-weight: 500; letter-spacing: 3px; text-transform: uppercase; color: var(--ink3); white-space: nowrap; }
-  .sg-divider-flower { font-size: 11px; color: var(--divider-flower); transition: color 0.5s; }
+  .sg-divider-flower { font-size: 11px; color: var(--divider-flower); }
+
   .sg-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; }
   .sg-card { border-radius: 20px; padding: clamp(14px,2vw,20px) clamp(12px,1.5vw,16px); position: relative; overflow: hidden; transition: transform 0.2s ease, border-color 0.2s, background 0.5s; cursor: default; }
   .sg-card:hover { transform: translateY(-3px); }
@@ -138,16 +107,19 @@ const baseCss = `
   .sg-card-val { font-family: 'Fraunces', serif; font-size: clamp(24px,3.5vw,32px); font-weight: 300; letter-spacing: -0.5px; line-height: 1; margin-bottom: 5px; }
   .sg-card-sub { font-size: 11px; color: var(--ink3); display: flex; align-items: center; gap: 5px; }
   .sg-card-ico { position: absolute; top: 14px; right: 14px; font-size: 16px; opacity: 0.22; }
+
   .sg-acts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 16px; }
   .sg-act { display: flex; flex-direction: column; align-items: flex-start; gap: 7px; padding: clamp(10px,1.5vw,14px) clamp(10px,1.5vw,12px); border-radius: 18px; border: 1px solid var(--act-border); background: var(--act-bg); text-decoration: none; color: var(--ink2); font-size: 11px; font-weight: 500; letter-spacing: 0.2px; font-family: 'DM Sans', sans-serif; transition: all 0.17s ease; }
   .sg-act:hover { background: var(--act-hover-bg); border-color: var(--act-hover-border); color: var(--act-hover-text); transform: translateY(-2px); }
   .sg-act:active { transform: scale(0.97); }
   .sg-act-ico { font-size: 17px; }
-  .sg-footer { background: linear-gradient(135deg, var(--footer-grad-a) 0%, var(--footer-grad-b) 100%); border: 1px solid var(--footer-border); border-radius: 20px; padding: 18px 22px; display: flex; align-items: center; justify-content: space-between; gap: 12px; transition: background 0.5s, border-color 0.5s; }
+
+  .sg-footer { background: linear-gradient(135deg, var(--footer-grad-a) 0%, var(--footer-grad-b) 100%); border: 1px solid var(--footer-border); border-radius: 20px; padding: 18px 22px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
   .sg-footer-lbl { font-size: 9px; font-weight: 500; letter-spacing: 2.5px; text-transform: uppercase; color: var(--ink3); margin-bottom: 5px; }
   .sg-footer-msg { font-family: 'Fraunces', serif; font-style: italic; font-size: 15px; font-weight: 300; color: var(--ink2); }
   .sg-footer-right { display: flex; align-items: center; gap: 6px; }
   .sg-footer-ico { font-size: 20px; color: var(--footer-ico); }
+
   @media (max-width: 768px) {
     .sg { padding: 72px 20px 88px; }
     .sg-header { flex-direction: column; gap: 12px; }
@@ -202,13 +174,13 @@ function lastDayOfMonth(thisMonth: string): string {
 // ── Period-mode metric card colours ───────────────────────────────────────
 function periodCardStyle(label: string): { c: string; bg: string; border: string; dotC: string } {
   const map: Record<string, { c: string; bg: string; border: string; dotC: string }> = {
-    'mood today': { c: '#e8a0b0', bg: '#1e1015', border: 'rgba(192,57,79,0.2)', dotC: '#9b4a60' },
+    'mood today': { c: '#e8a0b0', bg: '#1e1015', border: 'rgba(192,57,79,0.2)',  dotC: '#9b4a60' },
     'habits':     { c: '#c97080', bg: '#1e1015', border: 'rgba(176,48,80,0.18)', dotC: '#7a3848' },
-    'study time': { c: '#c08060', bg: '#1e1015', border: 'rgba(160,80,48,0.2)', dotC: '#804030' },
+    'study time': { c: '#c08060', bg: '#1e1015', border: 'rgba(160,80,48,0.2)',  dotC: '#804030' },
     'attendance': { c: '#9b7080', bg: '#1e1015', border: 'rgba(140,80,100,0.2)', dotC: '#6b4050' },
-    'expenses':   { c: '#e8a0b0', bg: '#1e1015', border: 'rgba(192,57,79,0.2)', dotC: '#9b4a60' },
+    'expenses':   { c: '#e8a0b0', bg: '#1e1015', border: 'rgba(192,57,79,0.2)',  dotC: '#9b4a60' },
     'streak':     { c: '#c97080', bg: '#1e1015', border: 'rgba(176,48,80,0.18)', dotC: '#7a3848' },
-    'periods':    { c: '#e8a0b0', bg: '#2a1018', border: 'rgba(192,57,79,0.3)', dotC: '#9b4a60' },
+    'periods':    { c: '#e8a0b0', bg: '#2a1018', border: 'rgba(192,57,79,0.3)',  dotC: '#9b4a60' },
   }
   return map[label] ?? { c: '#e8a0b0', bg: '#1e1015', border: 'rgba(176,48,80,0.2)', dotC: '#9b4a60' }
 }
@@ -235,7 +207,9 @@ export default function DashboardPage() {
         supabase.from('attendance').select('status').eq('user_id', userId).gte('date', `${thisMonth}-01`).lte('date', monthEnd),
         supabase.from('study_sessions').select('duration_mins').eq('user_id', userId).eq('date', today),
         supabase.from('expenses').select('amount').eq('user_id', userId).gte('date', `${thisMonth}-01`).lte('date', monthEnd),
-        supabase.from('habit_logs').select('date').eq('user_id', userId).gte('date', (() => { const d = new Date(); d.setDate(d.getDate() - 90); return d.toISOString().slice(0, 10) })()).lte('date', today),
+        supabase.from('habit_logs').select('date').eq('user_id', userId)
+          .gte('date', (() => { const d = new Date(); d.setDate(d.getDate() - 90); return d.toISOString().slice(0, 10) })())
+          .lte('date', today),
         supabase.from('period_entries').select('start_date, end_date').eq('user_id', userId).order('start_date', { ascending: false }).limit(2),
       ])
 
@@ -272,24 +246,30 @@ export default function DashboardPage() {
 
     if (streakRes.data?.length) {
       const loggedDates = new Set((streakRes.data as { date: string }[]).map(l => l.date))
-      let count = 0; const cursor = new Date()
+      let count = 0
+      const cursor = new Date()
       if (!loggedDates.has(today)) cursor.setDate(cursor.getDate() - 1)
       while (true) {
         const dateStr = cursor.toISOString().slice(0, 10)
         if (!loggedDates.has(dateStr)) break
-        count++; cursor.setDate(cursor.getDate() - 1)
+        count++
+        cursor.setDate(cursor.getDate() - 1)
       }
       next.streak = String(count)
     }
 
     const periodEntries = periodRes.data
     if (periodEntries?.length) {
-      const latest = periodEntries[0]
+      const latest      = periodEntries[0]
       const cycleLength = periodEntries.length >= 2
-        ? Math.round((new Date(periodEntries[0].start_date).getTime() - new Date(periodEntries[1].start_date).getTime()) / 86_400_000)
+        ? Math.round(
+            (new Date(periodEntries[0].start_date).getTime() - new Date(periodEntries[1].start_date).getTime())
+            / 86_400_000
+          )
         : 28
-      const now = new Date(); const start = new Date(latest.start_date)
-      const end = latest.end_date ? new Date(latest.end_date) : null
+      const now   = new Date()
+      const start = new Date(latest.start_date)
+      const end   = latest.end_date ? new Date(latest.end_date) : null
 
       if (end && now >= start && now <= end) {
         next.period = 'active'; next.periodActive = true; next.periodSub = 'currently on your period'
@@ -297,9 +277,9 @@ export default function DashboardPage() {
         const nextDate = new Date(latest.start_date)
         nextDate.setDate(nextDate.getDate() + cycleLength)
         const daysLeft = Math.ceil((nextDate.getTime() - now.getTime()) / 86_400_000)
-        next.period = daysLeft > 0 ? `${daysLeft}d` : 'due'
+        next.period       = daysLeft > 0 ? `${daysLeft}d` : 'due'
         next.periodActive = false
-        next.periodSub = daysLeft > 0 ? `next in ${daysLeft} days` : 'period due today'
+        next.periodSub    = daysLeft > 0 ? `next in ${daysLeft} days` : 'period due today'
       }
     }
 
@@ -313,8 +293,7 @@ export default function DashboardPage() {
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) return
       const full = user.user_metadata?.full_name as string | undefined
-      if (full) { setUserName(full.split(' ')[0]) }
-      else if (user.email) {
+      if (full) { setUserName(full.split(' ')[0]) } else if (user.email) {
         const part = user.email.split('@')[0]
         setUserName(part.charAt(0).toUpperCase() + part.slice(1))
       }
@@ -322,7 +301,6 @@ export default function DashboardPage() {
     })
   }, [supabase, fetchMetrics])
 
-  // Pick vibe pool based on period status
   useEffect(() => {
     const pool = metrics.periodActive ? periodVibes : vibes
     setVibe(pool[Math.floor(Math.random() * pool.length)])
@@ -343,12 +321,18 @@ export default function DashboardPage() {
   return (
     <>
       <style>{baseCss}</style>
-      <div className={`sg${isPeriod ? ' period-mode' : ''}`}>
+      {/*
+        Key fix: period-mode overrides live ONLY in dashboard.module.css.
+        CSS Modules scopes the class to this component and Next.js cleans it
+        up on navigation — it never leaks to other pages.
+      */}
+      <div className={`sg ${isPeriod ? styles.periodMode : ''}`}>
 
-        <motion.header className="sg-header" initial={{ opacity: 0, y: -14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.44 }}>
+        <motion.header
+          className="sg-header"
+          initial={{ opacity: 0, y: -14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.44 }}
+        >
           <div className="sg-header-left">
-
-            {/* Period active badge */}
             {isPeriod && (
               <motion.div className="sg-period-badge" initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
                 <span className="sg-period-badge-dot" />
@@ -369,8 +353,7 @@ export default function DashboardPage() {
               <span className="accent">
                 {userName || '...'}{' '}
                 {isPeriod
-                  ? /* drop icon when on period */
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline', verticalAlign: 'middle' }} aria-hidden="true"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" /></svg>
+                  ? <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline', verticalAlign: 'middle' }} aria-hidden="true"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" /></svg>
                   : <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline', verticalAlign: 'middle' }} aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" /></svg>
                 }
               </span>
@@ -391,30 +374,28 @@ export default function DashboardPage() {
 
         <div className="sg-grid">
           {metricCards.map((m, i) => {
-            const style = isPeriod ? periodCardStyle(m.label) : { c: m.c, bg: m.bg, border: m.border, dotC: m.dotC }
+            const s = isPeriod ? periodCardStyle(m.label) : { c: m.c, bg: m.bg, border: m.border, dotC: m.dotC }
             return (
               <motion.div
                 key={m.label}
                 className="sg-card"
-                style={{ background: style.bg, border: `1px solid ${style.border}`, ['--dot-c' as string]: style.dotC }}
-                initial={{ opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
+                style={{ background: s.bg, border: `1px solid ${s.border}`, ['--dot-c' as string]: s.dotC }}
+                initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.05 * i, duration: 0.36 }}
               >
-                <i className={`ti ${m.icon} sg-card-ico`} aria-hidden="true" style={{ color: style.c }} />
+                <i className={`ti ${m.icon} sg-card-ico`} aria-hidden="true" style={{ color: s.c }} />
                 <p className="sg-card-lbl">
-                  <span className="sg-card-lbl-dot" style={{ background: style.dotC }} />
+                  <span className="sg-card-lbl-dot" style={{ background: s.dotC }} />
                   {m.label}
                 </p>
-
                 {m.label === 'periods' && metrics.periodActive ? (
-                  <p className="sg-card-val" style={{ color: style.c }}>
-                    <img src="/blood-drop.png" alt="Period active" width={56} height={56} style={{ display: 'inline-block', objectFit: 'contain', borderRadius: '6px' }} />
+                  <p className="sg-card-val" style={{ color: s.c }}>
+                    <img src="/blood-drop.png" alt="Period active" width={56} height={56}
+                      style={{ display: 'inline-block', objectFit: 'contain', borderRadius: '6px' }} />
                   </p>
                 ) : (
-                  <p className="sg-card-val" style={{ color: style.c }}>{m.value}</p>
+                  <p className="sg-card-val" style={{ color: s.c }}>{m.value}</p>
                 )}
-
                 <p className="sg-card-sub">
                   {m.label === 'habits' && metrics.habitsDone
                     ? <><LeafIcon size={12} color={isPeriod ? '#9b7080' : '#5a8c63'} />{m.sub}</>
@@ -431,14 +412,12 @@ export default function DashboardPage() {
         <motion.div className="sg-acts" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.38 }}>
           {actions.map((a, i) => (
             <motion.a
-              key={a.label}
-              href={a.href}
-              className="sg-act"
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
+              key={a.label} href={a.href} className="sg-act"
+              initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.38 + i * 0.05 }}
             >
-              <i className={`ti ${a.icon} sg-act-ico`} aria-hidden="true" style={{ color: isPeriod ? a.periodIconC : a.iconC }} />
+              <i className={`ti ${a.icon} sg-act-ico`} aria-hidden="true"
+                style={{ color: isPeriod ? a.periodIconC : a.iconC }} />
               {a.label}
             </motion.a>
           ))}
@@ -453,16 +432,17 @@ export default function DashboardPage() {
             }
           </div>
           <div className="sg-footer-right">
-            {isPeriod
-              ? <>
-                  <i className="ti ti-droplet sg-footer-ico" aria-hidden="true" />
-                  <i className="ti ti-moon sg-footer-ico" aria-hidden="true" />
-                </>
-              : <>
-                  <i className="ti ti-heart sg-footer-ico" aria-hidden="true" />
-                  <i className="ti ti-flower sg-footer-ico" aria-hidden="true" />
-                </>
-            }
+            {isPeriod ? (
+              <>
+                <i className="ti ti-droplet sg-footer-ico" aria-hidden="true" />
+                <i className="ti ti-moon sg-footer-ico" aria-hidden="true" />
+              </>
+            ) : (
+              <>
+                <i className="ti ti-heart sg-footer-ico" aria-hidden="true" />
+                <i className="ti ti-flower sg-footer-ico" aria-hidden="true" />
+              </>
+            )}
           </div>
         </motion.div>
 

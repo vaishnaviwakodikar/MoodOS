@@ -13,7 +13,7 @@ export default async function DashboardLayout({
   if (!user) redirect('/login')
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: '#0a0a0f' }}>
+    <div style={{ display: 'flex', minHeight: '100vh', background: '#fdf7f0' }}>
       <Sidebar user={user} />
       <main style={{ flex: 1, overflowY: 'auto' }}>
         {children}

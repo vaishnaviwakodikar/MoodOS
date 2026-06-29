@@ -1,0 +1,48 @@
+/* Period-mode overrides — scoped via CSS Modules, never leaks globally */
+
+.periodMode {
+  --blush: #e8b4bc;
+  --blush2: #c97080;
+  --rose: #b03050;
+  --lavender: #2e1825;
+  --lav2: #8c4060;
+  --cream: #160c10;
+  --ink: #f5e6ea;
+  --ink2: #d4a8b4;
+  --ink3: #8c6070;
+  --card: #1e1015;
+  --divider-line: rgba(176,48,80,0.2);
+  --divider-flower: #7a3848;
+  --act-border: rgba(176,48,80,0.2);
+  --act-bg: #1e1015;
+  --act-hover-bg: #2e1420;
+  --act-hover-border: rgba(176,48,80,0.4);
+  --act-hover-text: #e8a0b0;
+  --footer-grad-a: #2e1220;
+  --footer-grad-b: #1e0e18;
+  --footer-border: rgba(176,48,80,0.2);
+  --footer-ico: #9b4a60;
+  --vibe-bg: rgba(176,48,80,0.12);
+  --vibe-border: rgba(176,48,80,0.25);
+  --vibe-text: #e8a0b0;
+  --clock-bg: #2e1825;
+  --clock-border: rgba(140,64,96,0.4);
+  background: var(--cream) !important;
+  color: var(--ink) !important;
+}
+
+.periodMode::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    radial-gradient(ellipse 70% 50% at 15% 0%, rgba(160,30,50,0.18) 0%, transparent 70%),
+    radial-gradient(ellipse 50% 40% at 90% 100%, rgba(100,20,40,0.14) 0%, transparent 60%);
+}
+
+.periodMode > * {
+  position: relative;
+  z-index: 1;
+}
