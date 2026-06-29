@@ -3,7 +3,7 @@
 import { motion } from 'framer-motion'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase'
-import styles from './dashboard.module.css'
+import { usePeriod } from '../PeriodContext'
 
 const vibes = [
   "you're blooming so beautifully",
@@ -31,35 +31,38 @@ const actions = [
   { label: 'periods',    href: '/periods',    iconC: '#9b7ec8', periodIconC: '#c0394f', icon: 'ti-calendar-heart' },
 ]
 
-// ── Inline SVG icons ───────────────────────────────────────────────────────
-
 function LeafIcon({ size = 14, color = '#5a8c63' }: { size?: number; color?: string }) {
   return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg" width={size} height={size}
-      viewBox="0 0 24 24" fill="none" stroke={color}
-      strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-      aria-hidden="true"
-      style={{ display: 'inline', verticalAlign: 'middle', flexShrink: 0 }}
-    >
+    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24"
+      fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+      aria-hidden="true" style={{ display: 'inline', verticalAlign: 'middle', flexShrink: 0 }}>
       <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10z" />
       <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12" />
     </svg>
   )
 }
 
-// ── Styles — normal palette only, NO period-mode block here ───────────────
-
-const baseCss = `
+const css = `
   @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;1,9..144,300;1,9..144,400&family=DM+Sans:wght@300;400;500&display=swap');
   @import url('https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css');
 
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
   .sg {
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    padding: clamp(20px,5vw,48px) clamp(20px,4vw,40px);
+    overflow-x: hidden; width: 100%;
+    /* Inherits --cream, --ink etc. from PeriodLayout's CSS Module when on period */
+    background: var(--cream, #fdf7f0);
+    color: var(--ink, #3d2a35);
+    transition: background 0.6s ease, color 0.6s ease;
+  }
+
+  /* Normal palette defaults — period overrides come from period.module.css on the layout */
+  .sg {
     --blush: #f2c4ce; --blush2: #e8a0b0; --rose: #d4607a; --petal: #fde8ee;
-    --lavender: #e8daf5; --lav2: #c9b8e8; --butter: #fef3e2; --butter2: #f5ddb4;
-    --sage: #d4e8d8; --sage2: #a8c9ae; --cream: #fdf7f0;
+    --lavender: #e8daf5; --lav2: #c9b8e8; --cream: #fdf7f0;
     --ink: #3d2a35; --ink2: #7a5c68; --ink3: #b09aa4; --card: #fff9fb;
     --divider-line: rgba(212,96,122,0.12); --divider-flower: #e8a0b0;
     --act-border: rgba(212,96,122,0.1); --act-bg: #fff9fb;
@@ -68,22 +71,17 @@ const baseCss = `
     --footer-border: rgba(212,96,122,0.14); --footer-ico: #e8a0b0;
     --vibe-bg: #fde8ee; --vibe-border: rgba(212,96,122,0.18); --vibe-text: #d4607a;
     --clock-bg: #e8daf5; --clock-border: rgba(201,184,232,0.5);
-    font-family: 'DM Sans', sans-serif;
-    background: var(--cream); color: var(--ink);
-    min-height: 100vh; padding: clamp(20px,5vw,48px) clamp(20px,4vw,40px);
-    overflow-x: hidden; width: 100%;
-    transition: background 0.6s ease, color 0.6s ease;
   }
 
   .sg-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 24px; gap: 16px; flex-wrap: wrap; }
   .sg-header-left { flex: 1; min-width: 0; }
   .sg-eyebrow { font-size: 10px; font-weight: 400; letter-spacing: 3px; text-transform: uppercase; color: var(--ink3); margin-bottom: 8px; display: flex; align-items: center; gap: 7px; }
   .sg-petal-ico { font-size: 13px; color: var(--blush2); }
-  .sg-name { font-family: 'Fraunces', serif; font-size: clamp(30px, 6vw, 48px); font-weight: 300; font-style: italic; letter-spacing: -1px; line-height: 1.05; color: var(--ink); margin-bottom: 14px; word-break: break-word; }
+  .sg-name { font-family: 'Fraunces', serif; font-size: clamp(30px,6vw,48px); font-weight: 300; font-style: italic; letter-spacing: -1px; line-height: 1.05; color: var(--ink); margin-bottom: 14px; word-break: break-word; }
   .sg-name .accent { color: var(--rose); }
   .sg-vibe { display: inline-flex; align-items: center; gap: 8px; background: var(--vibe-bg); border: 1px solid var(--vibe-border); border-radius: 999px; padding: 6px 16px; font-size: 12px; font-weight: 400; color: var(--vibe-text); font-family: 'Fraunces', serif; font-style: italic; }
   .sg-vibe-heart { font-size: 12px; color: var(--blush2); animation: hbeat 2.4s ease-in-out infinite; display: inline-block; }
-  @keyframes hbeat { 0%, 100% { transform: scale(1); } 45% { transform: scale(1.3); } 55% { transform: scale(1.1); } }
+  @keyframes hbeat { 0%,100%{transform:scale(1)} 45%{transform:scale(1.3)} 55%{transform:scale(1.1)} }
 
   .sg-period-badge { display: inline-flex; align-items: center; gap: 6px; background: rgba(176,48,80,0.15); border: 1px solid rgba(176,48,80,0.3); border-radius: 999px; padding: 4px 12px; font-size: 9px; font-weight: 500; letter-spacing: 2px; text-transform: uppercase; color: #e8a0b0; margin-bottom: 10px; }
   .sg-period-badge-dot { width: 6px; height: 6px; border-radius: 50%; background: #c0394f; animation: pulse-dot 1.8s ease-in-out infinite; }
@@ -98,7 +96,7 @@ const baseCss = `
   .sg-divider-label { font-size: 9px; font-weight: 500; letter-spacing: 3px; text-transform: uppercase; color: var(--ink3); white-space: nowrap; }
   .sg-divider-flower { font-size: 11px; color: var(--divider-flower); }
 
-  .sg-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; }
+  .sg-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-bottom: 16px; }
   .sg-card { border-radius: 20px; padding: clamp(14px,2vw,20px) clamp(12px,1.5vw,16px); position: relative; overflow: hidden; transition: transform 0.2s ease, border-color 0.2s, background 0.5s; cursor: default; }
   .sg-card:hover { transform: translateY(-3px); }
   .sg-card::after { content: ''; position: absolute; bottom: -18px; right: -18px; width: 56px; height: 56px; border-radius: 50%; opacity: 0.22; pointer-events: none; background: var(--dot-c, #f2c4ce); }
@@ -108,7 +106,7 @@ const baseCss = `
   .sg-card-sub { font-size: 11px; color: var(--ink3); display: flex; align-items: center; gap: 5px; }
   .sg-card-ico { position: absolute; top: 14px; right: 14px; font-size: 16px; opacity: 0.22; }
 
-  .sg-acts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 16px; }
+  .sg-acts { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-bottom: 16px; }
   .sg-act { display: flex; flex-direction: column; align-items: flex-start; gap: 7px; padding: clamp(10px,1.5vw,14px) clamp(10px,1.5vw,12px); border-radius: 18px; border: 1px solid var(--act-border); background: var(--act-bg); text-decoration: none; color: var(--ink2); font-size: 11px; font-weight: 500; letter-spacing: 0.2px; font-family: 'DM Sans', sans-serif; transition: all 0.17s ease; }
   .sg-act:hover { background: var(--act-hover-bg); border-color: var(--act-hover-border); color: var(--act-hover-text); transform: translateY(-2px); }
   .sg-act:active { transform: scale(0.97); }
@@ -124,8 +122,8 @@ const baseCss = `
     .sg { padding: 72px 20px 88px; }
     .sg-header { flex-direction: column; gap: 12px; }
     .sg-clock-card { align-self: flex-start; text-align: left; }
-    .sg-grid { grid-template-columns: repeat(2, 1fr); }
-    .sg-acts { grid-template-columns: repeat(2, 1fr); }
+    .sg-grid { grid-template-columns: repeat(2,1fr); }
+    .sg-acts { grid-template-columns: repeat(2,1fr); }
     .sg-footer { flex-direction: column; align-items: flex-start; }
   }
   @media (max-width: 380px) {
@@ -134,28 +132,18 @@ const baseCss = `
   }
 `
 
-// ── Types ──────────────────────────────────────────────────────────────────
 interface MetricState {
-  mood: string
-  habits: string
-  habitSub: string
-  habitsDone: boolean
-  studyTime: string
-  attendance: string
-  expenses: string
-  streak: string
-  period: string
-  periodSub: string
-  periodActive: boolean
+  mood: string; habits: string; habitSub: string; habitsDone: boolean
+  studyTime: string; attendance: string; expenses: string; streak: string
+  period: string; periodSub: string;
 }
 
 const DEFAULT_METRICS: MetricState = {
   mood: '—', habits: '0 / 0', habitSub: 'none added yet', habitsDone: false,
   studyTime: '0min', attendance: '—%', expenses: '₹0', streak: '0',
-  period: '—', periodSub: 'not tracked yet', periodActive: false,
+  period: '—', periodSub: 'not tracked yet',
 }
 
-// ── Helpers ────────────────────────────────────────────────────────────────
 function formatExpenses(total: number): string {
   if (total >= 100_000) return `₹${(total / 100_000).toFixed(1)}L`
   if (total >= 1_000)   return `₹${(total / 1_000).toFixed(1)}k`
@@ -171,7 +159,6 @@ function lastDayOfMonth(thisMonth: string): string {
   return `${thisMonth}-${String(new Date(y, m, 0).getDate()).padStart(2, '0')}`
 }
 
-// ── Period-mode metric card colours ───────────────────────────────────────
 function periodCardStyle(label: string): { c: string; bg: string; border: string; dotC: string } {
   const map: Record<string, { c: string; bg: string; border: string; dotC: string }> = {
     'mood today': { c: '#e8a0b0', bg: '#1e1015', border: 'rgba(192,57,79,0.2)',  dotC: '#9b4a60' },
@@ -185,9 +172,9 @@ function periodCardStyle(label: string): { c: string; bg: string; border: string
   return map[label] ?? { c: '#e8a0b0', bg: '#1e1015', border: 'rgba(176,48,80,0.2)', dotC: '#9b4a60' }
 }
 
-// ── Component ──────────────────────────────────────────────────────────────
 export default function DashboardPage() {
-  const supabase = useMemo(() => createClient(), [])
+  const supabase  = useMemo(() => createClient(), [])
+  const isPeriod  = usePeriod() // ← from shared context, no extra fetch
   const [greeting, setGreeting] = useState('')
   const [vibe,     setVibe]     = useState('')
   const [date,     setDate]     = useState('')
@@ -233,27 +220,20 @@ export default function DashboardPage() {
       next.attendance = workDays > 0 ? `${Math.round((present / workDays) * 100)}%` : '—%'
     }
 
-    if (studyRes.data?.length) {
-      next.studyTime = formatStudyTime(
-        (studyRes.data as { duration_mins: number }[]).reduce((s, r) => s + r.duration_mins, 0)
-      )
-    }
-    if (expRes.data?.length) {
-      next.expenses = formatExpenses(
-        (expRes.data as { amount: number }[]).reduce((s, r) => s + r.amount, 0)
-      )
-    }
+    if (studyRes.data?.length)
+      next.studyTime = formatStudyTime((studyRes.data as { duration_mins: number }[]).reduce((s, r) => s + r.duration_mins, 0))
+
+    if (expRes.data?.length)
+      next.expenses = formatExpenses((expRes.data as { amount: number }[]).reduce((s, r) => s + r.amount, 0))
 
     if (streakRes.data?.length) {
       const loggedDates = new Set((streakRes.data as { date: string }[]).map(l => l.date))
-      let count = 0
-      const cursor = new Date()
+      let count = 0; const cursor = new Date()
       if (!loggedDates.has(today)) cursor.setDate(cursor.getDate() - 1)
       while (true) {
         const dateStr = cursor.toISOString().slice(0, 10)
         if (!loggedDates.has(dateStr)) break
-        count++
-        cursor.setDate(cursor.getDate() - 1)
+        count++; cursor.setDate(cursor.getDate() - 1)
       }
       next.streak = String(count)
     }
@@ -262,29 +242,18 @@ export default function DashboardPage() {
     if (periodEntries?.length) {
       const latest      = periodEntries[0]
       const cycleLength = periodEntries.length >= 2
-        ? Math.round(
-            (new Date(periodEntries[0].start_date).getTime() - new Date(periodEntries[1].start_date).getTime())
-            / 86_400_000
-          )
+        ? Math.round((new Date(periodEntries[0].start_date).getTime() - new Date(periodEntries[1].start_date).getTime()) / 86_400_000)
         : 28
       const now   = new Date()
-      const start = new Date(latest.start_date)
-      const end   = latest.end_date ? new Date(latest.end_date) : null
-
-      if (end && now >= start && now <= end) {
-        next.period = 'active'; next.periodActive = true; next.periodSub = 'currently on your period'
-      } else {
-        const nextDate = new Date(latest.start_date)
-        nextDate.setDate(nextDate.getDate() + cycleLength)
-        const daysLeft = Math.ceil((nextDate.getTime() - now.getTime()) / 86_400_000)
-        next.period       = daysLeft > 0 ? `${daysLeft}d` : 'due'
-        next.periodActive = false
-        next.periodSub    = daysLeft > 0 ? `next in ${daysLeft} days` : 'period due today'
-      }
+      const nextDate = new Date(latest.start_date)
+      nextDate.setDate(nextDate.getDate() + cycleLength)
+      const daysLeft = Math.ceil((nextDate.getTime() - now.getTime()) / 86_400_000)
+      next.period    = isPeriod ? 'active' : daysLeft > 0 ? `${daysLeft}d` : 'due'
+      next.periodSub = isPeriod ? 'currently on your period' : daysLeft > 0 ? `next in ${daysLeft} days` : 'period due today'
     }
 
     setMetrics(next)
-  }, [supabase])
+  }, [supabase, isPeriod])
 
   useEffect(() => {
     const h = new Date().getHours()
@@ -302,11 +271,9 @@ export default function DashboardPage() {
   }, [supabase, fetchMetrics])
 
   useEffect(() => {
-    const pool = metrics.periodActive ? periodVibes : vibes
+    const pool = isPeriod ? periodVibes : vibes
     setVibe(pool[Math.floor(Math.random() * pool.length)])
-  }, [metrics.periodActive])
-
-  const isPeriod = metrics.periodActive
+  }, [isPeriod])
 
   const metricCards = useMemo(() => [
     { label: 'mood today', value: metrics.mood,       sub: metrics.mood === '—' ? 'not logged yet' : 'logged today', c: '#d4607a', bg: '#fff9fb', border: 'rgba(212,96,122,0.1)',    dotC: '#e8a0b0', icon: 'ti-mood-smile'     },
@@ -320,34 +287,23 @@ export default function DashboardPage() {
 
   return (
     <>
-      <style>{baseCss}</style>
-      {/*
-        Key fix: period-mode overrides live ONLY in dashboard.module.css.
-        CSS Modules scopes the class to this component and Next.js cleans it
-        up on navigation — it never leaks to other pages.
-      */}
-      <div className={`sg ${isPeriod ? styles.periodMode : ''}`}>
+      <style>{css}</style>
+      <div className="sg">
 
-        <motion.header
-          className="sg-header"
-          initial={{ opacity: 0, y: -14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.44 }}
-        >
+        <motion.header className="sg-header"
+          initial={{ opacity: 0, y: -14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.44 }}>
           <div className="sg-header-left">
             {isPeriod && (
-              <motion.div className="sg-period-badge" initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+              <motion.div className="sg-period-badge"
+                initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
                 <span className="sg-period-badge-dot" />
                 period active — be gentle with yourself
               </motion.div>
             )}
-
             <p className="sg-eyebrow">
-              {isPeriod
-                ? <i className="ti ti-moon sg-petal-ico" aria-hidden="true" />
-                : <i className="ti ti-leaf sg-petal-ico" aria-hidden="true" />
-              }
+              <i className={`ti ${isPeriod ? 'ti-moon' : 'ti-leaf'} sg-petal-ico`} aria-hidden="true" />
               {date}
             </p>
-
             <h1 className="sg-name">
               {greeting},<br />
               <span className="accent">
@@ -358,12 +314,9 @@ export default function DashboardPage() {
                 }
               </span>
             </h1>
-
-            <motion.span className="sg-vibe" initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
-              {isPeriod
-                ? <i className="ti ti-droplet sg-vibe-heart" aria-hidden="true" />
-                : <i className="ti ti-heart sg-vibe-heart" aria-hidden="true" />
-              }
+            <motion.span className="sg-vibe"
+              initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+              <i className={`ti ${isPeriod ? 'ti-droplet' : 'ti-heart'} sg-vibe-heart`} aria-hidden="true" />
               {vibe}
             </motion.span>
           </div>
@@ -376,19 +329,16 @@ export default function DashboardPage() {
           {metricCards.map((m, i) => {
             const s = isPeriod ? periodCardStyle(m.label) : { c: m.c, bg: m.bg, border: m.border, dotC: m.dotC }
             return (
-              <motion.div
-                key={m.label}
-                className="sg-card"
+              <motion.div key={m.label} className="sg-card"
                 style={{ background: s.bg, border: `1px solid ${s.border}`, ['--dot-c' as string]: s.dotC }}
                 initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.05 * i, duration: 0.36 }}
-              >
+                transition={{ delay: 0.05 * i, duration: 0.36 }}>
                 <i className={`ti ${m.icon} sg-card-ico`} aria-hidden="true" style={{ color: s.c }} />
                 <p className="sg-card-lbl">
                   <span className="sg-card-lbl-dot" style={{ background: s.dotC }} />
                   {m.label}
                 </p>
-                {m.label === 'periods' && metrics.periodActive ? (
+                {m.label === 'periods' && isPeriod ? (
                   <p className="sg-card-val" style={{ color: s.c }}>
                     <img src="/blood-drop.png" alt="Period active" width={56} height={56}
                       style={{ display: 'inline-block', objectFit: 'contain', borderRadius: '6px' }} />
@@ -399,8 +349,7 @@ export default function DashboardPage() {
                 <p className="sg-card-sub">
                   {m.label === 'habits' && metrics.habitsDone
                     ? <><LeafIcon size={12} color={isPeriod ? '#9b7080' : '#5a8c63'} />{m.sub}</>
-                    : m.sub
-                  }
+                    : m.sub}
                 </p>
               </motion.div>
             )
@@ -409,13 +358,12 @@ export default function DashboardPage() {
 
         <Divider label="quick actions" isPeriod={isPeriod} />
 
-        <motion.div className="sg-acts" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.38 }}>
+        <motion.div className="sg-acts"
+          initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.38 }}>
           {actions.map((a, i) => (
-            <motion.a
-              key={a.label} href={a.href} className="sg-act"
+            <motion.a key={a.label} href={a.href} className="sg-act"
               initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.38 + i * 0.05 }}
-            >
+              transition={{ delay: 0.38 + i * 0.05 }}>
               <i className={`ti ${a.icon} sg-act-ico`} aria-hidden="true"
                 style={{ color: isPeriod ? a.periodIconC : a.iconC }} />
               {a.label}
@@ -423,13 +371,15 @@ export default function DashboardPage() {
           ))}
         </motion.div>
 
-        <motion.div className="sg-footer" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.7 }}>
+        <motion.div className="sg-footer"
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.7 }}>
           <div>
             <p className="sg-footer-lbl">today's intention</p>
-            {isPeriod
-              ? <p className="sg-footer-msg">rest when you need to. your softness is a strength.</p>
-              : <p className="sg-footer-msg">log your mood, tend your habits, bloom gently.</p>
-            }
+            <p className="sg-footer-msg">
+              {isPeriod
+                ? 'rest when you need to. your softness is a strength.'
+                : 'log your mood, tend your habits, bloom gently.'}
+            </p>
           </div>
           <div className="sg-footer-right">
             {isPeriod ? (
@@ -450,8 +400,6 @@ export default function DashboardPage() {
     </>
   )
 }
-
-// ── Sub-components ─────────────────────────────────────────────────────────
 
 function Divider({ label, isPeriod }: { label: string; isPeriod?: boolean }) {
   return (
@@ -474,7 +422,8 @@ function LiveTime() {
     return () => clearInterval(id)
   }, [])
   return (
-    <motion.div className="sg-clock-card" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.24 }}>
+    <motion.div className="sg-clock-card"
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.24 }}>
       <p className="sg-clock-val">{time}</p>
       <p className="sg-clock-sub">IST</p>
     </motion.div>

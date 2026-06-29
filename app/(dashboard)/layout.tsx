@@ -1,6 +1,8 @@
 import { redirect } from 'next/navigation'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import Sidebar from '@/components/Sidebar'
+import { PeriodProvider } from './PeriodContext'
+import PeriodLayout from './PeriodLayout'
 
 export default async function DashboardLayout({
   children,
@@ -13,11 +15,13 @@ export default async function DashboardLayout({
   if (!user) redirect('/login')
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: '#fdf7f0' }}>
-      <Sidebar user={user} />
-      <main style={{ flex: 1, overflowY: 'auto' }}>
-        {children}
-      </main>
-    </div>
+    <PeriodProvider>
+      <PeriodLayout>
+        <Sidebar user={user} />
+        <main style={{ flex: 1, overflowY: 'auto' }}>
+          {children}
+        </main>
+      </PeriodLayout>
+    </PeriodProvider>
   )
 }
