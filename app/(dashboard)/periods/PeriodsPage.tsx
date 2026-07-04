@@ -1419,7 +1419,7 @@ share
                           style={{ background: '#edf6ee', border: '1px solid #a8c9ae', color: '#2a5c33' }}>
                           your cycle has been logged 🌸
                         </motion.div>
-                        <PeriodCravingsCard />
+                        {/* <PeriodCravingsCard /> */}
                       </>
                     )}
                   </AnimatePresence>
