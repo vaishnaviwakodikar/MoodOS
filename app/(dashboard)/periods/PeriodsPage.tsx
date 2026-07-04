@@ -1182,9 +1182,9 @@ const handleSaveEdit = async () => {
         {/* Header */}
         <motion.div initial={{ opacity: 0, y: -14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.44 }}>
           <p className={styles['pt-eyebrow']}>
-            <i className="ti ti-calendar-heart" style={{ color: '#e8a0b0' }} />
-            cycle tracker
-          </p>
+  <i className="ti ti-calendar-heart" style={{ color: '#e8a0b0', fontSize: '3em' }} />
+  cycle tracker
+</p>
           <h1 className={styles['pt-h1']}>your <span className={styles.accent}>cycle,</span><br />your rhythm</h1>
           <p className={styles['pt-sub']}>track, understand, and bloom with your body</p>
 
