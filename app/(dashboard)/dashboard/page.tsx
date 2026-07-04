@@ -4,6 +4,7 @@ import { motion } from 'framer-motion'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import { usePeriod } from '../PeriodContext'
+import { parseYMD, getPhase, getNextPrediction, type CycleProfileLike } from '@/lib/cycleMath'
 
 const vibes = [
   "you're blooming so beautifully",
@@ -186,7 +187,7 @@ export default function DashboardPage() {
     const thisMonth = today.slice(0, 7)
     const monthEnd  = lastDayOfMonth(thisMonth)
 
-    const [moodRes, habitsRes, logsRes, attRes, studyRes, expRes, streakRes, periodRes] =
+    const [moodRes, habitsRes, logsRes, attRes, studyRes, expRes, streakRes, periodRes, profileRes] =
       await Promise.all([
         supabase.from('mood_entries').select('mood, emoji').eq('user_id', userId).gte('created_at', `${today}T00:00:00`).lte('created_at', `${today}T23:59:59`).order('created_at', { ascending: false }).limit(1).maybeSingle(),
         supabase.from('habits').select('id').eq('user_id', userId).eq('archived', false),
@@ -198,6 +199,13 @@ export default function DashboardPage() {
           .gte('date', (() => { const d = new Date(); d.setDate(d.getDate() - 90); return d.toISOString().slice(0, 10) })())
           .lte('date', today),
         supabase.from('period_entries').select('start_date, end_date').eq('user_id', userId).order('start_date', { ascending: false }).limit(2),
+        // NOTE: no .eq('user_id', userId) here — RLS already scopes this to the
+        // current user. The previous explicit filter was returning zero rows
+        // even though periods/page.tsx's identical (RLS-only) query found the
+        // row fine — that mismatch was the root cause of the dashboard always
+        // showing the hardcoded 28-day default instead of the user's real
+        // cycle_length. Keep this consistent with periods/page.tsx.
+        supabase.from('cycle_profiles').select('cycle_length, period_length, has_pcos_pcod, last_period_date').maybeSingle(),
       ])
 
     const next: MetricState = { ...DEFAULT_METRICS }
@@ -238,18 +246,41 @@ export default function DashboardPage() {
       next.streak = String(count)
     }
 
+    // ── periods, mapped from cycle_profiles (same source as periods/page.tsx) ──
+    if (periodRes.error) console.error('dashboard: period_entries fetch failed:', periodRes.error)
+    if (profileRes.error) console.error('dashboard: cycle_profiles fetch failed:', profileRes.error)
+    console.log('dashboard period debug:', { periodEntries: periodRes.data, profile: profileRes.data })
+
     const periodEntries = periodRes.data
-    if (periodEntries?.length) {
-      const latest      = periodEntries[0]
-      const cycleLength = periodEntries.length >= 2
-        ? Math.round((new Date(periodEntries[0].start_date).getTime() - new Date(periodEntries[1].start_date).getTime()) / 86_400_000)
-        : 28
-      const now   = new Date()
-      const nextDate = new Date(latest.start_date)
-      nextDate.setDate(nextDate.getDate() + cycleLength)
-      const daysLeft = Math.ceil((nextDate.getTime() - now.getTime()) / 86_400_000)
-      next.period    = isPeriod ? 'active' : daysLeft > 0 ? `${daysLeft}d` : 'due'
-      next.periodSub = isPeriod ? 'currently on your period' : daysLeft > 0 ? `next in ${daysLeft} days` : 'period due today'
+    const profile = profileRes.data as CycleProfileLike | null
+
+    const lastStart = periodEntries?.length
+      ? parseYMD(periodEntries[0].start_date)
+      : (profileRes.data as { last_period_date?: string | null } | null)?.last_period_date
+        ? parseYMD((profileRes.data as { last_period_date: string }).last_period_date)
+        : null
+
+    const cycleLength = profile?.cycle_length
+      ?? (periodEntries && periodEntries.length >= 2
+          ? diffDaysFallback(parseYMD(periodEntries[1].start_date), parseYMD(periodEntries[0].start_date))
+          : 28)
+
+    const periodLength = profile?.period_length ?? 5
+
+    if (lastStart) {
+      // Single shared implementation — guaranteed to match periods/page.tsx
+      const { nextPredicted, daysUntilNext: daysLeft } = getNextPrediction(lastStart, cycleLength)
+      const { phase, day } = getPhase(lastStart, cycleLength, profile)
+
+      next.period = isPeriod
+        ? 'active'
+        : daysLeft !== null && daysLeft > 0 ? `${daysLeft}d` : 'due'
+
+      next.periodSub = isPeriod
+        ? `day ${day} · ${profile?.has_pcos_pcod ? 'be gentle, PCOS can hit harder' : 'currently on your period'}`
+        : daysLeft !== null && daysLeft > 0
+          ? `${phase} phase · next in ${daysLeft} days`
+          : 'period due today'
     }
 
     setMetrics(next)
@@ -428,4 +459,11 @@ function LiveTime() {
       <p className="sg-clock-sub">IST</p>
     </motion.div>
   )
+}
+
+// Fallback only used when no cycle_profiles row exists at all and we must
+// estimate cycle length from raw entry gaps (kept local since it's only
+// needed for this narrow legacy-data fallback path).
+function diffDaysFallback(a: Date, b: Date): number {
+  return Math.round((b.getTime() - a.getTime()) / 86_400_000)
 }

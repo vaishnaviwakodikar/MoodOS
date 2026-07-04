@@ -6,9 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { createClient } from '@/lib/supabase'
 import styles from './periods.module.css'
 import SharePartner from './SharePartner'
-
-type Flow = 'spotting' | 'light' | 'medium' | 'heavy' | 'very_heavy'
-type Phase = 'menstrual' | 'follicular' | 'ovulation' | 'luteal' | 'unknown'
+import { toYMD, parseYMD, addDays, diffDays, getPhase, getNextPrediction, type Flow, type Phase } from '@/lib/cycleMath'
 
 type CycleProfile = {
   cycle_length: number
@@ -131,34 +129,6 @@ function logSupabaseError(label: string, error: any) {
     message: error.message, details: error.details,
     hint: error.hint, code: error.code, status: error.status, name: error.name,
   })
-}
-
-function addDays(date: Date, n: number) {
-  const d = new Date(date); d.setDate(d.getDate() + n); return d
-}
-function diffDays(a: Date, b: Date) {
-  return Math.round((b.getTime() - a.getTime()) / 86400000)
-}
-function toYMD(d: Date) { return d.toISOString().split('T')[0] }
-function parseYMD(s: string) {
-  const [y, m, day] = s.split('-').map(Number)
-  return new Date(y, m - 1, day)
-}
-
-function getPhase(lastStart: Date | null, cycleLen: number, profile: CycleProfile | null) {
-  if (!lastStart) return { phase: 'unknown' as Phase, day: 0, tip: 'Log your first period to see your cycle phase.' }
-  const today = new Date(); today.setHours(0, 0, 0, 0)
-  const day = diffDays(lastStart, today) + 1
-  const d = ((day - 1) % cycleLen) + 1
-  const periodLen = profile?.period_length ?? 5
-  const hasPcos = profile?.has_pcos_pcod ?? false
-  if (d <= periodLen)
-    return { phase: 'menstrual' as Phase, day: d, tip: hasPcos ? 'Rest, hydrate & heat pad — PCOS cramps can be stronger.' : 'Rest well, hydrate, and be gentle with yourself.' }
-  if (d <= cycleLen - 15)
-    return { phase: 'follicular' as Phase, day: d, tip: 'Energy rising — great time to start new things.' }
-  if (d >= cycleLen - 14 && d <= cycleLen - 12)
-    return { phase: 'ovulation' as Phase, day: d, tip: "Peak energy & confidence — you're glowing." }
-  return { phase: 'luteal' as Phase, day: d, tip: hasPcos ? 'Luteal phase with PCOS can bring stronger symptoms — be extra gentle.' : 'Wind down, nourish yourself, and rest more.' }
 }
 
 const phaseConfig = {
@@ -1138,8 +1108,7 @@ const handleSaveEdit = async () => {
     return Math.round(withEnd.reduce((a, e) => a + diffDays(parseYMD(e.start_date), parseYMD(e.end_date!)) + 1, 0) / withEnd.length)
   })()
 
-  const nextPredicted = lastStart ? addDays(lastStart, avgCycle) : null
-  const daysUntilNext = nextPredicted ? diffDays(new Date(), nextPredicted) : null
+  const { nextPredicted, daysUntilNext } = getNextPrediction(lastStart, avgCycle)
   const { phase, day: phaseDay, tip } = getPhase(lastStart, avgCycle, cycleProfile)
   const pc = phaseConfig[phase]
 
@@ -1174,14 +1143,15 @@ const handleSaveEdit = async () => {
   const sexDateSet  = new Set(sexLogs.map(s => s.date))
   const painDateSet = new Set(painLogs.map(p => p.date))
 
+  /* ── TABS: symptoms moved right after period so it reads as its own peer section ── */
   const tabs = [
     { key: 'log'      as const, label: 'period',   icon: 'ti-droplet' },
+    { key: 'symptoms' as const, label: 'symptoms',  icon: 'ti-stethoscope' },
     { key: 'pain'     as const, label: 'pain',      icon: 'ti-bolt' },
     { key: 'sex'      as const, label: 'intimacy',  icon: 'ti-heart' },
     { key: 'calendar' as const, label: 'calendar',  icon: 'ti-calendar-heart' },
     { key: 'insights' as const, label: 'insights',  icon: 'ti-chart-bar' },
     { key: 'profile'  as const, label: 'profile',   icon: 'ti-settings' },
-    { key: 'symptoms' as const, label: 'symptoms',  icon: 'ti-stethoscope' },
   ]
 
   const tabColors: Record<string, { bg: string; border: string; color: string }> = {
@@ -1559,113 +1529,6 @@ const handleSaveEdit = async () => {
             </motion.div>
           )}
 
-          {/* ── PAIN LOG ── */}
-          {activeTab === 'pain' && (
-            <motion.div key="pain" className={styles['pt-grid']}
-              initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 16 }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                <div className={styles['pt-card']}>
-                  <p className={styles['pt-card-lbl']}><i className="ti ti-bolt" style={{ color: '#b8860b' }} /> log pain or discomfort</p>
-                  <div className={styles['pt-input-lbl']}><i className="ti ti-calendar" /> date</div>
-                  <input type="date" className={styles['pt-input']} value={painDate} onChange={e => setPainDate(e.target.value)} />
-                  <div className={styles['pt-input-lbl']} style={{ marginTop: '4px' }}><i className="ti ti-stethoscope" /> type of pain</div>
-                  <div className={styles['pt-pain-type-grid']}>
-                    {painTypes.map(pt => {
-                      const active = painType === pt.key
-                      return (
-                        <button key={pt.key} className={styles['pt-pain-type-btn']}
-                          onClick={() => setPainType(active ? null : pt.key)}
-                          style={{ background: active ? pt.bg : 'transparent', borderColor: active ? pt.c : 'rgba(212,96,122,0.12)', color: active ? pt.c : '#b09aa4' }}>
-                          <i className={`ti ${pt.icon}`} style={{ color: active ? pt.c : '#b09aa4' }} />{pt.label}
-                        </button>
-                      )
-                    })}
-                  </div>
-                  <div className={styles['pt-input-lbl']}><i className="ti ti-chart-bar" /> severity (1 = mild, 5 = severe)</div>
-                  <div className={styles['pt-severity']}>
-                    {[1,2,3,4,5].map(n => (
-                      <button key={n} className={`${styles['pt-sev-btn']} ${painSeverity >= n ? styles.active : ''}`}
-                        onClick={() => setPainSeverity(n)}
-                        style={{ background: painSeverity >= n ? `hsl(${340 - n * 18},${60 + n * 6}%,${60 - n * 4}%)` : 'transparent', borderColor: painSeverity >= n ? 'transparent' : 'rgba(212,96,122,0.15)' }}>
-                        {n}
-                      </button>
-                    ))}
-                    <span style={{ fontSize: '11px', color: '#b09aa4', marginLeft: '4px' }}>
-                      {['','mild','moderate','notable','strong','severe'][painSeverity]}
-                    </span>
-                  </div>
-                  <div className={styles['pt-input-lbl']}><i className="ti ti-clock" /> duration (hours, optional)</div>
-                  <input type="number" className={styles['pt-input']} placeholder="e.g. 2" value={painDuration} onChange={e => setPainDuration(e.target.value)} />
-                  <div className={styles['pt-input-lbl']}><i className="ti ti-first-aid-kit" /> relief used</div>
-                  <div className={styles['pt-chips']} style={{ marginBottom: '12px' }}>
-                    {reliefOptions.map(r => {
-                      const active = painRelief.includes(r)
-                      return (
-                        <button key={r} className={styles['pt-chip']} onClick={() => toggleRelief(r)}
-                          style={{ background: active ? '#fef8e7' : 'transparent', borderColor: active ? '#f5ddb4' : 'rgba(212,96,122,0.15)', color: active ? '#5a3a00' : '#b09aa4' }}>
-                          {r}
-                        </button>
-                      )
-                    })}
-                  </div>
-                  <div className={styles['pt-input-lbl']}><i className="ti ti-pencil" /> notes</div>
-                  <textarea className={styles['pt-input']} value={painNotes} rows={2}
-                    onChange={e => setPainNotes(e.target.value)} placeholder="describe how you feel..." style={{ resize: 'none' }} />
-                  <button className={styles['pt-submit']} onClick={handleLogPain} disabled={!painType || savingPain}
-                    style={{ background: painType ? 'linear-gradient(135deg, #b8860b, #d4607a)' : 'rgba(212,96,122,0.08)', color: painType ? '#fff' : '#b09aa4' }}>
-                    {savingPain ? 'saving...' : successPain ? 'logged 🌿' : painType ? 'log this pain' : 'pick a pain type first'}
-                  </button>
-                  <AnimatePresence>
-                    {successPain && (
-                      <motion.div className={styles['pt-toast']} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-                        style={{ background: '#fef8e7', border: '1px solid #f5ddb4', color: '#5a3a00' }}>
-                        pain logged — rest up 🌿
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-              </div>
-              <div className={styles['pt-card']}>
-                <p className={styles['pt-card-lbl']}><i className="ti ti-history" style={{ color: '#b8860b' }} /> pain history</p>
-                {painLogs.length === 0 ? (
-                  <div className={styles['pt-empty']}><i className="ti ti-heart" />no pain logged yet — great!</div>
-                ) : (
-                  <div className={styles['pt-history']}>
-                    {painLogs.slice(0, 8).map((p, i) => {
-                      const pt2 = painTypes.find(x => x.key === p.type)!
-                      return (
-                        <motion.div key={p.id} className={styles['pt-hitem']}
-                          style={{ background: `${pt2?.bg}88`, borderColor: `${pt2?.c}22` }}
-                          initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}>
-                          <div className={styles['pt-hitem-ico']} style={{ background: pt2?.bg }}>
-                            <i className={`ti ${pt2?.icon}`} style={{ color: pt2?.c }} />
-                          </div>
-                          <div style={{ flex: 1 }}>
-                            <div className={styles['pt-hitem-name']}>{pt2?.label}</div>
-                            <div className={styles['pt-hitem-sub']}>
-                              {parseYMD(p.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
-                              {p.relief_used && ` · ${p.relief_used}`}
-                            </div>
-                          </div>
-                          <div className={styles['pt-hitem-right']}>
-                            <div className={styles['pt-hitem-days']} style={{ color: pt2?.c }}>{p.severity}/5</div>
-                            <div className={styles['pt-hitem-days-lbl']}>severity</div>
-                          </div>
-                          <button onClick={() => openEditPain(p)}
-                            style={{ width: 30, height: 30, borderRadius: '50%', border: '1.5px solid rgba(184,134,11,0.2)', background: '#fefdf8', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, color: '#b8860b', flexShrink: 0, transition: 'all 0.18s ease' }}
-                            onMouseEnter={e2 => (e2.currentTarget.style.background = '#fef8e7')}
-                            onMouseLeave={e2 => (e2.currentTarget.style.background = '#fefdf8')}>
-                            <i className="ti ti-pencil" />
-                          </button>
-                        </motion.div>
-                      )
-                    })}
-                  </div>
-                )}
-              </div>
-            </motion.div>
-          )}
-
           {/* ── DAILY SYMPTOMS ── */}
           {activeTab === 'symptoms' && (
             <motion.div key="symptoms" className={styles['pt-grid']}
@@ -1767,6 +1630,113 @@ const handleSaveEdit = async () => {
                         </button>
                       </motion.div>
                     ))}
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          )}
+
+          {/* ── PAIN LOG ── */}
+          {activeTab === 'pain' && (
+            <motion.div key="pain" className={styles['pt-grid']}
+              initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 16 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <div className={styles['pt-card']}>
+                  <p className={styles['pt-card-lbl']}><i className="ti ti-bolt" style={{ color: '#b8860b' }} /> log pain or discomfort</p>
+                  <div className={styles['pt-input-lbl']}><i className="ti ti-calendar" /> date</div>
+                  <input type="date" className={styles['pt-input']} value={painDate} onChange={e => setPainDate(e.target.value)} />
+                  <div className={styles['pt-input-lbl']} style={{ marginTop: '4px' }}><i className="ti ti-stethoscope" /> type of pain</div>
+                  <div className={styles['pt-pain-type-grid']}>
+                    {painTypes.map(pt => {
+                      const active = painType === pt.key
+                      return (
+                        <button key={pt.key} className={styles['pt-pain-type-btn']}
+                          onClick={() => setPainType(active ? null : pt.key)}
+                          style={{ background: active ? pt.bg : 'transparent', borderColor: active ? pt.c : 'rgba(212,96,122,0.12)', color: active ? pt.c : '#b09aa4' }}>
+                          <i className={`ti ${pt.icon}`} style={{ color: active ? pt.c : '#b09aa4' }} />{pt.label}
+                        </button>
+                      )
+                    })}
+                  </div>
+                  <div className={styles['pt-input-lbl']}><i className="ti ti-chart-bar" /> severity (1 = mild, 5 = severe)</div>
+                  <div className={styles['pt-severity']}>
+                    {[1,2,3,4,5].map(n => (
+                      <button key={n} className={`${styles['pt-sev-btn']} ${painSeverity >= n ? styles.active : ''}`}
+                        onClick={() => setPainSeverity(n)}
+                        style={{ background: painSeverity >= n ? `hsl(${340 - n * 18},${60 + n * 6}%,${60 - n * 4}%)` : 'transparent', borderColor: painSeverity >= n ? 'transparent' : 'rgba(212,96,122,0.15)' }}>
+                        {n}
+                      </button>
+                    ))}
+                    <span style={{ fontSize: '11px', color: '#b09aa4', marginLeft: '4px' }}>
+                      {['','mild','moderate','notable','strong','severe'][painSeverity]}
+                    </span>
+                  </div>
+                  <div className={styles['pt-input-lbl']}><i className="ti ti-clock" /> duration (hours, optional)</div>
+                  <input type="number" className={styles['pt-input']} placeholder="e.g. 2" value={painDuration} onChange={e => setPainDuration(e.target.value)} />
+                  <div className={styles['pt-input-lbl']}><i className="ti ti-first-aid-kit" /> relief used</div>
+                  <div className={styles['pt-chips']} style={{ marginBottom: '12px' }}>
+                    {reliefOptions.map(r => {
+                      const active = painRelief.includes(r)
+                      return (
+                        <button key={r} className={styles['pt-chip']} onClick={() => toggleRelief(r)}
+                          style={{ background: active ? '#fef8e7' : 'transparent', borderColor: active ? '#f5ddb4' : 'rgba(212,96,122,0.15)', color: active ? '#5a3a00' : '#b09aa4' }}>
+                          {r}
+                        </button>
+                      )
+                    })}
+                  </div>
+                  <div className={styles['pt-input-lbl']}><i className="ti ti-pencil" /> notes</div>
+                  <textarea className={styles['pt-input']} value={painNotes} rows={2}
+                    onChange={e => setPainNotes(e.target.value)} placeholder="describe how you feel..." style={{ resize: 'none' }} />
+                  <button className={styles['pt-submit']} onClick={handleLogPain} disabled={!painType || savingPain}
+                    style={{ background: painType ? 'linear-gradient(135deg, #b8860b, #d4607a)' : 'rgba(212,96,122,0.08)', color: painType ? '#fff' : '#b09aa4' }}>
+                    {savingPain ? 'saving...' : successPain ? 'logged 🌿' : painType ? 'log this pain' : 'pick a pain type first'}
+                  </button>
+                  <AnimatePresence>
+                    {successPain && (
+                      <motion.div className={styles['pt-toast']} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                        style={{ background: '#fef8e7', border: '1px solid #f5ddb4', color: '#5a3a00' }}>
+                        pain logged — rest up 🌿
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              </div>
+              <div className={styles['pt-card']}>
+                <p className={styles['pt-card-lbl']}><i className="ti ti-history" style={{ color: '#b8860b' }} /> pain history</p>
+                {painLogs.length === 0 ? (
+                  <div className={styles['pt-empty']}><i className="ti ti-heart" />no pain logged yet — great!</div>
+                ) : (
+                  <div className={styles['pt-history']}>
+                    {painLogs.slice(0, 8).map((p, i) => {
+                      const pt2 = painTypes.find(x => x.key === p.type)!
+                      return (
+                        <motion.div key={p.id} className={styles['pt-hitem']}
+                          style={{ background: `${pt2?.bg}88`, borderColor: `${pt2?.c}22` }}
+                          initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}>
+                          <div className={styles['pt-hitem-ico']} style={{ background: pt2?.bg }}>
+                            <i className={`ti ${pt2?.icon}`} style={{ color: pt2?.c }} />
+                          </div>
+                          <div style={{ flex: 1 }}>
+                            <div className={styles['pt-hitem-name']}>{pt2?.label}</div>
+                            <div className={styles['pt-hitem-sub']}>
+                              {parseYMD(p.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                              {p.relief_used && ` · ${p.relief_used}`}
+                            </div>
+                          </div>
+                          <div className={styles['pt-hitem-right']}>
+                            <div className={styles['pt-hitem-days']} style={{ color: pt2?.c }}>{p.severity}/5</div>
+                            <div className={styles['pt-hitem-days-lbl']}>severity</div>
+                          </div>
+                          <button onClick={() => openEditPain(p)}
+                            style={{ width: 30, height: 30, borderRadius: '50%', border: '1.5px solid rgba(184,134,11,0.2)', background: '#fefdf8', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, color: '#b8860b', flexShrink: 0, transition: 'all 0.18s ease' }}
+                            onMouseEnter={e2 => (e2.currentTarget.style.background = '#fef8e7')}
+                            onMouseLeave={e2 => (e2.currentTarget.style.background = '#fefdf8')}>
+                            <i className="ti ti-pencil" />
+                          </button>
+                        </motion.div>
+                      )
+                    })}
                   </div>
                 )}
               </div>

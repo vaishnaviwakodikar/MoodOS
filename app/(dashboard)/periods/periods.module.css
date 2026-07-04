@@ -607,8 +607,9 @@
 
 .pt-tabs {
   display: flex;
-  gap: 7px;
-  flex-wrap: wrap;
+  gap: 10px;              /* pehle shayad 4-6px tha, badha do */
+  flex-wrap: wrap;         /* taaki chhote screen pe wrap ho jaye, cramped na ho */
+  margin-bottom: 20px;
 }
 
 .pt-tab {
