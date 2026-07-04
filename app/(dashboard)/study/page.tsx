@@ -87,7 +87,7 @@ const css = `
   .st-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 24px; gap: 16px; flex-wrap: wrap; }
   .st-header-left { flex: 1; min-width: 0; }
   .st-eyebrow { font-size: 10px; font-weight: 400; letter-spacing: 3px; text-transform: uppercase; color: var(--ink3); margin-bottom: 8px; display: flex; align-items: center; gap: 7px; }
-  .st-h1 { font-family: 'Fraunces', serif; font-size: clamp(26px,5.5vw,44px); font-weight: 300; font-style: italic; letter-spacing: -1px; line-height: 1.05; color: var(--ink); margin-bottom: 12px; word-break: break-word; }
+  .st-h1 { font-family: 'Fraunces', serif; font-size: clamp(26px,5.5vw,44px); font-weight: 300; font-style: italic; letter-spacing: -1px; line-height: 1.25; padding-bottom: 4px; color: var(--ink); margin-bottom: 12px; word-break: break-word; }
   .st-h1 .accent { color: var(--rose); }
   .st-vibe { display: inline-flex; align-items: center; gap: 8px; background: var(--petal); border: 1px solid rgba(212,96,122,0.18); border-radius: 999px; padding: 6px 16px; font-size: 12px; color: var(--rose); font-family: 'Fraunces', serif; font-style: italic; }
 
