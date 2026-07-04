@@ -79,13 +79,15 @@ const css = `
     padding: clamp(16px,3vw,32px) clamp(16px,3vw,32px) 40px;
     overflow-x: hidden;
     width: 100%;
+    box-sizing: border-box;
   }
+  .st *, .st *::before, .st *::after { box-sizing: border-box; }
 
   /* header */
   .st-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 24px; gap: 16px; flex-wrap: wrap; }
   .st-header-left { flex: 1; min-width: 0; }
   .st-eyebrow { font-size: 10px; font-weight: 400; letter-spacing: 3px; text-transform: uppercase; color: var(--ink3); margin-bottom: 8px; display: flex; align-items: center; gap: 7px; }
-  .st-h1 { font-family: 'Fraunces', serif; font-size: clamp(28px,5.5vw,44px); font-weight: 300; font-style: italic; letter-spacing: -1px; line-height: 1.05; color: var(--ink); margin-bottom: 12px; }
+  .st-h1 { font-family: 'Fraunces', serif; font-size: clamp(26px,5.5vw,44px); font-weight: 300; font-style: italic; letter-spacing: -1px; line-height: 1.05; color: var(--ink); margin-bottom: 12px; word-break: break-word; }
   .st-h1 .accent { color: var(--rose); }
   .st-vibe { display: inline-flex; align-items: center; gap: 8px; background: var(--petal); border: 1px solid rgba(212,96,122,0.18); border-radius: 999px; padding: 6px 16px; font-size: 12px; color: var(--rose); font-family: 'Fraunces', serif; font-style: italic; }
 
@@ -102,22 +104,22 @@ const css = `
 
   /* stat cards */
   .st-stats { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; margin-bottom: 16px; }
-  .st-stat { border-radius: 20px; padding: 16px; position: relative; overflow: hidden; transition: transform 0.2s ease; }
+  .st-stat { border-radius: 20px; padding: 16px; position: relative; overflow: hidden; transition: transform 0.2s ease; min-width: 0; }
   .st-stat:hover { transform: translateY(-3px); }
   .st-stat::after { content: ''; position: absolute; bottom: -18px; right: -18px; width: 56px; height: 56px; border-radius: 50%; opacity: 0.22; pointer-events: none; background: var(--dot-c, #f2c4ce); }
   .st-stat-ico { font-size: 16px; opacity: 0.45; margin-bottom: 8px; }
-  .st-stat-val { font-family: 'Fraunces', serif; font-size: 26px; font-weight: 300; letter-spacing: -0.5px; line-height: 1; margin-bottom: 4px; }
+  .st-stat-val { font-family: 'Fraunces', serif; font-size: 26px; font-weight: 300; letter-spacing: -0.5px; line-height: 1; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .st-stat-lbl { font-size: 9px; font-weight: 500; letter-spacing: 2px; text-transform: uppercase; opacity: 0.5; }
 
   /* tabs */
   .st-tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
-  .st-tab { display: inline-flex; align-items: center; gap: 7px; padding: 8px 16px; border-radius: 999px; font-family: 'DM Sans', sans-serif; font-size: 11px; font-weight: 600; cursor: pointer; transition: all 0.15s ease; border: 1px solid; background: none; }
+  .st-tab { display: inline-flex; align-items: center; gap: 7px; padding: 8px 16px; border-radius: 999px; font-family: 'DM Sans', sans-serif; font-size: 11px; font-weight: 600; cursor: pointer; transition: all 0.15s ease; border: 1px solid; background: none; white-space: nowrap; }
   .st-tab:hover { transform: scale(1.03); }
   .st-tab i { font-size: 13px; }
 
   /* card */
-  .st-card { background: var(--card); border: 1px solid rgba(212,96,122,0.12); border-radius: 22px; padding: clamp(16px,2vw,24px); }
-  .st-card-lbl { font-size: 9px; font-weight: 500; letter-spacing: 2.5px; text-transform: uppercase; color: var(--ink3); margin-bottom: 14px; display: flex; align-items: center; gap: 6px; }
+  .st-card { background: var(--card); border: 1px solid rgba(212,96,122,0.12); border-radius: 22px; padding: clamp(14px,2vw,24px); min-width: 0; }
+  .st-card-lbl { font-size: 9px; font-weight: 500; letter-spacing: 2.5px; text-transform: uppercase; color: var(--ink3); margin-bottom: 14px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
   .st-card-lbl i { font-size: 12px; color: var(--rose); }
 
   /* inputs */
@@ -128,10 +130,10 @@ const css = `
 
   /* subject grid */
   .st-subj-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 7px; margin-bottom: 10px; }
-  .st-subj-btn { display: flex; flex-direction: column; align-items: center; gap: 5px; padding: 11px 6px; border-radius: 14px; cursor: pointer; font-family: 'DM Sans', sans-serif; background: rgba(253,247,240,0.8); border: 1px solid rgba(212,96,122,0.1); transition: all 0.17s ease; }
+  .st-subj-btn { display: flex; flex-direction: column; align-items: center; gap: 5px; padding: 11px 6px; border-radius: 14px; cursor: pointer; font-family: 'DM Sans', sans-serif; background: rgba(253,247,240,0.8); border: 1px solid rgba(212,96,122,0.1); transition: all 0.17s ease; min-width: 0; }
   .st-subj-btn:hover { transform: translateY(-2px); }
   .st-subj-btn i { font-size: 16px; }
-  .st-subj-lbl { font-size: 9px; font-weight: 500; }
+  .st-subj-lbl { font-size: 9px; font-weight: 500; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
 
   /* chips / pill buttons */
   .st-chips { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 10px; }
@@ -145,14 +147,14 @@ const css = `
 
   /* task list */
   .st-tasks { display: flex; flex-direction: column; gap: 9px; }
-  .st-task { display: flex; align-items: center; gap: 10px; padding: 13px 14px; border-radius: 16px; border: 1px solid rgba(212,96,122,0.1); background: rgba(253,247,240,0.6); transition: transform 0.15s ease; }
+  .st-task { display: flex; align-items: center; gap: 10px; padding: 13px 14px; border-radius: 16px; border: 1px solid rgba(212,96,122,0.1); background: rgba(253,247,240,0.6); transition: transform 0.15s ease; flex-wrap: wrap; }
   .st-task:hover { transform: translateX(2px); }
   .st-task.done { background: var(--petal); border-color: rgba(212,96,122,0.2); }
 
   .st-task-check { width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 12px; border: none; transition: transform 0.15s ease; }
   .st-task-check:hover { transform: scale(1.15); }
 
-  .st-task-name { font-size: 13px; font-weight: 500; color: var(--ink); }
+  .st-task-name { font-size: 13px; font-weight: 500; color: var(--ink); word-break: break-word; }
   .st-task-meta { font-size: 10px; color: var(--ink3); margin-top: 2px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 
   .st-badge { display: inline-flex; align-items: center; gap: 3px; padding: 2px 8px; border-radius: 999px; font-size: 10px; font-weight: 600; }
@@ -161,11 +163,18 @@ const css = `
   .st-overdue  { color: #8b1a35; font-weight: 700; }
 
   /* ── Pomodoro timer ── */
-  .st-timer-wrap { display: flex; flex-direction: column; align-items: center; padding: 8px 0 4px; }
-  .st-timer-display { font-family: 'Fraunces', serif; font-size: clamp(40px,8vw,64px); font-weight: 300; letter-spacing: -2px; line-height: 1; color: var(--ink); margin-bottom: 6px; }
-  .st-timer-label { font-size: 9px; font-weight: 500; letter-spacing: 3px; text-transform: uppercase; color: var(--ink3); margin-bottom: 16px; }
-  .st-timer-btns { display: flex; gap: 8px; margin-bottom: 14px; }
-  .st-timer-btn { display: flex; align-items: center; gap: 6px; padding: 9px 20px; border-radius: 999px; border: 1px solid; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.15s; background: none; }
+  .st-timer-wrap { display: flex; flex-direction: column; align-items: center; padding: 8px 0 4px; width: 100%; }
+  .st-timer-ring { position: relative; width: 100%; max-width: 200px; margin: 0 auto; display: flex; align-items: center; justify-content: center; }
+  .st-timer-ring svg { display: block; width: 100%; height: auto; }
+  .st-timer-display-overlay {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; width: 100%; pointer-events: none;
+  }
+  .st-timer-display { font-family: 'Fraunces', serif; font-size: clamp(28px,7vw,44px); font-weight: 300; letter-spacing: -1px; line-height: 1; color: var(--ink); }
+  .st-timer-label { font-size: 9px; font-weight: 500; letter-spacing: 2px; text-transform: uppercase; color: var(--ink3); margin: 16px 0 14px; text-align: center; padding: 0 8px; }
+  .st-timer-btns { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; justify-content: center; }
+  .st-timer-btn { display: flex; align-items: center; gap: 6px; padding: 9px 20px; border-radius: 999px; border: 1px solid; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.15s; background: none; white-space: nowrap; }
   .st-timer-btn:hover { transform: scale(1.04); }
   .st-timer-presets { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
   .st-timer-preset { padding: 5px 12px; border-radius: 999px; border: 1px solid rgba(212,96,122,0.15); background: none; font-family: 'DM Sans', sans-serif; font-size: 11px; font-weight: 600; color: var(--ink3); cursor: pointer; transition: all 0.15s; }
@@ -182,9 +191,9 @@ const css = `
   /* notes */
   .st-note { padding: 13px 15px; border-radius: 14px; border: 1px solid rgba(212,96,122,0.1); background: rgba(253,247,240,0.6); transition: transform 0.15s; }
   .st-note:hover { transform: translateX(2px); }
-  .st-note-title { font-size: 13px; font-weight: 600; color: var(--ink); margin-bottom: 4px; }
-  .st-note-body  { font-size: 12px; color: var(--ink2); line-height: 1.5; }
-  .st-note-meta  { font-size: 10px; color: var(--ink3); margin-top: 6px; display: flex; align-items: center; gap: 6px; }
+  .st-note-title { font-size: 13px; font-weight: 600; color: var(--ink); margin-bottom: 4px; word-break: break-word; }
+  .st-note-body  { font-size: 12px; color: var(--ink2); line-height: 1.5; word-break: break-word; }
+  .st-note-meta  { font-size: 10px; color: var(--ink3); margin-top: 6px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 
   /* delete btn */
   .st-del-btn { background: none; border: none; cursor: pointer; color: var(--ink3); font-size: 13px; padding: 4px; transition: color 0.15s; margin-left: auto; flex-shrink: 0; }
@@ -198,13 +207,16 @@ const css = `
   .st-empty i { font-size: 32px; display: block; margin-bottom: 10px; opacity: 0.4; }
 
   /* footer */
-  .st-footer { background: linear-gradient(135deg, var(--petal) 0%, var(--lav) 100%); border: 1px solid rgba(212,96,122,0.14); border-radius: 20px; padding: 18px 22px; display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 16px; }
+  .st-footer { background: linear-gradient(135deg, var(--petal) 0%, var(--lav) 100%); border: 1px solid rgba(212,96,122,0.14); border-radius: 20px; padding: 18px 22px; display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 16px; flex-wrap: wrap; }
   .st-footer-lbl { font-size: 9px; font-weight: 500; letter-spacing: 2.5px; text-transform: uppercase; color: var(--ink3); margin-bottom: 4px; }
   .st-footer-msg { font-family: 'Fraunces', serif; font-style: italic; font-size: 15px; font-weight: 300; color: var(--ink2); }
   .st-footer-ico { font-size: 20px; color: var(--blush2); }
 
-  /* grid layout */
+  /* grid layouts */
   .st-two-col { display: grid; grid-template-columns: 1fr 280px; gap: 14px; align-items: start; }
+  .st-timer-col { display: grid; grid-template-columns: 1fr 280px; gap: 14px; align-items: start; }
+  .st-notes-col { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; align-items: start; }
+  .st-insight-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 
   @keyframes spin { to { transform: rotate(360deg); } }
   .spinning { animation: spin 0.9s linear infinite; display: inline-block; }
@@ -212,13 +224,44 @@ const css = `
   @keyframes pulse-ring { 0%,100%{opacity:1} 50%{opacity:0.6} }
   .timer-running { animation: pulse-ring 2s ease-in-out infinite; }
 
-  @media (max-width: 768px) {
-    .st-stats  { grid-template-columns: repeat(2,1fr); }
-    .st-two-col { grid-template-columns: 1fr; }
-    .st-subj-grid { grid-template-columns: repeat(4,1fr); }
+  /* ── Responsive breakpoints ── */
+  @media (max-width: 900px) {
+    .st-two-col, .st-timer-col { grid-template-columns: 1fr; }
   }
+
+  @media (max-width: 768px) {
+    .st { padding: 16px 14px 90px; }
+    .st-header { flex-direction: column; gap: 12px; }
+    .st-clock { align-self: flex-start; text-align: left; }
+    .st-stats { grid-template-columns: repeat(2,1fr); }
+    .st-two-col, .st-timer-col { grid-template-columns: 1fr; }
+    .st-notes-col { grid-template-columns: 1fr; }
+    .st-insight-row { grid-template-columns: 1fr; }
+    .st-subj-grid { grid-template-columns: repeat(3,1fr); }
+    .st-tabs { gap: 6px; }
+    .st-tab { padding: 7px 12px; font-size: 10.5px; }
+    .st-footer { flex-direction: column; align-items: flex-start; gap: 10px; }
+    .st-timer-btn { padding: 9px 16px; font-size: 11px; }
+  }
+
+  @media (max-width: 480px) {
+    .st-subj-grid { grid-template-columns: repeat(2,1fr); }
+    .st-stats { grid-template-columns: repeat(2,1fr); gap: 8px; }
+    .st-stat { padding: 12px; }
+    .st-stat-val { font-size: 20px; }
+    .st-h1 { font-size: 24px; }
+    .st-card { padding: 14px; }
+    .st-chips { gap: 5px; }
+    .st-chip { padding: 5px 10px; font-size: 10px; }
+    .st-timer-ring { max-width: 160px; }
+    .st-task { padding: 11px 12px; }
+  }
+
   @media (max-width: 380px) {
-    .st { padding-left: 14px; padding-right: 14px; }
+    .st { padding-left: 12px; padding-right: 12px; }
+    .st-subj-grid { grid-template-columns: repeat(2,1fr); gap: 6px; }
+    .st-timer-btns { gap: 6px; }
+    .st-timer-btn { padding: 8px 14px; font-size: 10.5px; }
   }
 `
 
@@ -233,7 +276,7 @@ type Task = {
   status: string
   due_date: string | null
   notes: string | null
-  created_at: string | null  // ← add | null
+  created_at: string | null
 }
 
 type StudySession = {
@@ -520,7 +563,7 @@ export default function StudyPage() {
               {/* Task list */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                 <div className="st-card">
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
                     <p className="st-card-lbl" style={{ marginBottom: 0 }}>
                       <i className="ti ti-list-check" />
                       {pendingTasks === 0 && tasks.length > 0 ? 'all tasks complete!' : `${pendingTasks} pending`}
@@ -714,8 +757,7 @@ export default function StudyPage() {
 
           {/* ── TIMER ── */}
           {activeTab === 'timer' && (
-            <motion.div key="timer"
-              style={{ display: 'grid', gridTemplateColumns: '1fr 280px', gap: '14px', alignItems: 'start' }}
+            <motion.div key="timer" className="st-timer-col"
               initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 16 }}>
 
               <div className="st-card">
@@ -741,28 +783,31 @@ export default function StudyPage() {
 
                 {/* Timer display */}
                 <div className="st-timer-wrap">
-                  <svg width={CX * 2} height={CY * 2} style={{ marginBottom: 4 }}>
-                    <circle cx={CX} cy={CY} r={R} fill="none" stroke="rgba(212,96,122,0.1)" strokeWidth="5" />
-                    <motion.circle cx={CX} cy={CY} r={R} fill="none"
-                      stroke="url(#timer-grad)" strokeWidth="5" strokeLinecap="round"
-                      strokeDasharray={CIRC}
-                      animate={{ strokeDashoffset: CIRC * (1 - timerPct) }}
-                      transition={{ duration: 0.5 }}
-                      transform={`rotate(-90 ${CX} ${CY})`} />
-                    <defs>
-                      <linearGradient id="timer-grad" x1="0%" y1="0%" x2="100%" y2="0%">
-                        <stop offset="0%"   stopColor="#d4607a" />
-                        <stop offset="100%" stopColor="#9b7ec8" />
-                      </linearGradient>
-                    </defs>
-                  </svg>
-
-                  <div className={`st-timer-display${timerRunning ? ' timer-running' : ''}`}
-                    style={{ color: timerSecs === 0 ? '#5a8c63' : 'var(--ink)', marginTop: -120 }}>
-                    {fmtTime(timerSecs)}
+                  <div className="st-timer-ring">
+                    <svg viewBox={`0 0 ${CX * 2} ${CY * 2}`}>
+                      <circle cx={CX} cy={CY} r={R} fill="none" stroke="rgba(212,96,122,0.1)" strokeWidth="5" />
+                      <motion.circle cx={CX} cy={CY} r={R} fill="none"
+                        stroke="url(#timer-grad)" strokeWidth="5" strokeLinecap="round"
+                        strokeDasharray={CIRC}
+                        animate={{ strokeDashoffset: CIRC * (1 - timerPct) }}
+                        transition={{ duration: 0.5 }}
+                        transform={`rotate(-90 ${CX} ${CY})`} />
+                      <defs>
+                        <linearGradient id="timer-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+                          <stop offset="0%"   stopColor="#d4607a" />
+                          <stop offset="100%" stopColor="#9b7ec8" />
+                        </linearGradient>
+                      </defs>
+                    </svg>
+                    <div className="st-timer-display-overlay">
+                      <div className={`st-timer-display${timerRunning ? ' timer-running' : ''}`}
+                        style={{ color: timerSecs === 0 ? '#5a8c63' : 'var(--ink)' }}>
+                        {fmtTime(timerSecs)}
+                      </div>
+                    </div>
                   </div>
 
-                  <div className="st-timer-label" style={{ marginTop: 68 }}>
+                  <div className="st-timer-label">
                     {timerRunning ? `focusing on ${getSubject(timerSubject).label}` : timerSecs === 0 ? 'session complete ✨' : 'ready to focus'}
                   </div>
 
@@ -844,13 +889,12 @@ export default function StudyPage() {
 
           {/* ── NOTES ── */}
           {activeTab === 'notes' && (
-            <motion.div key="notes"
-              style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', alignItems: 'start' }}
+            <motion.div key="notes" className="st-notes-col"
               initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 16 }}>
 
               {/* Add note */}
               <div className="st-card">
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
                   <p className="st-card-lbl" style={{ marginBottom: 0 }}><i className="ti ti-notebook" /> quick note</p>
                   <button onClick={() => setShowAddNote(v => !v)}
                     style={{
@@ -1008,7 +1052,7 @@ export default function StudyPage() {
               </div>
 
               {/* Task status breakdown */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+              <div className="st-insight-row">
                 <div className="st-card">
                   <p className="st-card-lbl"><i className="ti ti-circle-check" /> task status</p>
                   {tasks.length === 0 ? (
