@@ -461,7 +461,7 @@ export default function LoginPage() {
   const handleGoogle = useCallback(async () => {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: `${window.location.origin}/auth/callback?check_onboarding=true` },
+      options: { redirectTo: `${window.location.origin}/callback?check_onboarding=true` },
     })
     if (error) setError(error.message)
   }, [supabase])

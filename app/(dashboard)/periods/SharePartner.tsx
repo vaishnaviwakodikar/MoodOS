@@ -126,7 +126,7 @@ export default function SharePartner({ open, onOpenChange }: SharePartnerProps) 
             </div>
           </div>
           <p style={{ fontSize: '11px', color: '#e57399', marginTop: '6px', marginBottom: 0 }}>
-            Read-only · cycle, symptoms &amp; mood
+            Cycle, symptoms &amp; mood
           </p>
         </div>
 
@@ -134,7 +134,14 @@ export default function SharePartner({ open, onOpenChange }: SharePartnerProps) 
         <div style={{ padding: '16px 20px', maxHeight: '280px', overflowY: 'auto' }}>
           {activeShares.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '24px 0' }}>
-              <div style={{ fontSize: '28px', marginBottom: '8px' }}>🔗</div>
+              <div style={{ 
+  marginBottom: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' 
+}}>
+  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#d4607a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+  </svg>
+</div>
               <p style={{ fontSize: '12px', color: '#c9a0b0', letterSpacing: '0.05em', margin: 0 }}>No active links yet</p>
               <p style={{ fontSize: '11px', color: '#dbb8c8', marginTop: '4px' }}>Create one to share with your partner</p>
             </div>
@@ -199,7 +206,7 @@ export default function SharePartner({ open, onOpenChange }: SharePartnerProps) 
         {/* Footer */}
         <div style={{ padding: '10px 20px', borderTop: '1px solid #fce4ec', background: '#fffafb' }}>
           <p style={{ fontSize: '10px', color: '#dbb8c8', textAlign: 'center', letterSpacing: '0.05em', margin: 0 }}>
-            Links can be revoked anytime · view only
+            Links can be revoked anytime 
           </p>
         </div>
       </div>
