@@ -172,15 +172,121 @@ export default function AttendancePage() {
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <div style={{ height: '100vh', overflow: 'hidden', background: '#fdf7f0', fontFamily: 'DM Sans, sans-serif', display: 'grid', gridTemplateColumns: '1fr 360px' }}>
+    <div className="att-page">
+      <style jsx>{`
+        .att-page {
+          min-height: 100vh;
+          background: #fdf7f0;
+          font-family: 'DM Sans', sans-serif;
+          display: grid;
+          grid-template-columns: 1fr 360px;
+        }
+        .att-left {
+          display: flex;
+          flex-direction: column;
+          padding: 28px 28px 28px 32px;
+          gap: 20px;
+          min-height: 100vh;
+        }
+        .att-right {
+          background: #fff;
+          border-left: 1px solid rgba(61,42,53,.08);
+          display: flex;
+          flex-direction: column;
+        }
+        .att-stats {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 10px;
+        }
+        .att-calendar-card {
+          flex: 1;
+          background: #fff;
+          border: 1px solid rgba(61,42,53,.09);
+          border-radius: 16px;
+          padding: 16px 14px;
+          display: flex;
+          flex-direction: column;
+          min-height: 360px;
+        }
+        .att-day-grid {
+          flex: 1;
+          display: grid;
+          grid-template-columns: repeat(7, 1fr);
+          grid-template-rows: repeat(6, 1fr);
+          gap: 5px;
+        }
+        .att-day-cell {
+          border-radius: 10px;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          gap: 3px;
+          min-height: 34px;
+        }
+        .att-history {
+          flex: 1;
+          overflow-y: auto;
+          padding: 16px 22px;
+        }
+        .att-status-row {
+          display: flex;
+          gap: 6px;
+          margin-bottom: 12px;
+        }
+
+        @media (max-width: 860px) {
+          .att-page {
+            grid-template-columns: 1fr;
+          }
+          .att-left {
+            min-height: auto;
+            padding: 18px 16px 8px;
+            gap: 16px;
+          }
+          .att-right {
+            border-left: none;
+            border-top: 1px solid rgba(61,42,53,.08);
+          }
+          .att-calendar-card {
+            min-height: 320px;
+          }
+          .att-day-cell span {
+            font-size: 11px !important;
+          }
+          .att-history {
+            overflow-y: visible;
+            padding: 14px 16px 28px;
+          }
+        }
+
+        @media (max-width: 480px) {
+          .att-left {
+            padding: 14px 10px 6px;
+          }
+          .att-stats {
+            gap: 6px;
+          }
+          .att-status-row {
+            gap: 4px;
+          }
+          .att-day-grid {
+            gap: 3px;
+          }
+          .att-day-cell {
+            min-height: 30px;
+          }
+        }
+      `}</style>
 
       {/* ── LEFT: Calendar ── */}
-      <div style={{ display: 'flex', flexDirection: 'column', padding: '28px 28px 28px 32px', gap: 20, overflow: 'hidden' }}>
+      <div className="att-left">
 
         {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
           <div>
-            <h1 style={{ fontFamily: 'Georgia, serif', fontSize: 26, fontWeight: 300, fontStyle: 'italic', color: '#3d2a35', margin: 0 }}>
+            <h1 style={{ fontFamily: 'Georgia, serif', fontSize: 24, fontWeight: 300, fontStyle: 'italic', color: '#3d2a35', margin: 0 }}>
               Attendance
             </h1>
             <p style={{ fontSize: 12, color: '#b09aa4', margin: '3px 0 0' }}>
@@ -200,21 +306,21 @@ export default function AttendancePage() {
         </div>
 
         {/* Stats */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
+        <div className="att-stats">
           {[
             { title: 'Present',  value: present, ...STATUS_CONFIG.present },
             { title: 'Absent',   value: absent,  ...STATUS_CONFIG.absent  },
             { title: 'Holidays', value: holiday, ...STATUS_CONFIG.holiday },
           ].map(s => (
-            <div key={s.title} style={{ background: s.bg, border: `1px solid ${s.border}`, borderRadius: 12, padding: '12px 16px' }}>
+            <div key={s.title} style={{ background: s.bg, border: `1px solid ${s.border}`, borderRadius: 12, padding: '10px 12px' }}>
               <div style={{ fontSize: 8, letterSpacing: 2, textTransform: 'uppercase', color: s.c, opacity: 0.65, marginBottom: 4 }}>{s.title}</div>
-              <div style={{ fontFamily: 'Georgia, serif', fontSize: 28, fontWeight: 300, color: s.c, lineHeight: 1 }}>{s.value}</div>
+              <div style={{ fontFamily: 'Georgia, serif', fontSize: 24, fontWeight: 300, color: s.c, lineHeight: 1 }}>{s.value}</div>
             </div>
           ))}
         </div>
 
-        {/* Calendar grid — takes remaining space */}
-        <div style={{ flex: 1, background: '#fff', border: '1px solid rgba(61,42,53,.09)', borderRadius: 16, padding: '16px 14px', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+        {/* Calendar grid */}
+        <div className="att-calendar-card">
           {/* Day headers */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', marginBottom: 8 }}>
             {DAYS.map(d => (
@@ -222,7 +328,7 @@ export default function AttendancePage() {
             ))}
           </div>
           {/* Day cells */}
-          <div style={{ flex: 1, display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gridTemplateRows: `repeat(6, 1fr)`, gap: 5 }}>
+          <div className="att-day-grid">
             {Array.from({ length: firstDay }).map((_, i) => <div key={`e${i}`} />)}
             {Array.from({ length: daysInMonth }).map((_, i) => {
               const day     = i + 1
@@ -234,10 +340,9 @@ export default function AttendancePage() {
               const isSel    = dateStr === selDate
               return (
                 <div key={day}
+                  className="att-day-cell"
                   onClick={() => !isFuture && handleDayClick(dateStr)}
                   style={{
-                    borderRadius: 10, display: 'flex', flexDirection: 'column',
-                    alignItems: 'center', justifyContent: 'center', gap: 3,
                     cursor: isFuture ? 'not-allowed' : 'pointer',
                     border: `1.5px solid ${cfg ? cfg.border : isSel ? '#a8c9ae' : isToday ? '#d4bfc5' : 'transparent'}`,
                     background: cfg ? cfg.bg : isSel ? '#f0f8f0' : 'transparent',
@@ -256,22 +361,22 @@ export default function AttendancePage() {
       </div>
 
       {/* ── RIGHT: Log + History panel ── */}
-      <div style={{ background: '#fff', borderLeft: '1px solid rgba(61,42,53,.08)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <div className="att-right">
 
         {/* Log form */}
-        <div style={{ padding: '28px 22px 20px', borderBottom: '1px solid rgba(61,42,53,.08)' }}>
+        <div style={{ padding: '24px 20px 18px', borderBottom: '1px solid rgba(61,42,53,.08)' }}>
           <p style={{ fontSize: 8, fontWeight: 600, letterSpacing: 2, textTransform: 'uppercase', color: '#b09aa4', margin: '0 0 14px' }}>
             Log attendance
           </p>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
             <input type="date" value={selDate} max={todayIso}
               onChange={e => { setSelDate(e.target.value); setSelStatus(null) }}
-              style={{ flex: 1, padding: '7px 10px', borderRadius: 8, border: '1px solid rgba(61,42,53,.12)', fontSize: 13, fontFamily: 'inherit', outline: 'none', background: '#fdf7f0', color: '#3d2a35' }} />
+              style={{ flex: '1 1 160px', padding: '7px 10px', borderRadius: 8, border: '1px solid rgba(61,42,53,.12)', fontSize: 13, fontFamily: 'inherit', outline: 'none', background: '#fdf7f0', color: '#3d2a35', minWidth: 0 }} />
             <span style={{ fontSize: 10.5, color: '#b09aa4', whiteSpace: 'nowrap' }}>{selDateFormatted}</span>
           </div>
 
-          <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
+          <div className="att-status-row">
             {(Object.entries(STATUS_CONFIG) as [Status, typeof STATUS_CONFIG[Status]][]).map(([key, cfg]) => (
               <button key={key}
                 onClick={() => setSelStatus(selStatus === key ? null : key)}
@@ -313,9 +418,9 @@ export default function AttendancePage() {
           )}
         </div>
 
-        {/* History — scrollable */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '16px 22px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+        {/* History */}
+        <div className="att-history">
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, flexWrap: 'wrap', gap: 4 }}>
             <p style={{ fontSize: 8, fontWeight: 600, letterSpacing: 2, textTransform: 'uppercase', color: '#b09aa4', margin: 0 }}>
               {records.length} record{records.length !== 1 ? 's' : ''} · {MONTHS[viewMonth.month]}
             </p>
@@ -346,11 +451,11 @@ export default function AttendancePage() {
                         {d.toLocaleDateString('en-IN', { weekday: 'long' })}
                       </div>
                     </div>
-                    <span style={{ padding: '2px 8px', borderRadius: 999, fontSize: 9, fontWeight: 600, background: cfg.bg, border: `1px solid ${cfg.border}`, color: cfg.c }}>
+                    <span style={{ padding: '2px 8px', borderRadius: 999, fontSize: 9, fontWeight: 600, background: cfg.bg, border: `1px solid ${cfg.border}`, color: cfg.c, whiteSpace: 'nowrap' }}>
                       {cfg.label}
                     </span>
                     <button onClick={() => deleteRecord(rec.id)}
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#d4bfc5', fontSize: 14, padding: '2px 4px', borderRadius: 4 }}>
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#d4bfc5', fontSize: 14, padding: '2px 4px', borderRadius: 4, flexShrink: 0 }}>
                       🗑
                     </button>
                   </div>

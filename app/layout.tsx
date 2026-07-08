@@ -1,8 +1,8 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { DM_Sans } from "next/font/google";
 import "./globals.css";
 import ThemeWatcher from "./ThemeWatcher";
-<html lang="en" style={{ colorScheme: 'light' }}></html>
+
 const dmSans = DM_Sans({
   subsets: ["latin"],
   weight: ["300", "400", "500", "600", "700", "800"],
@@ -14,9 +14,15 @@ export const metadata: Metadata = {
   description: "Track your mood, habits, study, expenses and attendance.",
 };
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+};
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning style={{ colorScheme: "light" }}>
       <body className={dmSans.variable} style={{ fontFamily: "var(--font-dm-sans), sans-serif" }}>
         <ThemeWatcher />
         {children}
