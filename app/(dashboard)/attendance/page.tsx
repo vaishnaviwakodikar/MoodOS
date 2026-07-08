@@ -241,9 +241,9 @@ export default function AttendancePage() {
             grid-template-columns: 1fr;
           }
           .att-left {
-            min-height: auto;
-            padding: 18px 16px 8px;
-            gap: 16px;
+            min-height: auto !important;
+            padding: calc(72px + env(safe-area-inset-top, 0px)) 16px 8px !important;
+            gap: 16px !important;
           }
           .att-right {
             border-left: none;
@@ -263,7 +263,7 @@ export default function AttendancePage() {
 
         @media (max-width: 480px) {
           .att-left {
-            padding: 14px 10px 6px;
+            padding: calc(68px + env(safe-area-inset-top, 0px)) 10px 6px !important;
           }
           .att-stats {
             gap: 6px;

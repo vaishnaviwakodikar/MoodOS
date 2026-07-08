@@ -1,27 +1,32 @@
-import { redirect } from 'next/navigation'
-import { createServerSupabaseClient } from '@/lib/supabase-server'
-import Sidebar from '@/components/Sidebar'
-import { PeriodProvider } from './PeriodContext'
-import PeriodLayout from './PeriodLayout'
+import type { Metadata, Viewport } from "next";
+import { DM_Sans } from "next/font/google";
+import "./globals.css";
+import ThemeWatcher from "./ThemeWatcher";
 
-export default async function DashboardLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
-  const supabase = await createServerSupabaseClient()
-  const { data: { user } } = await supabase.auth.getUser()
+const dmSans = DM_Sans({
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700", "800"],
+  variable: "--font-dm-sans",
+});
 
-  if (!user) redirect('/login')
+export const metadata: Metadata = {
+  title: "MoodOS — Student Life Dashboard",
+  description: "Track your mood, habits, study, expenses and attendance.",
+};
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+};
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <PeriodProvider>
-      <PeriodLayout>
-        <Sidebar user={user} />
-        <main style={{ flex: 1, overflowY: 'auto' }}>
-          {children}
-        </main>
-      </PeriodLayout>
-    </PeriodProvider>
-  )
+    <html lang="en" suppressHydrationWarning style={{ colorScheme: "light" }}>
+      <body className={dmSans.variable} style={{ fontFamily: "var(--font-dm-sans), sans-serif" }}>
+        <ThemeWatcher />
+        {children}
+      </body>
+    </html>
+  );
 }

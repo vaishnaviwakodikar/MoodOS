@@ -1,23 +1,27 @@
-'use client'
+import { redirect } from 'next/navigation'
+import { createServerSupabaseClient } from '@/lib/supabase-server'
+import Sidebar from '@/components/Sidebar'
+import { PeriodProvider } from './PeriodContext'
+import PeriodLayout from './PeriodLayout'
 
-import { usePeriod } from './PeriodContext'
-import styles from './period.module.css'
+export default async function DashboardLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
+  const supabase = await createServerSupabaseClient()
+  const { data: { user } } = await supabase.auth.getUser()
 
-export default function PeriodLayout({ children }: { children: React.ReactNode }) {
-  const isPeriod = usePeriod()
+  if (!user) redirect('/login')
+
   return (
-    <div className={isPeriod ? styles.periodWrap : styles.normalWrap}>
-      <div className={isPeriod ? styles.periodFilter : ''}>
-        <div
-          style={{
-            display: 'flex',
-            minHeight: '100vh',
-            background: isPeriod ? '#160c10' : '#fdf7f0',
-          }}
-        >
+    <PeriodProvider>
+      <PeriodLayout>
+        <Sidebar user={user} />
+        <main className="sb-page-wrap" style={{ flex: 1, overflowY: 'auto', minWidth: 0 }}>
           {children}
-        </div>
-      </div>
-    </div>
+        </main>
+      </PeriodLayout>
+    </PeriodProvider>
   )
 }
